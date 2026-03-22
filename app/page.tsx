@@ -1,65 +1,242 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { supabase } from "../lib/supabase";
+import toast, { Toaster } from "react-hot-toast";
+import { motion } from "framer-motion";
+
+type FormData = {
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  edad: string;
+  direccion: string;
+};
 
 export default function Home() {
+  const [loading, setLoading] = useState(false);
+
+  const [form, setForm] = useState<FormData>({
+    nombre: "",
+    apellido: "",
+    email: "",
+    telefono: "",
+    edad: "",
+    direccion: ""
+  });
+
+  const validate = () => {
+    if (!form.nombre || !form.apellido) {
+      toast.error("Nombre y apellido son obligatorios");
+      return false;
+    }
+    if (!form.email.includes("@")) {
+      toast.error("Email inválido");
+      return false;
+    }
+    if (!form.telefono) {
+      toast.error("Ingresá un teléfono");
+      return false;
+    }
+    if (!form.edad) {
+      toast.error("Ingresá la edad");
+      return false;
+    }
+    if (!form.direccion) {
+      toast.error("Ingresá la dirección");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validate()) return;
+
+    setLoading(true);
+
+    const { error } = await supabase.from("personas").insert([form]);
+
+    setLoading(false);
+
+    if (error) {
+      toast.error("Error al guardar");
+      console.error(error);
+    } else {
+      toast.success("Datos enviados 🙌");
+      setForm({
+        nombre: "",
+        apellido: "",
+        email: "",
+        telefono: "",
+        edad: "",
+        direccion: ""
+      });
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "radial-gradient(circle at top, #1a0000, #020617)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20
+      }}
+    >
+      <Toaster position="top-right" />
+
+      <motion.form
+        onSubmit={handleSubmit}
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          background: "#020617",
+          padding: "30px",
+          borderRadius: "16px",
+          width: "100%",
+          maxWidth: "400px",
+          color: "white",
+          boxShadow: "0 0 30px rgba(255,0,0,0.2)",
+          border: "1px solid #7f1d1d",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px"
+        }}
+      >
+        {/* LOGO + TÍTULO */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 15
+          }}
+        >
+          <motion.img
+            src="/logo.png"
+            alt="CFC Logo"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: [1, 1.05, 1]
+            }}
+            transition={{
+              duration: 1.2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            whileHover={{
+              scale: 1.12
+            }}
+            style={{
+              width: 80,
+              height: "auto",
+              objectFit: "contain",
+              cursor: "pointer",
+              filter: "drop-shadow(0 0 8px rgba(255,0,0,0.7))"
+            }}
+          />
+
+          <h2
+            style={{
+              color: "#ef4444",
+              letterSpacing: "1px",
+              textShadow: "0 0 6px rgba(255,255,255,0.6)",
+              marginTop: 10
+            }}
+          >
+            CFC Miembros
+          </h2>
+        </div>
+
+        {/* INPUTS */}
+        <input
+          placeholder="Nombre"
+          value={form.nombre}
+          onChange={(e) => setForm({ ...form, nombre: e.target.value })}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        <input
+          placeholder="Apellido"
+          value={form.apellido}
+          onChange={(e) => setForm({ ...form, apellido: e.target.value })}
+        />
+
+        <input
+          placeholder="Email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+        />
+
+        <input
+          placeholder="Teléfono"
+          value={form.telefono}
+          onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+        />
+
+        <input
+          type="number"
+          placeholder="Edad"
+          value={form.edad}
+          onChange={(e) => setForm({ ...form, edad: e.target.value })}
+        />
+
+        <input
+          placeholder="Dirección"
+          value={form.direccion}
+          onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+        />
+
+        {/* BOTÓN */}
+        <button type="submit" disabled={loading}>
+          {loading ? "Enviando..." : "Enviar"}
+        </button>
+
+        {/* estilos */}
+        <style jsx>{`
+          input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #7f1d1d;
+            background: #020617;
+            color: white;
+          }
+
+          input::placeholder {
+            color: #94a3b8;
+          }
+
+          input:focus {
+            outline: none;
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+          }
+
+          button {
+            margin-top: 10px;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(90deg, #b91c1c, #ef4444);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+          }
+
+          button:hover {
+            background: linear-gradient(90deg, #991b1b, #dc2626);
+          }
+        `}</style>
+      </motion.form>
     </div>
   );
 }
