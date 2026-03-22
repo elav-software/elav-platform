@@ -118,31 +118,29 @@ export default function Home() {
             marginBottom: 15
           }}
         >
-          <motion.img
-            src="/logo.png"
-            alt="CFC Logo"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: [1, 1.05, 1]
-            }}
-            transition={{
-              duration: 1.2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            whileHover={{
-              scale: 1.12
-            }}
-            style={{
-              width: 80,
-              height: "auto",
-              objectFit: "contain",
-              cursor: "pointer",
-              filter: "drop-shadow(0 0 8px rgba(255,0,0,0.7))"
-            }}
-          />
+        <motion.img
+          src="/logo.png"
+          alt="CFC Logo"
+          initial={{ scale: 1 }}
+          animate={{
+            scale: [1, 1.06, 1, 1.04, 1]
+          }}
+          transition={{
+            duration: 3.5,          // 👈 más lento (clave)
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          whileHover={{
+            scale: 1.1
+          }}
+          style={{
+            width: 80,
+            height: "auto",
+            objectFit: "contain",
+            cursor: "pointer",
+            filter: "drop-shadow(0 0 8px rgba(255,0,0,0.7))"
+          }}
+        />
 
           <h2
             style={{
@@ -152,7 +150,7 @@ export default function Home() {
               marginTop: 10
             }}
           >
-            CFC Miembros
+            Centro Familiar Cristiano Miembros
           </h2>
         </div>
 
