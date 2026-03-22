@@ -149,12 +149,12 @@ export default function Home() {
             textShadow: "0 0 6px rgba(255,255,255,0.6)",
             marginTop: 10,
             textAlign: "center",
-            fontSize: "clamp(18px, 4vw, 24px)", // 👈 clave responsive
-            lineHeight: "1.2",
-            wordBreak: "break-word"
+            fontSize: "clamp(18px, 4vw, 24px)",
+            lineHeight: "1.2"
           }}
         >
-          Centro Familiar Cristiano Miembros
+          Centro Familiar Cristiano<br />
+          Miembros
         </h2>
         </div>
 
