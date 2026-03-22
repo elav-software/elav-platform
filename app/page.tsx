@@ -142,16 +142,20 @@ export default function Home() {
           }}
         />
 
-          <h2
-            style={{
-              color: "#ef4444",
-              letterSpacing: "1px",
-              textShadow: "0 0 6px rgba(255,255,255,0.6)",
-              marginTop: 10
-            }}
-          >
-            Centro Familiar Cristiano Miembros
-          </h2>
+        <h2
+          style={{
+            color: "#ef4444",
+            letterSpacing: "1px",
+            textShadow: "0 0 6px rgba(255,255,255,0.6)",
+            marginTop: 10,
+            textAlign: "center",
+            fontSize: "clamp(18px, 4vw, 24px)", // 👈 clave responsive
+            lineHeight: "1.2",
+            wordBreak: "break-word"
+          }}
+        >
+          Centro Familiar Cristiano Miembros
+        </h2>
         </div>
 
         {/* INPUTS */}
