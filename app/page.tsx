@@ -190,7 +190,7 @@ export default function Home() {
           >
             Centro Familiar Cristiano
             <br />
-            Censo de Miembros
+            Miembros
           </h2>
         </div>
 
