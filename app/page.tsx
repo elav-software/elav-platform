@@ -78,6 +78,42 @@ export default function Home() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => setForm({ ...form, [field]: e.target.value });
 
+  // Floating label components
+  const FloatingInput = ({ label, field, type = "text" }: { label: string; field: keyof FormData; type?: string }) => (
+    <div className="float-group">
+      <input
+        type={type}
+        value={form[field]}
+        onChange={set(field)}
+        placeholder=" "
+        className="float-input"
+      />
+      <label className="float-label">{label}</label>
+    </div>
+  );
+
+  const FloatingSelect = ({ label, field, children }: { label: string; field: keyof FormData; children: React.ReactNode }) => (
+    <div className="float-group">
+      <select value={form[field]} onChange={set(field)} className={`float-input ${form[field] ? "has-value" : ""}`}>
+        {children}
+      </select>
+      <label className="float-label active">{label}</label>
+    </div>
+  );
+
+  const FloatingTextarea = ({ label, field, rows = 3 }: { label: string; field: keyof FormData; rows?: number }) => (
+    <div className="float-group">
+      <textarea
+        value={form[field]}
+        onChange={set(field)}
+        placeholder=" "
+        rows={rows}
+        className="float-input"
+      />
+      <label className="float-label">{label}</label>
+    </div>
+  );
+
   const validate = () => {
     if (!form.nombre || !form.apellido) {
       toast.error("Nombre y apellido son obligatorios");
@@ -144,6 +180,9 @@ export default function Home() {
 
       <motion.form
         onSubmit={handleSubmit}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === "Enter" && step < STEPS.length - 1) e.preventDefault();
+        }}
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         style={{
@@ -221,35 +260,34 @@ export default function Home() {
         {step === 0 && (
           <>
             {sectionTitle("Información Personal")}
-            <input placeholder="Nombre *" value={form.nombre} onChange={set("nombre")} />
-            <input placeholder="Apellido *" value={form.apellido} onChange={set("apellido")} />
-            <label className="field-label">Fecha de Nacimiento</label>
-            <input type="date" value={form.fecha_nacimiento} onChange={set("fecha_nacimiento")} />
-            <input type="number" placeholder="Edad" value={form.edad} onChange={set("edad")} />
-            <select value={form.genero} onChange={set("genero")}>
-              <option value="">Género</option>
+            <FloatingInput label="Nombre *" field="nombre" />
+            <FloatingInput label="Apellido *" field="apellido" />
+            <FloatingInput label="Fecha de Nacimiento" field="fecha_nacimiento" type="date" />
+            <FloatingInput label="Edad" field="edad" type="number" />
+            <FloatingSelect label="Género" field="genero">
+              <option value="">Seleccionar...</option>
               <option value="Masculino">Masculino</option>
               <option value="Femenino">Femenino</option>
-            </select>
+            </FloatingSelect>
 
             {sectionTitle("Contacto")}
-            <input placeholder="Teléfono *" value={form.telefono} onChange={set("telefono")} />
-            <input placeholder="WhatsApp" value={form.whatsapp} onChange={set("whatsapp")} />
-            <input placeholder="Email" value={form.email} onChange={set("email")} />
+            <FloatingInput label="Teléfono *" field="telefono" />
+            <FloatingInput label="WhatsApp" field="whatsapp" />
+            <FloatingInput label="Email" field="email" />
 
             {sectionTitle("Ubicación")}
-            <input placeholder="Dirección" value={form.direccion} onChange={set("direccion")} />
-            <input placeholder="Barrio / Zona" value={form.barrio_zona} onChange={set("barrio_zona")} />
+            <FloatingInput label="Dirección" field="direccion" />
+            <FloatingInput label="Barrio / Zona" field="barrio_zona" />
 
-            <input placeholder="Ocupación" value={form.ocupacion} onChange={set("ocupacion")} />
-            <select value={form.nivel_educacion} onChange={set("nivel_educacion")}>
-              <option value="">Nivel de Educación</option>
+            <FloatingInput label="Ocupación" field="ocupacion" />
+            <FloatingSelect label="Nivel de Educación" field="nivel_educacion">
+              <option value="">Seleccionar...</option>
               <option value="Primaria">Primaria</option>
               <option value="Secundaria">Secundaria</option>
               <option value="Técnico">Técnico</option>
               <option value="Universitario">Universitario</option>
               <option value="Otro">Otro</option>
-            </select>
+            </FloatingSelect>
           </>
         )}
 
@@ -257,35 +295,30 @@ export default function Home() {
         {step === 1 && (
           <>
             {sectionTitle("Vida en la Iglesia")}
-            <label className="field-label">Fecha de Conversión</label>
-            <input type="date" value={form.fecha_conversion} onChange={set("fecha_conversion")} />
-            <label className="field-label">Fecha de Llegada a CFC</label>
-            <input type="date" value={form.fecha_llegada_cfc} onChange={set("fecha_llegada_cfc")} />
+            <FloatingInput label="Fecha de Conversión" field="fecha_conversion" type="date" />
+            <FloatingInput label="Fecha de Llegada a CFC" field="fecha_llegada_cfc" type="date" />
 
-            <select value={form.bautizado} onChange={set("bautizado")}>
-              <option value="">¿Está Bautizado?</option>
+            <FloatingSelect label="¿Está Bautizado?" field="bautizado">
+              <option value="">Seleccionar...</option>
               <option value="Sí">Sí</option>
               <option value="No">No</option>
-            </select>
+            </FloatingSelect>
             {form.bautizado === "Sí" && (
-              <>
-                <label className="field-label">Fecha de Bautismo</label>
-                <input type="date" value={form.fecha_bautismo} onChange={set("fecha_bautismo")} />
-              </>
+              <FloatingInput label="Fecha de Bautismo" field="fecha_bautismo" type="date" />
             )}
 
-            <select value={form.fue_encuentro} onChange={set("fue_encuentro")}>
-              <option value="">¿Fue a un Encuentro?</option>
+            <FloatingSelect label="¿Fue a un Encuentro?" field="fue_encuentro">
+              <option value="">Seleccionar...</option>
               <option value="Sí">Sí</option>
               <option value="No">No</option>
-            </select>
+            </FloatingSelect>
 
-            <select value={form.nivel_formacion} onChange={set("nivel_formacion")}>
-              <option value="">Nivel de Formación</option>
+            <FloatingSelect label="Nivel de Formación" field="nivel_formacion">
+              <option value="">Seleccionar...</option>
               <option value="Ninguno">Ninguno</option>
               <option value="EFE">EFE</option>
               <option value="Liderazgo">Liderazgo</option>
-            </select>
+            </FloatingSelect>
           </>
         )}
 
@@ -293,23 +326,18 @@ export default function Home() {
         {step === 2 && (
           <>
             {sectionTitle("Servicio y Habilidades")}
-            <textarea
-              placeholder="Habilidades técnicas/profesionales (ej: Sonido, Diseño, Arte, Danza, Medicina, Albañilería...)"
-              value={form.habilidades_tecnicas}
-              onChange={set("habilidades_tecnicas")}
-              rows={3}
-            />
-            <select value={form.disponibilidad_horaria} onChange={set("disponibilidad_horaria")}>
-              <option value="">Disponibilidad Horaria</option>
+            <FloatingTextarea label="Habilidades técnicas/profesionales (ej: Sonido, Diseño, Arte, Danza...)" field="habilidades_tecnicas" />
+            <FloatingSelect label="Disponibilidad Horaria" field="disponibilidad_horaria">
+              <option value="">Seleccionar...</option>
               <option value="Mañana">Mañana</option>
               <option value="Tarde">Tarde</option>
               <option value="Noche">Noche</option>
               <option value="Fines de semana">Fines de semana</option>
               <option value="Flexible">Flexible</option>
-            </select>
-            <input placeholder="Área de servicio actual" value={form.area_servicio_actual} onChange={set("area_servicio_actual")} />
-            <input placeholder="Ministerio" value={form.ministerio} onChange={set("ministerio")} />
-            <input placeholder="Grupo / Célula" value={form.grupo_celula} onChange={set("grupo_celula")} />
+            </FloatingSelect>
+            <FloatingInput label="Área de servicio actual" field="area_servicio_actual" />
+            <FloatingInput label="Ministerio" field="ministerio" />
+            <FloatingInput label="Grupo / Célula" field="grupo_celula" />
           </>
         )}
 
@@ -317,22 +345,17 @@ export default function Home() {
         {step === 3 && (
           <>
             {sectionTitle("Información Familiar")}
-            <select value={form.estado_civil} onChange={set("estado_civil")}>
-              <option value="">Estado Civil</option>
+            <FloatingSelect label="Estado Civil" field="estado_civil">
+              <option value="">Seleccionar...</option>
               <option value="Soltero/a">Soltero/a</option>
               <option value="Casado/a">Casado/a</option>
               <option value="Viudo/a">Viudo/a</option>
               <option value="Divorciado/a">Divorciado/a</option>
-            </select>
-            <input placeholder="Cónyuge" value={form.conyuge} onChange={set("conyuge")} />
-            <input placeholder="Hijos (nombres o cantidad)" value={form.hijos} onChange={set("hijos")} />
-            <input type="number" placeholder="Tamaño del hogar" value={form.tamano_hogar} onChange={set("tamano_hogar")} />
-            <textarea
-              placeholder="Vínculos familiares en la iglesia (ej: hermano de Juan Pérez, hija de María López...)"
-              value={form.vinculos_familiares_iglesia}
-              onChange={set("vinculos_familiares_iglesia")}
-              rows={3}
-            />
+            </FloatingSelect>
+            <FloatingInput label="Cónyuge" field="conyuge" />
+            <FloatingInput label="Hijos (nombres o cantidad)" field="hijos" />
+            <FloatingInput label="Tamaño del hogar" field="tamano_hogar" type="number" />
+            <FloatingTextarea label="Vínculos familiares en la iglesia" field="vinculos_familiares_iglesia" />
           </>
         )}
 
@@ -348,7 +371,8 @@ export default function Home() {
               Siguiente →
             </button>
           ) : (
-            <button type="submit" disabled={loading} className="btn-submit" style={{ marginLeft: "auto" }}>
+            <button type="button" disabled={loading} className="btn-submit" style={{ marginLeft: "auto" }}
+              onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}>
               {loading ? "Enviando..." : "Enviar Censo"}
             </button>
           )}
@@ -356,36 +380,71 @@ export default function Home() {
 
         {/* ESTILOS */}
         <style jsx>{`
-          input,
-          select,
-          textarea {
+          .float-group {
+            position: relative;
             width: 100%;
-            padding: 12px;
+          }
+
+          .float-input {
+            width: 100%;
+            padding: 18px 12px 8px;
             border-radius: 8px;
             border: 1px solid #7f1d1d;
             background: #020617;
             color: white;
             font-size: 14px;
+            transition: border 0.2s;
           }
 
-          textarea {
+          textarea.float-input {
             resize: vertical;
             font-family: inherit;
           }
 
-          select {
+          select.float-input {
             appearance: none;
             cursor: pointer;
           }
 
-          input::placeholder,
-          textarea::placeholder {
-            color: #94a3b8;
+          .float-input::placeholder {
+            color: transparent;
           }
 
-          input:focus,
-          select:focus,
-          textarea:focus {
+          .float-label {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 14px;
+            pointer-events: none;
+            transition: all 0.2s ease;
+          }
+
+          textarea ~ .float-label {
+            top: 18px;
+            transform: none;
+          }
+
+          /* Label sube cuando el input tiene foco o valor */
+          .float-input:focus ~ .float-label,
+          .float-input:not(:placeholder-shown) ~ .float-label,
+          .float-label.active {
+            top: 6px;
+            transform: none;
+            font-size: 10px;
+            color: #ef4444;
+          }
+
+          /* Select siempre muestra label arriba */
+          select.float-input ~ .float-label {
+            top: 6px;
+            transform: none;
+            font-size: 10px;
+            color: #ef4444;
+          }
+
+          .float-input:focus {
             outline: none;
             border: 1px solid #ef4444;
             box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
