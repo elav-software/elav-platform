@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
 import { motion } from "framer-motion";
+
+type Lider = {
+  id: number;
+  nombre: string;
+  apellido: string;
+};
 
 type FormData = {
   nombre: string;
@@ -18,22 +24,11 @@ type FormData = {
   whatsapp: string;
   barrio_zona: string;
   ocupacion: string;
-  nivel_educacion: string;
-  fecha_conversion: string;
-  fecha_llegada_cfc: string;
+  lider_id: string;
   bautizado: string;
-  fecha_bautismo: string;
   fue_encuentro: string;
-  nivel_formacion: string;
-  habilidades_tecnicas: string;
-  disponibilidad_horaria: string;
-  area_servicio_actual: string;
-  ministerio: string;
-  grupo_celula: string;
   conyuge: string;
   hijos: string;
-  tamano_hogar: string;
-  vinculos_familiares_iglesia: string;
 };
 
 const INITIAL_FORM: FormData = {
@@ -49,30 +44,38 @@ const INITIAL_FORM: FormData = {
   whatsapp: "",
   barrio_zona: "",
   ocupacion: "",
-  nivel_educacion: "",
-  fecha_conversion: "",
-  fecha_llegada_cfc: "",
+  lider_id: "",
   bautizado: "",
-  fecha_bautismo: "",
   fue_encuentro: "",
-  nivel_formacion: "",
-  habilidades_tecnicas: "",
-  disponibilidad_horaria: "",
-  area_servicio_actual: "",
-  ministerio: "",
-  grupo_celula: "",
   conyuge: "",
   hijos: "",
-  tamano_hogar: "",
-  vinculos_familiares_iglesia: "",
 };
 
-const STEPS = ["Datos Personales", "Iglesia", "Servicio", "Familia"];
+const STEPS = ["Datos Personales", "Iglesia y Líder", "Familia"];
 
-export default function Home() {
+export default function MiembrosPage() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
+  const [lideres, setLideres] = useState<Lider[]>([]);
+
+  useEffect(() => {
+    const fetchLideres = async () => {
+      const { data, error } = await supabase
+        .from("personas")
+        .select("id, nombre, apellido")
+        .eq("rol", "Líder")
+        .order("apellido", { ascending: true });
+
+      if (error) {
+        console.error("Error cargando líderes:", error);
+        toast.error("No se pudieron cargar los líderes");
+      } else {
+        setLideres(data || []);
+      }
+    };
+    fetchLideres();
+  }, []);
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -87,6 +90,10 @@ export default function Home() {
       toast.error("Ingresá un teléfono");
       return false;
     }
+    if (!form.lider_id) {
+      toast.error("Seleccioná tu líder");
+      return false;
+    }
     return true;
   };
 
@@ -97,14 +104,24 @@ export default function Home() {
     setLoading(true);
 
     const payload = {
-      ...form,
-      rol: "Líder",
+      nombre: form.nombre,
+      apellido: form.apellido,
+      email: form.email || null,
+      telefono: form.telefono,
       edad: form.edad ? Number(form.edad) : null,
-      tamano_hogar: form.tamano_hogar ? Number(form.tamano_hogar) : null,
+      direccion: form.direccion || null,
       fecha_nacimiento: form.fecha_nacimiento || null,
-      fecha_conversion: form.fecha_conversion || null,
-      fecha_llegada_cfc: form.fecha_llegada_cfc || null,
-      fecha_bautismo: form.fecha_bautismo || null,
+      genero: form.genero || null,
+      estado_civil: form.estado_civil || null,
+      whatsapp: form.whatsapp || null,
+      barrio_zona: form.barrio_zona || null,
+      ocupacion: form.ocupacion || null,
+      bautizado: form.bautizado || null,
+      fue_encuentro: form.fue_encuentro || null,
+      conyuge: form.conyuge || null,
+      hijos: form.hijos || null,
+      rol: "Miembro",
+      lider_id: Number(form.lider_id),
     };
 
     const { error } = await supabase.from("personas").insert([payload]);
@@ -194,7 +211,7 @@ export default function Home() {
           >
             Centro Familiar Cristiano
             <br />
-            LIDERES
+            MIEMBROS
           </h2>
         </div>
 
@@ -244,81 +261,44 @@ export default function Home() {
             {sectionTitle("Ubicación")}
             <input placeholder="Dirección" value={form.direccion} onChange={set("direccion")} />
             <input placeholder="Barrio / Zona" value={form.barrio_zona} onChange={set("barrio_zona")} />
-
             <input placeholder="Ocupación" value={form.ocupacion} onChange={set("ocupacion")} />
-            <select value={form.nivel_educacion} onChange={set("nivel_educacion")}>
-              <option value="">Nivel de Educación</option>
-              <option value="Primaria">Primaria</option>
-              <option value="Secundaria">Secundaria</option>
-              <option value="Técnico">Técnico</option>
-              <option value="Universitario">Universitario</option>
-              <option value="Otro">Otro</option>
-            </select>
           </>
         )}
 
-        {/* STEP 1: IGLESIA */}
+        {/* STEP 1: IGLESIA Y LÍDER */}
         {step === 1 && (
           <>
             {sectionTitle("Vida en la Iglesia")}
-            <label className="field-label">Fecha de Conversión</label>
-            <input type="date" value={form.fecha_conversion} onChange={set("fecha_conversion")} />
-            <label className="field-label">Fecha de Llegada a CFC</label>
-            <input type="date" value={form.fecha_llegada_cfc} onChange={set("fecha_llegada_cfc")} />
-
             <select value={form.bautizado} onChange={set("bautizado")}>
               <option value="">¿Está Bautizado?</option>
               <option value="Sí">Sí</option>
               <option value="No">No</option>
             </select>
-            {form.bautizado === "Sí" && (
-              <>
-                <label className="field-label">Fecha de Bautismo</label>
-                <input type="date" value={form.fecha_bautismo} onChange={set("fecha_bautismo")} />
-              </>
-            )}
-
             <select value={form.fue_encuentro} onChange={set("fue_encuentro")}>
               <option value="">¿Fue a un Encuentro?</option>
               <option value="Sí">Sí</option>
               <option value="No">No</option>
             </select>
 
-            <select value={form.nivel_formacion} onChange={set("nivel_formacion")}>
-              <option value="">Nivel de Formación</option>
-              <option value="Ninguno">Ninguno</option>
-              <option value="EFE">EFE</option>
-              <option value="Liderazgo">Liderazgo</option>
+            {sectionTitle("Tu Líder *")}
+            <select value={form.lider_id} onChange={set("lider_id")}>
+              <option value="">Seleccioná tu líder</option>
+              {lideres.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.apellido}, {l.nombre}
+                </option>
+              ))}
             </select>
+            {lideres.length === 0 && (
+              <p style={{ color: "#94a3b8", fontSize: 12 }}>
+                Cargando líderes...
+              </p>
+            )}
           </>
         )}
 
-        {/* STEP 2: SERVICIO */}
+        {/* STEP 2: FAMILIA */}
         {step === 2 && (
-          <>
-            {sectionTitle("Servicio y Habilidades")}
-            <textarea
-              placeholder="Habilidades técnicas/profesionales (ej: Sonido, Diseño, Arte, Danza, Medicina, Albañilería...)"
-              value={form.habilidades_tecnicas}
-              onChange={set("habilidades_tecnicas")}
-              rows={3}
-            />
-            <select value={form.disponibilidad_horaria} onChange={set("disponibilidad_horaria")}>
-              <option value="">Disponibilidad Horaria</option>
-              <option value="Mañana">Mañana</option>
-              <option value="Tarde">Tarde</option>
-              <option value="Noche">Noche</option>
-              <option value="Fines de semana">Fines de semana</option>
-              <option value="Flexible">Flexible</option>
-            </select>
-            <input placeholder="Área de servicio actual" value={form.area_servicio_actual} onChange={set("area_servicio_actual")} />
-            <input placeholder="Ministerio" value={form.ministerio} onChange={set("ministerio")} />
-            <input placeholder="Grupo / Célula" value={form.grupo_celula} onChange={set("grupo_celula")} />
-          </>
-        )}
-
-        {/* STEP 3: FAMILIA */}
-        {step === 3 && (
           <>
             {sectionTitle("Información Familiar")}
             <select value={form.estado_civil} onChange={set("estado_civil")}>
@@ -330,13 +310,6 @@ export default function Home() {
             </select>
             <input placeholder="Cónyuge" value={form.conyuge} onChange={set("conyuge")} />
             <input placeholder="Hijos (nombres o cantidad)" value={form.hijos} onChange={set("hijos")} />
-            <input type="number" placeholder="Tamaño del hogar" value={form.tamano_hogar} onChange={set("tamano_hogar")} />
-            <textarea
-              placeholder="Vínculos familiares en la iglesia (ej: hermano de Juan Pérez, hija de María López...)"
-              value={form.vinculos_familiares_iglesia}
-              onChange={set("vinculos_familiares_iglesia")}
-              rows={3}
-            />
           </>
         )}
 
