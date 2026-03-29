@@ -30,6 +30,9 @@ type FormData = {
   area_servicio_actual: string;
   ministerio: string;
   grupo_celula: string;
+  dia_reunion: string;
+  hora_reunion: string;
+  lugar_reunion: string;
   conyuge: string;
   hijos: string;
   tamano_hogar: string;
@@ -61,13 +64,16 @@ const INITIAL_FORM: FormData = {
   area_servicio_actual: "",
   ministerio: "",
   grupo_celula: "",
+  dia_reunion: "",
+  hora_reunion: "",
+  lugar_reunion: "",
   conyuge: "",
   hijos: "",
   tamano_hogar: "",
   vinculos_familiares_iglesia: "",
 };
 
-const STEPS = ["Datos Personales", "Iglesia", "Servicio", "Familia"];
+const STEPS = ["Datos Personales", "Iglesia", "Servicio", "Célula", "Familia"];
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
@@ -313,12 +319,32 @@ export default function Home() {
             </select>
             <input placeholder="Área de servicio actual" value={form.area_servicio_actual} onChange={set("area_servicio_actual")} />
             <input placeholder="Ministerio" value={form.ministerio} onChange={set("ministerio")} />
-            <input placeholder="Grupo / Célula" value={form.grupo_celula} onChange={set("grupo_celula")} />
           </>
         )}
 
-        {/* STEP 3: FAMILIA */}
+        {/* STEP 3: CÉLULA */}
         {step === 3 && (
+          <>
+            {sectionTitle("Datos de tu Célula")}
+            <input placeholder="Nombre de la célula (ej: Célula Esperanza)" value={form.grupo_celula} onChange={set("grupo_celula")} />
+            <select value={form.dia_reunion} onChange={set("dia_reunion")}>
+              <option value="">Día de reunión</option>
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
+            <label className="field-label">Hora de reunión</label>
+            <input type="time" value={form.hora_reunion} onChange={set("hora_reunion")} />
+            <input placeholder="Lugar de reunión (dirección)" value={form.lugar_reunion} onChange={set("lugar_reunion")} />
+          </>
+        )}
+
+        {/* STEP 4: FAMILIA */}
+        {step === 4 && (
           <>
             {sectionTitle("Información Familiar")}
             <select value={form.estado_civil} onChange={set("estado_civil")}>
