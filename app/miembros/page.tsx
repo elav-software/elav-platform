@@ -14,14 +14,11 @@ type Lider = {
 type FormData = {
   nombre: string;
   apellido: string;
-  email: string;
   telefono: string;
-  edad: string;
   direccion: string;
   fecha_nacimiento: string;
   genero: string;
   estado_civil: string;
-  whatsapp: string;
   barrio_zona: string;
   ocupacion: string;
   lider_id: string;
@@ -34,14 +31,11 @@ type FormData = {
 const INITIAL_FORM: FormData = {
   nombre: "",
   apellido: "",
-  email: "",
   telefono: "",
-  edad: "",
   direccion: "",
   fecha_nacimiento: "",
   genero: "",
   estado_civil: "",
-  whatsapp: "",
   barrio_zona: "",
   ocupacion: "",
   lider_id: "",
@@ -106,14 +100,11 @@ export default function MiembrosPage() {
     const payload = {
       nombre: form.nombre,
       apellido: form.apellido,
-      email: form.email || null,
       telefono: form.telefono,
-      edad: form.edad ? Number(form.edad) : null,
       direccion: form.direccion || null,
       fecha_nacimiento: form.fecha_nacimiento || null,
       genero: form.genero || null,
       estado_civil: form.estado_civil || null,
-      whatsapp: form.whatsapp || null,
       barrio_zona: form.barrio_zona || null,
       ocupacion: form.ocupacion || null,
       bautizado: form.bautizado || null,
@@ -246,7 +237,6 @@ export default function MiembrosPage() {
             <input placeholder="Apellido *" value={form.apellido} onChange={set("apellido")} />
             <label className="field-label">Fecha de Nacimiento</label>
             <input type="date" value={form.fecha_nacimiento} onChange={set("fecha_nacimiento")} />
-            <input type="number" placeholder="Edad" value={form.edad} onChange={set("edad")} />
             <select value={form.genero} onChange={set("genero")}>
               <option value="">Género</option>
               <option value="Masculino">Masculino</option>
@@ -255,8 +245,6 @@ export default function MiembrosPage() {
 
             {sectionTitle("Contacto")}
             <input placeholder="Teléfono *" value={form.telefono} onChange={set("telefono")} />
-            <input placeholder="WhatsApp" value={form.whatsapp} onChange={set("whatsapp")} />
-            <input placeholder="Email" value={form.email} onChange={set("email")} />
 
             {sectionTitle("Ubicación")}
             <input placeholder="Dirección" value={form.direccion} onChange={set("direccion")} />
