@@ -121,7 +121,7 @@ export default function MiembrosPage() {
       conyuge: form.conyuge || null,
       hijos: form.hijos || null,
       rol: "Miembro",
-      lider_id: Number(form.lider_id),
+      lider_id: form.lider_id,
     };
 
     const { error } = await supabase.from("personas").insert([payload]);
