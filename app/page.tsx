@@ -193,7 +193,7 @@ export default function Home() {
           >
             Centro Familiar Cristiano
             <br />
-            Censo de Miembros
+            LIDERES
           </h2>
         </div>
 
