@@ -9,10 +9,11 @@ type FormData = {
   nombre: string; apellido: string; email: string; telefono: string;
   edad: string; direccion: string; fecha_nacimiento: string; genero: string;
   estado_civil: string; whatsapp: string; barrio_zona: string; ocupacion: string;
-  nivel_educacion: string; fecha_conversion: string; fecha_llegada_cfc: string;
-  bautizado: string; fecha_bautismo: string; fue_encuentro: string;
-  nivel_formacion: string; habilidades_tecnicas: string; disponibilidad_horaria: string;
-  area_servicio_actual: string; ministerio: string; grupo_celula: string;
+  nivel_educacion: string; ano_conversion: string; fecha_llegada_cfc: string;
+  bautizado: string; ano_bautismo: string; fue_encuentro: string;
+  nivel_formacion: string; como_conociste: string; quien_te_invito: string;
+  habilidades_tecnicas: string; disponibilidad_horaria: string[]; 
+  area_servicio_actual: string[]; ministerio: string; grupo_celula: string;
   dia_reunion: string; hora_reunion: string; lugar_reunion: string;
   conyuge: string; hijos: string; tamano_hogar: string; vinculos_familiares_iglesia: string;
 };
@@ -20,14 +21,24 @@ type FormData = {
 const INITIAL_FORM: FormData = {
   nombre: "", apellido: "", email: "", telefono: "", edad: "", direccion: "",
   fecha_nacimiento: "", genero: "", estado_civil: "", whatsapp: "", barrio_zona: "",
-  ocupacion: "", nivel_educacion: "", fecha_conversion: "", fecha_llegada_cfc: "",
-  bautizado: "", fecha_bautismo: "", fue_encuentro: "", nivel_formacion: "",
-  habilidades_tecnicas: "", disponibilidad_horaria: "", area_servicio_actual: "",
+  ocupacion: "", nivel_educacion: "", ano_conversion: "", fecha_llegada_cfc: "",
+  bautizado: "", ano_bautismo: "", fue_encuentro: "", nivel_formacion: "",
+  como_conociste: "", quien_te_invito: "", habilidades_tecnicas: "", 
+  disponibilidad_horaria: [], area_servicio_actual: [], 
   ministerio: "", grupo_celula: "", dia_reunion: "", hora_reunion: "", lugar_reunion: "",
   conyuge: "", hijos: "", tamano_hogar: "", vinculos_familiares_iglesia: "",
 };
 
 const STEPS = ["Datos Personales", "Iglesia", "Servicio", "Célula", "Familia"];
+
+const AREAS_SERVICIO = [
+  "Consolidación", "Vasos de barro", "Coro Kids", "Alabanza", "Expresión", 
+  "Intercesión", "CFC Niños", "Medios", "Social media", "Sonido", "Luces", 
+  "Pantalla", "Llamados a la escena", "Servicio Especial", "Seguridad", 
+  "Casa en Orden", "Asesoramiento de Imagen", "Primeros Auxilios", "Embajadores de Alegría"
+];
+
+const DISPONIBILIDAD = ["Mañana", "Tarde", "Noche", "Fines de semana", "Flexible"];
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
@@ -37,6 +48,18 @@ export default function Home() {
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => setForm({ ...form, [field]: e.target.value });
+
+  // Manejador específico para los checkboxes (Arrays)
+  const handleCheckbox = (field: "area_servicio_actual" | "disponibilidad_horaria", value: string) => {
+    setForm(prev => {
+      const currentArray = prev[field];
+      if (currentArray.includes(value)) {
+        return { ...prev, [field]: currentArray.filter(item => item !== value) };
+      } else {
+        return { ...prev, [field]: [...currentArray, value] };
+      }
+    });
+  };
 
   const validate = () => {
     if (!form.nombre || !form.apellido) {
@@ -62,9 +85,12 @@ export default function Home() {
       edad: form.edad ? Number(form.edad) : null,
       tamano_hogar: form.tamano_hogar ? Number(form.tamano_hogar) : null,
       fecha_nacimiento: form.fecha_nacimiento || null,
-      fecha_conversion: form.fecha_conversion || null,
+      ano_conversion: form.ano_conversion || null,
+      ano_bautismo: form.ano_bautismo || null,
       fecha_llegada_cfc: form.fecha_llegada_cfc || null,
-      fecha_bautismo: form.fecha_bautismo || null,
+      // Convertimos los arrays en texto plano separado por comas para evitar errores en DB
+      area_servicio_actual: form.area_servicio_actual.join(", ") || null,
+      disponibilidad_horaria: form.disponibilidad_horaria.join(", ") || null,
     };
 
     const { error } = await supabase.from("personas").insert([payload]);
@@ -82,8 +108,6 @@ export default function Home() {
   };
 
   const next = () => {
-    // Aquí idealmente se validaría cada paso antes de avanzar. 
-    // Por ahora solo aseguramos que avance visualmente.
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
   const prev = () => setStep((s) => Math.max(s - 1, 0));
@@ -111,7 +135,6 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white p-6 md:p-10 rounded-2xl w-full max-w-2xl shadow-xl border border-slate-100"
       >
-        {/* LOGO + TÍTULO */}
         <div className="flex flex-col items-center mb-8">
           <img src="/logo.png" alt="CFC Logo" className="w-20 h-auto object-contain mb-4" />
           <h2 className="text-slate-800 text-2xl font-bold text-center leading-tight">
@@ -120,7 +143,6 @@ export default function Home() {
           </h2>
         </div>
 
-        {/* STEP INDICATOR */}
         <div className="flex flex-wrap gap-2 justify-center mb-8">
           {STEPS.map((s, i) => {
             const isCompleted = i < step;
@@ -224,9 +246,31 @@ export default function Home() {
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             {sectionTitle("Vida en la Iglesia")}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={`${fieldGroupClasses} md:col-span-2`}>
+                <label className={labelClasses}>¿Cómo conociste la iglesia?</label>
+                <select className={inputClasses} value={form.como_conociste} onChange={set("como_conociste")}>
+                  <option value="">Seleccionar...</option>
+                  <option value="Invitación de un amigo/familiar">Invitación de un amigo/familiar</option>
+                  <option value="Invitación de un miembro de la iglesia">Invitación de un miembro de la iglesia</option>
+                  <option value="Instagram / Facebook">Instagram / Facebook</option>
+                  <option value="YouTube">YouTube</option>
+                  <option value="Sitio Web / Búsqueda en Google">Sitio Web / Búsqueda en Google</option>
+                  <option value="Pasaba por la puerta">Pasaba por la puerta</option>
+                  <option value="Evento especial / Campaña">Evento especial / Campaña</option>
+                  <option value="Radio / TV">Radio / TV</option>
+                </select>
+              </div>
+              
+              {(form.como_conociste === "Invitación de un amigo/familiar" || form.como_conociste === "Invitación de un miembro de la iglesia") && (
+                <div className={`${fieldGroupClasses} md:col-span-2`}>
+                  <label className={labelClasses}>¿Quién te invitó?</label>
+                  <input className={inputClasses} value={form.quien_te_invito} onChange={set("quien_te_invito")} placeholder="Nombre de la persona" />
+                </div>
+              )}
+
               <div className={fieldGroupClasses}>
-                <label className={labelClasses}>Fecha de Conversión</label>
-                <input type="date" className={inputClasses} value={form.fecha_conversion} onChange={set("fecha_conversion")} />
+                <label className={labelClasses}>Año de Conversión</label>
+                <input type="number" min="1950" max="2026" className={inputClasses} value={form.ano_conversion} onChange={set("ano_conversion")} placeholder="Ej: 2015" />
               </div>
               <div className={fieldGroupClasses}>
                 <label className={labelClasses}>Fecha de Llegada a CFC</label>
@@ -242,8 +286,8 @@ export default function Home() {
               </div>
               {form.bautizado === "Sí" && (
                 <div className={fieldGroupClasses}>
-                  <label className={labelClasses}>Fecha de Bautismo</label>
-                  <input type="date" className={inputClasses} value={form.fecha_bautismo} onChange={set("fecha_bautismo")} />
+                  <label className={labelClasses}>Año de Bautismo</label>
+                  <input type="number" min="1950" max="2026" className={inputClasses} value={form.ano_bautismo} onChange={set("ano_bautismo")} placeholder="Ej: 2016" />
                 </div>
               )}
               <div className={fieldGroupClasses}>
@@ -255,7 +299,7 @@ export default function Home() {
                 </select>
               </div>
               <div className={fieldGroupClasses}>
-                <label className={labelClasses}>Nivel de Formación</label>
+                <label className={labelClasses}>Nivel de Formación Ministerial</label>
                 <select className={inputClasses} value={form.nivel_formacion} onChange={set("nivel_formacion")}>
                   <option value="">Seleccionar...</option>
                   <option value="Ninguno">Ninguno</option>
@@ -281,26 +325,51 @@ export default function Home() {
                 rows={3} 
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={fieldGroupClasses}>
-                <label className={labelClasses}>Disponibilidad Horaria</label>
-                <select className={inputClasses} value={form.disponibilidad_horaria} onChange={set("disponibilidad_horaria")}>
-                  <option value="">Seleccionar...</option>
-                  <option value="Mañana">Mañana</option>
-                  <option value="Tarde">Tarde</option>
-                  <option value="Noche">Noche</option>
-                  <option value="Fines de semana">Fines de semana</option>
-                  <option value="Flexible">Flexible</option>
-                </select>
+
+            <div className="mb-6">
+              <label className={`${labelClasses} mb-3`}>Área de servicio actual (Puedes seleccionar varias)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                {AREAS_SERVICIO.map(area => (
+                  <label key={area} className="flex items-center space-x-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                      checked={form.area_servicio_actual.includes(area)}
+                      onChange={() => handleCheckbox("area_servicio_actual", area)}
+                    />
+                    <span className="text-sm text-slate-700">{area}</span>
+                  </label>
+                ))}
               </div>
-              <div className={fieldGroupClasses}>
-                <label className={labelClasses}>Área de servicio actual</label>
-                <input className={inputClasses} value={form.area_servicio_actual} onChange={set("area_servicio_actual")} />
+            </div>
+
+            <div className="mb-6">
+              <label className={`${labelClasses} mb-3`}>Disponibilidad Horaria (Puedes seleccionar varias)</label>
+              <div className="flex flex-wrap gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                {DISPONIBILIDAD.map(disp => (
+                  <label key={disp} className="flex items-center space-x-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                      checked={form.disponibilidad_horaria.includes(disp)}
+                      onChange={() => handleCheckbox("disponibilidad_horaria", disp)}
+                    />
+                    <span className="text-sm text-slate-700">{disp}</span>
+                  </label>
+                ))}
               </div>
-              <div className={`${fieldGroupClasses} md:col-span-2`}>
-                <label className={labelClasses}>Ministerio principal</label>
-                <input className={inputClasses} value={form.ministerio} onChange={set("ministerio")} />
-              </div>
+            </div>
+
+            <div className={fieldGroupClasses}>
+              <label className={labelClasses}>Ministerio principal</label>
+              <select className={inputClasses} value={form.ministerio} onChange={set("ministerio")}>
+              <option value="">Seleccionar...</option>
+             <option value="Pastor">Pastor</option>
+            <option value="Maestro">Maestro</option>
+            <option value="Profeta">Profeta</option>
+            <option value="Evangelista">Evangelista</option>
+             <option value="Apostol">Apostol</option>
+              </select>
             </div>
           </div>
         )}
@@ -311,8 +380,14 @@ export default function Home() {
             {sectionTitle("Datos de tu Célula")}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className={`${fieldGroupClasses} md:col-span-2`}>
-                <label className={labelClasses}>Nombre de la célula</label>
-                <input className={inputClasses} placeholder="Ej: Célula Esperanza" value={form.grupo_celula} onChange={set("grupo_celula")} />
+                <label className={labelClasses}>Red</label>
+                <select className={inputClasses} value={form.grupo_celula} onChange={set("grupo_celula")}>
+                  <option value="">Seleccionar red...</option>
+                  <option value="Jóvenes">Jóvenes</option>
+                  <option value="Entrelazados">Entrelazados</option>
+                  <option value="Familias de Bendición">Familias de Bendición</option>
+                  <option value="Generales">Generales</option>
+                </select>
               </div>
               <div className={fieldGroupClasses}>
                 <label className={labelClasses}>Día de reunión</label>
@@ -380,7 +455,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* NAVIGATION BUTTONS */}
         <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
           <div>
             {step > 0 && (
