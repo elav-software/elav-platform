@@ -12,37 +12,16 @@ type Lider = {
 };
 
 type FormData = {
-  nombre: string;
-  apellido: string;
-  telefono: string;
-  direccion: string;
-  fecha_nacimiento: string;
-  genero: string;
-  estado_civil: string;
-  barrio_zona: string;
-  ocupacion: string;
-  lider_id: string;
-  bautizado: string;
-  fue_encuentro: string;
-  conyuge: string;
-  hijos: string;
+  nombre: string; apellido: string; telefono: string; direccion: string;
+  fecha_nacimiento: string; genero: string; estado_civil: string;
+  barrio_zona: string; ocupacion: string; lider_id: string;
+  bautizado: string; fue_encuentro: string; conyuge: string; hijos: string;
 };
 
 const INITIAL_FORM: FormData = {
-  nombre: "",
-  apellido: "",
-  telefono: "",
-  direccion: "",
-  fecha_nacimiento: "",
-  genero: "",
-  estado_civil: "",
-  barrio_zona: "",
-  ocupacion: "",
-  lider_id: "",
-  bautizado: "",
-  fue_encuentro: "",
-  conyuge: "",
-  hijos: "",
+  nombre: "", apellido: "", telefono: "", direccion: "", fecha_nacimiento: "",
+  genero: "", estado_civil: "", barrio_zona: "", ocupacion: "", lider_id: "",
+  bautizado: "", fue_encuentro: "", conyuge: "", hijos: "",
 };
 
 const STEPS = ["Datos Personales", "Iglesia y Líder", "Familia"];
@@ -133,22 +112,17 @@ export default function MiembrosPage() {
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const sectionTitle = (text: string) => (
-    <p style={{ color: "#ef4444", fontWeight: 600, fontSize: 14, marginBottom: 4, marginTop: 8, letterSpacing: "0.5px" }}>
+    <h3 className="text-blue-700 font-semibold text-lg border-b border-slate-200 pb-2 mb-4 mt-6">
       {text}
-    </p>
+    </h3>
   );
 
+  const inputClasses = "w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-800 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow";
+  const labelClasses = "block text-sm font-medium text-slate-700 mb-1";
+  const fieldGroupClasses = "flex flex-col mb-4";
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "radial-gradient(circle at top, #1a0000, #020617)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 20,
-      }}
-    >
+    <div className="min-h-screen bg-slate-50 flex justify-center items-start py-10 px-4">
       <Toaster position="top-right" />
 
       <motion.form
@@ -156,248 +130,195 @@ export default function MiembrosPage() {
         onKeyDown={(e: React.KeyboardEvent) => {
           if (e.key === "Enter" && step < STEPS.length - 1) e.preventDefault();
         }}
-        initial={{ opacity: 0, y: 40 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{
-          background: "#020617",
-          padding: "30px",
-          borderRadius: "16px",
-          width: "100%",
-          maxWidth: "460px",
-          color: "white",
-          boxShadow: "0 0 30px rgba(255,0,0,0.2)",
-          border: "1px solid #7f1d1d",
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-        }}
+        className="bg-white p-6 md:p-10 rounded-2xl w-full max-w-2xl shadow-xl border border-slate-100"
       >
         {/* LOGO + TÍTULO */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 10 }}>
-          <motion.img
-            src="/logo.png"
-            alt="CFC Logo"
-            initial={{ scale: 1 }}
-            animate={{ scale: [1, 1.06, 1, 1.04, 1] }}
-            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-            whileHover={{ scale: 1.1 }}
-            style={{
-              width: 70,
-              height: "auto",
-              objectFit: "contain",
-              cursor: "pointer",
-              filter: "drop-shadow(0 0 8px rgba(255,0,0,0.7))",
-            }}
-          />
-          <h2
-            style={{
-              color: "#ef4444",
-              letterSpacing: "1px",
-              textShadow: "0 0 6px rgba(255,255,255,0.6)",
-              marginTop: 8,
-              textAlign: "center",
-              fontSize: "clamp(16px, 4vw, 22px)",
-              lineHeight: "1.2",
-            }}
-          >
-            Centro Familiar Cristiano
-            <br />
-            MIEMBROS
+        <div className="flex flex-col items-center mb-8">
+          <img src="/logo.png" alt="CFC Logo" className="w-20 h-auto object-contain mb-4" />
+          <h2 className="text-slate-800 text-2xl font-bold text-center leading-tight">
+            Centro Familiar Cristiano<br />
+            <span className="text-blue-600">Censo de Miembros</span>
           </h2>
         </div>
 
         {/* STEP INDICATOR */}
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 6 }}>
-          {STEPS.map((s, i) => (
-            <div
-              key={s}
-              onClick={() => setStep(i)}
-              style={{
-                padding: "4px 10px",
-                borderRadius: 20,
-                fontSize: 11,
-                fontWeight: step === i ? 700 : 400,
-                background: step === i ? "#7f1d1d" : "transparent",
-                border: `1px solid ${step === i ? "#ef4444" : "#334155"}`,
-                color: step === i ? "#fff" : "#94a3b8",
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-            >
-              {s}
-            </div>
-          ))}
+        <div className="flex flex-wrap gap-2 justify-center mb-8">
+          {STEPS.map((s, i) => {
+            const isCompleted = i < step;
+            const isCurrent = i === step;
+            return (
+              <div
+                key={s}
+                onClick={() => isCompleted && setStep(i)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isCurrent
+                    ? "bg-blue-600 text-white shadow-md"
+                    : isCompleted
+                    ? "bg-blue-50 text-blue-700 cursor-pointer hover:bg-blue-100"
+                    : "bg-slate-100 text-slate-400 opacity-70 cursor-not-allowed"
+                }`}
+              >
+                {s}
+              </div>
+            );
+          })}
         </div>
 
         {/* STEP 0: DATOS PERSONALES */}
         {step === 0 && (
-          <>
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             {sectionTitle("Información Personal")}
-            <input placeholder="Nombre *" value={form.nombre} onChange={set("nombre")} />
-            <input placeholder="Apellido *" value={form.apellido} onChange={set("apellido")} />
-            <label className="field-label">Fecha de Nacimiento</label>
-            <input type="date" value={form.fecha_nacimiento} onChange={set("fecha_nacimiento")} />
-            <select value={form.genero} onChange={set("genero")}>
-              <option value="">Género</option>
-              <option value="Masculino">Masculino</option>
-              <option value="Femenino">Femenino</option>
-            </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Nombre *</label>
+                <input className={inputClasses} value={form.nombre} onChange={set("nombre")} placeholder="Tu nombre" />
+              </div>
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Apellido *</label>
+                <input className={inputClasses} value={form.apellido} onChange={set("apellido")} placeholder="Tu apellido" />
+              </div>
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Fecha de Nacimiento</label>
+                <input type="date" className={inputClasses} value={form.fecha_nacimiento} onChange={set("fecha_nacimiento")} />
+              </div>
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Género</label>
+                <select className={inputClasses} value={form.genero} onChange={set("genero")}>
+                  <option value="">Seleccionar...</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                </select>
+              </div>
+            </div>
 
             {sectionTitle("Contacto")}
-            <input placeholder="Teléfono *" value={form.telefono} onChange={set("telefono")} />
+            <div className={fieldGroupClasses}>
+              <label className={labelClasses}>Teléfono *</label>
+              <input type="tel" className={inputClasses} value={form.telefono} onChange={set("telefono")} placeholder="Ej: 1123456789" />
+            </div>
 
-            {sectionTitle("Ubicación")}
-            <input placeholder="Dirección" value={form.direccion} onChange={set("direccion")} />
-            <input placeholder="Barrio / Zona" value={form.barrio_zona} onChange={set("barrio_zona")} />
-            <input placeholder="Ocupación" value={form.ocupacion} onChange={set("ocupacion")} />
-          </>
+            {sectionTitle("Ubicación y Perfil")}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Dirección</label>
+                <input className={inputClasses} value={form.direccion} onChange={set("direccion")} placeholder="Tu dirección" />
+              </div>
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Barrio / Zona</label>
+                <input className={inputClasses} value={form.barrio_zona} onChange={set("barrio_zona")} placeholder="Ej: Isidro Casanova" />
+              </div>
+              <div className={`${fieldGroupClasses} md:col-span-2`}>
+                <label className={labelClasses}>Ocupación</label>
+                <input className={inputClasses} value={form.ocupacion} onChange={set("ocupacion")} placeholder="Ej: Empleado, Estudiante" />
+              </div>
+            </div>
+          </div>
         )}
 
         {/* STEP 1: IGLESIA Y LÍDER */}
         {step === 1 && (
-          <>
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             {sectionTitle("Vida en la Iglesia")}
-            <select value={form.bautizado} onChange={set("bautizado")}>
-              <option value="">¿Está Bautizado?</option>
-              <option value="Sí">Sí</option>
-              <option value="No">No</option>
-            </select>
-            <select value={form.fue_encuentro} onChange={set("fue_encuentro")}>
-              <option value="">¿Fue a un Encuentro?</option>
-              <option value="Sí">Sí</option>
-              <option value="No">No</option>
-            </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>¿Está Bautizado?</label>
+                <select className={inputClasses} value={form.bautizado} onChange={set("bautizado")}>
+                  <option value="">Seleccionar...</option>
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>¿Fue a un Encuentro?</label>
+                <select className={inputClasses} value={form.fue_encuentro} onChange={set("fue_encuentro")}>
+                  <option value="">Seleccionar...</option>
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+            </div>
 
             {sectionTitle("Tu Líder *")}
-            <select value={form.lider_id} onChange={set("lider_id")}>
-              <option value="">Seleccioná tu líder</option>
-              {lideres.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.apellido}, {l.nombre}
-                </option>
-              ))}
-            </select>
-            {lideres.length === 0 && (
-              <p style={{ color: "#94a3b8", fontSize: 12 }}>
-                Cargando líderes...
-              </p>
-            )}
-          </>
+            <div className={fieldGroupClasses}>
+              <label className={labelClasses}>Seleccioná tu líder</label>
+              <select className={inputClasses} value={form.lider_id} onChange={set("lider_id")}>
+                <option value="">Buscar en la lista...</option>
+                {lideres.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.apellido}, {l.nombre}
+                  </option>
+                ))}
+              </select>
+              {lideres.length === 0 && (
+                <p className="text-sm text-slate-500 mt-2 italic">Cargando líderes disponibles...</p>
+              )}
+            </div>
+          </div>
         )}
 
         {/* STEP 2: FAMILIA */}
         {step === 2 && (
-          <>
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             {sectionTitle("Información Familiar")}
-            <select value={form.estado_civil} onChange={set("estado_civil")}>
-              <option value="">Estado Civil</option>
-              <option value="Soltero/a">Soltero/a</option>
-              <option value="Casado/a">Casado/a</option>
-              <option value="Viudo/a">Viudo/a</option>
-              <option value="Divorciado/a">Divorciado/a</option>
-            </select>
-            <input placeholder="Cónyuge" value={form.conyuge} onChange={set("conyuge")} />
-            <input placeholder="Hijos (nombres o cantidad)" value={form.hijos} onChange={set("hijos")} />
-          </>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Estado Civil</label>
+                <select className={inputClasses} value={form.estado_civil} onChange={set("estado_civil")}>
+                  <option value="">Seleccionar...</option>
+                  <option value="Soltero/a">Soltero/a</option>
+                  <option value="Casado/a">Casado/a</option>
+                  <option value="Viudo/a">Viudo/a</option>
+                  <option value="Divorciado/a">Divorciado/a</option>
+                </select>
+              </div>
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Cónyuge</label>
+                <input className={inputClasses} value={form.conyuge} onChange={set("conyuge")} placeholder="Nombre del cónyuge" />
+              </div>
+              <div className={`${fieldGroupClasses} md:col-span-2`}>
+                <label className={labelClasses}>Hijos</label>
+                <input className={inputClasses} value={form.hijos} onChange={set("hijos")} placeholder="Nombres o cantidad" />
+              </div>
+            </div>
+          </div>
         )}
 
         {/* NAVIGATION BUTTONS */}
-        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          {step > 0 && (
-            <button type="button" onClick={prev} className="btn-secondary">
-              ← Anterior
-            </button>
-          )}
-          {step < STEPS.length - 1 ? (
-            <button type="button" onClick={next} className="btn-primary" style={{ marginLeft: "auto" }}>
-              Siguiente →
-            </button>
-          ) : (
-            <button type="button" disabled={loading} className="btn-submit" style={{ marginLeft: "auto" }}
-              onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}>
-              {loading ? "Enviando..." : "Enviar Censo"}
-            </button>
-          )}
+        <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+          <div>
+            {step > 0 && (
+              <button 
+                type="button" 
+                onClick={prev} 
+                className="px-6 py-3 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 font-medium transition-colors"
+              >
+                ← Anterior
+              </button>
+            )}
+          </div>
+          <div>
+            {step < STEPS.length - 1 ? (
+              <button 
+                type="button" 
+                onClick={next} 
+                className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors"
+              >
+                Siguiente →
+              </button>
+            ) : (
+              <button 
+                type="button" 
+                disabled={loading} 
+                onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}
+                className="px-8 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md transition-colors disabled:opacity-50"
+              >
+                {loading ? "Enviando..." : "Enviar Censo"}
+              </button>
+            )}
+          </div>
         </div>
-
-        {/* ESTILOS */}
-        <style jsx>{`
-          input,
-          select,
-          textarea {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #7f1d1d;
-            background: #020617;
-            color: white;
-            font-size: 14px;
-          }
-
-          textarea {
-            resize: vertical;
-            font-family: inherit;
-          }
-
-          select {
-            appearance: none;
-            cursor: pointer;
-          }
-
-          input::placeholder,
-          textarea::placeholder {
-            color: #94a3b8;
-          }
-
-          input:focus,
-          select:focus,
-          textarea:focus {
-            outline: none;
-            border: 1px solid #ef4444;
-            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
-          }
-
-          .field-label {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-bottom: -4px;
-          }
-
-          .btn-primary,
-          .btn-submit {
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: none;
-            background: linear-gradient(90deg, #b91c1c, #ef4444);
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-            font-size: 14px;
-          }
-
-          .btn-primary:hover,
-          .btn-submit:hover {
-            background: linear-gradient(90deg, #991b1b, #dc2626);
-          }
-
-          .btn-secondary {
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            background: transparent;
-            color: #94a3b8;
-            font-weight: 500;
-            cursor: pointer;
-            transition: 0.2s;
-            font-size: 14px;
-          }
-
-          .btn-secondary:hover {
-            border-color: #94a3b8;
-            color: white;
-          }
-        `}</style>
       </motion.form>
     </div>
   );
