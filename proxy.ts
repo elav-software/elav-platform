@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
 
   const url = request.nextUrl
 
@@ -10,9 +10,9 @@ export function middleware(request: NextRequest) {
 
   if (isCrmRoute && !isCrmLogin) {
 
-    const token = request.cookies.get("sb-access-token")
+    const auth = request.cookies.get("crm-auth")
 
-    if (!token) {
+    if (!auth) {
 
       return NextResponse.redirect(new URL("/crm/login", request.url))
 
@@ -22,4 +22,8 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next()
 
+}
+
+export const config = {
+  matcher: ['/crm/:path*'],
 }

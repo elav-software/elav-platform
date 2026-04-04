@@ -23,6 +23,7 @@ export default function Login() {
     }
 
     router.push("/crm/dashboard")
+    document.cookie = "crm-auth=1; path=/; max-age=86400"
 
   }
 
