@@ -1,22 +1,22 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const host = request.headers.get("host")
 
-  if (!host) return NextResponse.next()
+  const url = request.nextUrl
 
-  if (host.startsWith("portal.")) {
-    return NextResponse.rewrite(new URL("/portal", request.url))
-  }
+  if (url.pathname.startsWith("/crm")) {
 
-  if (host.startsWith("crm.")) {
-    return NextResponse.rewrite(new URL("/crm", request.url))
-  }
+    const token = request.cookies.get("sb-access-token")
 
-  if (host.startsWith("censo.")) {
-    return NextResponse.rewrite(new URL("/", request.url))
+    if (!token) {
+
+      return NextResponse.redirect(new URL("/crm/login", request.url))
+
+    }
+
   }
 
   return NextResponse.next()
+
 }
