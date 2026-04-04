@@ -1,4 +1,19 @@
+"use client"
+
+import { useEffect } from "react"
+import { supabase } from "@/lib/supabase"
+
 export default function Dashboard() {
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = "/crm/login"
+      }
+    }
+    checkSession()
+  }, [])
 
   return (
 

@@ -5,7 +5,10 @@ export function middleware(request: NextRequest) {
 
   const url = request.nextUrl
 
-  if (url.pathname.startsWith("/crm")) {
+  const isCrmRoute = url.pathname.startsWith("/crm")
+  const isCrmLogin = url.pathname.startsWith("/crm/login")
+
+  if (isCrmRoute && !isCrmLogin) {
 
     const token = request.cookies.get("sb-access-token")
 
