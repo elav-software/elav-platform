@@ -77,25 +77,26 @@ export function proxy(request: NextRequest) {
 
   // crm.cfccasanova.com/* → /crm/*
   if (subdomain === "crm") {
-    // Already on a /crm path or /api — no rewrite needed
+    const url = request.nextUrl.clone();
+
+    // Already rewritten to /crm/* — just apply auth guard
     if (pathname.startsWith("/crm")) {
-      // Auth guard for all CRM routes except login
       if (!pathname.startsWith("/crm/login") && !hasSession(request)) {
-        const loginUrl = new URL("/crm/login", request.url);
-        return NextResponse.redirect(loginUrl);
+        url.pathname = "/crm/login";
+        url.search = "";
+        return NextResponse.redirect(url);
       }
       return NextResponse.next();
     }
 
-    // Rewrite / → /crm/login (or /crm/dashboard if session exists)
-    const url = request.nextUrl.clone();
+    // / or any other path → redirect to /crm/login or /crm/dashboard
     if (pathname === "/" || pathname === "") {
       url.pathname = hasSession(request) ? "/crm/dashboard" : "/crm/login";
     } else {
       url.pathname = "/crm" + pathname;
     }
     url.search = search;
-    return NextResponse.rewrite(url);
+    return NextResponse.redirect(url);
   }
 
   // ── localhost / direct-path access (no subdomain) ─────────────────────────
