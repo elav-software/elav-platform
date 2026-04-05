@@ -76,25 +76,18 @@ export function proxy(request: NextRequest) {
   }
 
   // crm.cfccasanova.com/* → /crm/*
+  // No cookie-based auth guard here — Supabase JS uses localStorage, not cookies.
+  // Auth is enforced client-side by Layout.jsx (shows "Acceso no autorizado").
   if (subdomain === "crm") {
     const url = request.nextUrl.clone();
 
-    // Already rewritten to /crm/* — just apply auth guard
+    // Already on a /crm/* path — let it through
     if (pathname.startsWith("/crm")) {
-      if (!pathname.startsWith("/crm/login") && !hasSession(request)) {
-        url.pathname = "/crm/login";
-        url.search = "";
-        return NextResponse.redirect(url);
-      }
       return NextResponse.next();
     }
 
-    // / or any other path → redirect to /crm/login or /crm/dashboard
-    if (pathname === "/" || pathname === "") {
-      url.pathname = hasSession(request) ? "/crm/dashboard" : "/crm/login";
-    } else {
-      url.pathname = "/crm" + pathname;
-    }
+    // / or any other path → redirect to /crm/login
+    url.pathname = pathname === "/" || pathname === "" ? "/crm/login" : "/crm" + pathname;
     url.search = search;
     return NextResponse.redirect(url);
   }
