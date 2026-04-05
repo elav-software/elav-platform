@@ -57,6 +57,11 @@ export default function Welcome() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-950 to-slate-900 flex flex-col items-center justify-center px-4">
       <div className="flex flex-col items-center gap-8 max-w-md w-full">
         <div className="text-center">
+          <img
+            src="/logo.png"
+            alt="CFC CASA"
+            className="h-20 w-auto mx-auto mb-4 drop-shadow-lg"
+          />
           <h1 className="text-4xl font-bold text-white tracking-tight">CFC CASA CRM</h1>
           <p className="text-red-300 mt-1 text-lg">Sistema de Gestión</p>
         </div>
