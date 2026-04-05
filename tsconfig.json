@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@crm/*": ["./src/crm/*"]
+      "@crm/*": ["./src/crm/*"],
+      "@connect/*": ["./src/connect/*"]
     }
   },
   "include": [

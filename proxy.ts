@@ -4,9 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
  * Subdomain routing + auth guard
  *
  * Subdomain → root path mapping:
- *   censo.cfccasanova.com  → serves /          (public census form)
- *   portal.cfccasanova.com → serves /portal/*  (leaders portal, auth required)
- *   crm.cfccasanova.com    → serves /crm/*     (admin CRM, auth required)
+ *   cfccasanova.com (no subdomain / www) → /connect/home (public church website)
+ *   censo.cfccasanova.com  → /lider        (census form for leaders)
+ *   portal.cfccasanova.com → /portal/*     (leaders portal, auth required)
+ *   crm.cfccasanova.com    → /crm/*        (admin CRM, auth required)
  *
  * On localhost the subdomain detection is skipped — paths are used directly.
  */
@@ -55,8 +56,13 @@ export function proxy(request: NextRequest) {
 
   // ── Subdomain rewrites ────────────────────────────────────────────────────
 
-  // censo.cfccasanova.com → / (no rewrite needed, already root)
+  // censo.cfccasanova.com → /lider (census form)
   if (subdomain === "censo") {
+    const url = request.nextUrl.clone();
+    if (!pathname.startsWith("/lider")) {
+      url.pathname = "/lider";
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
 
@@ -97,6 +103,22 @@ export function proxy(request: NextRequest) {
   // so cookie-based guards always fail. Skip them here — auth is enforced
   // client-side by AuthContext.jsx instead.
   if (isLocalhost) {
+    return NextResponse.next();
+  }
+
+  // cfccasanova.com (no subdomain) and www.cfccasanova.com → /connect/*
+  // This is the main public church website.
+  if (!subdomain || subdomain === "www") {
+    const url = request.nextUrl.clone();
+    if (pathname === "/" || pathname === "") {
+      url.pathname = "/connect/home";
+      return NextResponse.redirect(url);
+    }
+    if (!pathname.startsWith("/connect")) {
+      url.pathname = "/connect" + pathname;
+      url.search = search;
+      return NextResponse.rewrite(url);
+    }
     return NextResponse.next();
   }
 
