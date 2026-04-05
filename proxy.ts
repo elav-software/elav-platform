@@ -1,29 +1,132 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
+
+/**
+ * Subdomain routing + auth guard
+ *
+ * Subdomain → root path mapping:
+ *   censo.cfccasanova.com  → serves /          (public census form)
+ *   portal.cfccasanova.com → serves /portal/*  (leaders portal, auth required)
+ *   crm.cfccasanova.com    → serves /crm/*     (admin CRM, auth required)
+ *
+ * On localhost the subdomain detection is skipped — paths are used directly.
+ */
+
+// Supabase stores the session cookie as sb-<project-ref>-auth-token
+// Derive the project ref from the public env var at build time.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const PROJECT_REF = SUPABASE_URL.replace("https://", "").split(".")[0];
+const SESSION_COOKIE = `sb-${PROJECT_REF}-auth-token`;
+
+function hasSession(request: NextRequest): boolean {
+  // Supabase stores JSON in the cookie; just checking existence is enough
+  // for the middleware guard. The real auth check happens client-side.
+  return (
+    request.cookies.has(SESSION_COOKIE) ||
+    request.cookies.has("sb-access-token") // legacy fallback
+  );
+}
 
 export function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const hostname = request.headers.get("host") ?? "";
 
-  const url = request.nextUrl
-
-  const isCrmRoute = url.pathname.startsWith("/crm")
-  const isCrmLogin = url.pathname.startsWith("/crm/login")
-
-  if (isCrmRoute && !isCrmLogin) {
-
-    const auth = request.cookies.get("crm-auth")
-
-    if (!auth) {
-
-      return NextResponse.redirect(new URL("/crm/login", request.url))
-
-    }
-
+  // Skip all Next.js internals and static assets
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next()
+  // ── Detect subdomain ──────────────────────────────────────────────────────
+  const isLocalhost =
+    hostname.startsWith("localhost") || hostname.startsWith("127.0.0.1");
 
+  let subdomain: string | null = null;
+
+  if (!isLocalhost) {
+    // e.g. "crm.cfccasanova.com" → "crm"
+    const parts = hostname.split(".");
+    if (parts.length >= 3) {
+      subdomain = parts[0];
+    }
+  }
+
+  // ── Subdomain rewrites ────────────────────────────────────────────────────
+
+  // censo.cfccasanova.com → / (no rewrite needed, already root)
+  if (subdomain === "censo") {
+    return NextResponse.next();
+  }
+
+  // portal.cfccasanova.com/* → /portal/*
+  if (subdomain === "portal") {
+    // Auth guard: redirect to /login if no session
+    if (pathname !== "/login" && !pathname.startsWith("/portal")) {
+      if (!hasSession(request)) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/portal" + (pathname === "/" ? "" : pathname);
+      url.search = search;
+      return NextResponse.rewrite(url);
+    }
+    return NextResponse.next();
+  }
+
+  // crm.cfccasanova.com/* → /crm/*
+  if (subdomain === "crm") {
+    // Already on a /crm path or /api — no rewrite needed
+    if (pathname.startsWith("/crm")) {
+      // Auth guard for all CRM routes except login
+      if (!pathname.startsWith("/crm/login") && !hasSession(request)) {
+        const loginUrl = new URL("/crm/login", request.url);
+        return NextResponse.redirect(loginUrl);
+      }
+      return NextResponse.next();
+    }
+
+    // Rewrite / → /crm/login (or /crm/dashboard if session exists)
+    const url = request.nextUrl.clone();
+    if (pathname === "/" || pathname === "") {
+      url.pathname = hasSession(request) ? "/crm/dashboard" : "/crm/login";
+    } else {
+      url.pathname = "/crm" + pathname;
+    }
+    url.search = search;
+    return NextResponse.rewrite(url);
+  }
+
+  // ── localhost / direct-path access (no subdomain) ─────────────────────────
+  // On localhost Supabase stores the session in localStorage (not cookies),
+  // so cookie-based guards always fail. Skip them here — auth is enforced
+  // client-side by AuthContext.jsx instead.
+  if (isLocalhost) {
+    return NextResponse.next();
+  }
+
+  // Protect /portal: redirect to /login if no session
+  if (pathname.startsWith("/portal") && !hasSession(request)) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Protect /crm/* except /crm/login
+  if (pathname.startsWith("/crm") && !pathname.startsWith("/crm/login")) {
+    if (!hasSession(request)) {
+      return NextResponse.redirect(new URL("/crm/login", request.url));
+    }
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/crm/:path*'],
-}
+  matcher: [
+    /*
+     * Match all paths except Next.js internals:
+     *   _next/static, _next/image, favicon.ico
+     */
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
+};
