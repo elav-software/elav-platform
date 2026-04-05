@@ -1,3 +1,4 @@
+"use client";
 import { useToast } from "@crm/components/ui/use-toast";
 import {
   Toast,

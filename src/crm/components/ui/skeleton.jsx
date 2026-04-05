@@ -1,3 +1,4 @@
+"use client";
 import { cn } from "@crm/lib/utils"
 
 function Skeleton({

@@ -1,15 +1,17 @@
-"use client";
-import dynamic from "next/dynamic";
+import type { Metadata } from "next";
+import ConnectClientLayout from "./ConnectClientLayout";
 
-const ConnectClientProviders = dynamic(
-  () => import("./ConnectClientProviders"),
-  { ssr: false }
-);
+export const metadata: Metadata = {
+  title: {
+    default: "CFC Casanova",
+    template: "%s | CFC",
+  },
+};
 
 export default function ConnectLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <ConnectClientProviders>{children}</ConnectClientProviders>;
+  return <ConnectClientLayout>{children}</ConnectClientLayout>;
 }

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@crm/components/ui/dialog";
 import { Button } from "@crm/components/ui/button";

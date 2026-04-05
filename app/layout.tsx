@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CFC - Censo Iglesia",
-  description: "Centro Familiar Cristiano - Censo de Líderes y Miembros",
+  title: {
+    default: "CFC Casanova",
+    template: "%s | CFC Casanova",
+  },
+  description: "Centro Familiar Cristiano Isidro Casanova",
   icons: {
     icon: "/logo.png",
   },

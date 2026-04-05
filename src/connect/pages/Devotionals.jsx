@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import { base44 } from '@connect/api/base44Client';
 import { useQuery } from '@tanstack/react-query';

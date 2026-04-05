@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { Button } from "@crm/components/ui/button";
 import { Plus } from "lucide-react";

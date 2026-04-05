@@ -1,3 +1,4 @@
+"use client";
 // Módulo de gestión de miembros — CFC CASA CRM
 import React, { useEffect, useState } from "react";
 import { base44 } from "@crm/api/base44Client";

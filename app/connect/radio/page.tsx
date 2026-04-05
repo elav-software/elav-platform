@@ -1,6 +1,10 @@
-"use client";
+import type { Metadata } from "next";
 import Radio from "@connect/pages/Radio";
 
-export default function RadioPage() {{
+export const metadata: Metadata = {
+  title: "Radio",
+};
+
+export default function RadioPage() {
   return <Radio />;
-}}
+}
