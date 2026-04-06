@@ -28,12 +28,13 @@ Todo corre sobre **Next.js 16**, **Supabase** como base de datos y autenticació
 7. [Cómo levantar el proyecto](#cómo-levantar-el-proyecto)
 8. [Sistema de Permisos — Cómo funcionan los usuarios admin](#sistema-de-permisos--cómo-funcionan-los-usuarios-admin)
 9. [Agregar una iglesia nueva](#agregar-una-iglesia-nueva) — Panel `/superadmin` + DNS + Vercel
-10. [Guía de trabajo — Ejemplos prácticos](#guía-de-trabajo--ejemplos-prácticos)
-11. [Routing por dominio](#routing-por-dominio)
-12. [Autenticación](#autenticación)
-13. [Migración Multi-tenant — Detalles técnicos](#migración-multi-tenant--detalles-técnicos)
-14. [Troubleshooting & Deployment](#troubleshooting--deployment) — **Guía de resolución de problemas**
-15. [Tecnologías usadas](#tecnologías-usadas)
+10. [Portal de Líderes — Configuración y uso](#portal-de-líderes--configuración-y-uso) — ✨ NUEVO
+11. [Guía de trabajo — Ejemplos prácticos](#guía-de-trabajo--ejemplos-prácticos)
+12. [Routing por dominio](#routing-por-dominio)
+13. [Autenticación](#autenticación)
+14. [Migración Multi-tenant — Detalles técnicos](#migración-multi-tenant--detalles-técnicos)
+15. [Troubleshooting & Deployment](#troubleshooting--deployment) — **Guía de resolución de problemas**
+16. [Tecnologías usadas](#tecnologías-usadas)
 
 ---
 
@@ -84,12 +85,60 @@ Todas las queries filtran con .eq('church_id', churchId)
 RLS en Supabase verifica que el usuario pertenezca a esa iglesia
 ```
 
+### Portal de Líderes (NUEVO)
+
+Sistema completo de autenticación y gestión para líderes aprobados:
+
+**✅ Autenticación con Google OAuth**
+- Los líderes se loguean con su cuenta Gmail en `/connect/portal/login`
+- El sistema verifica que el email exista en la tabla `personas` con `es_lider = true` y `estado_aprobacion = 'aprobado'`
+- Solo líderes aprobados por el pastor pueden acceder al portal
+
+**✅ Dashboard del líder** (`/connect/portal/dashboard`)
+- Vista general con estadísticas: reportes del mes, miembros de célula, pedidos activos
+- Navegación a las 4 funcionalidades principales
+
+**✅ Reportes de célula** (`/connect/portal/reportes`)
+- Cargar reportes con: fecha, asistencia, visitantes nuevos, ofrenda, testimonios, pedidos de oración
+- Ver historial de reportes enviados
+- Los reportes llegan al CRM para que el pastor los revise
+
+**✅ Materiales exclusivos** (`/connect/portal/materiales`)
+- Ver y descargar materiales que el pastor sube desde el CRM
+- Filtros por categoría (capacitación, recursos, liturgia, etc.)
+- Soporte para PDFs, videos y links externos
+
+**✅ Miembros de mi célula** (`/connect/portal/miembros`)
+- Lista completa de todos los miembros de su célula
+- Información de contacto (email, teléfono, dirección)
+- Búsqueda por nombre o email
+
+**✅ Pedidos de oración** (`/connect/portal/oracion`)
+- Ver todos los pedidos de oración activos
+- Cargar nuevos pedidos con categorías (salud, familia, trabajo, ministerio)
+- Marcar pedidos como respondidos
+- Opción de pedidos confidenciales y urgentes
+
+**Tablas de base de datos creadas:**
+- `leader_materials` — Materiales para líderes
+- `leader_cell_submissions` — Reportes de célula enviados
+- `leader_prayer_requests` — Pedidos de oración
+
+**Columnas agregadas a `personas`:**
+- `estado_aprobacion` — 'pendiente' | 'aprobado' | 'rechazado'
+- `fecha_aprobacion` — Timestamp de cuándo fue aprobado
+- `aprobado_por` — UUID del admin que lo aprobó
+
+### Banner "En construcción"
+
+✅ Banner visible en toda la web pública (Connect) indicando que el sitio está en desarrollo
+
 ### Próximos pasos disponibles
 
-1. **Crear iglesias nuevas** — Usar `/superadmin` para onboarding automático
-2. **Google OAuth** — Permitir login con cuentas Google
-3. **Aprobación de líderes** — Validar líderes antes de darles acceso al portal
-4. **Portal de líderes** — Sección protegida en la web pública para reportes de célula y materiales
+1. **Agregar botón de aprobación en el CRM** — Para que el pastor pueda aprobar líderes directamente desde la lista de personas
+2. **Upload de materiales en el CRM** — Interface para que el pastor suba PDFs, videos y links
+3. **Vista de reportes en el CRM** — Para que el pastor vea todos los reportes de células en un dashboard
+4. **Google OAuth** — Configurar credenciales de Google OAuth en Supabase (ya está el código listo)
 
 ---
 
@@ -630,6 +679,230 @@ Vos (superadmin)                  Pastor                    Líderes y miembros
                                   → comparte censo.dominio.com  → llenan el censo
                                                                  → aparecen en CRM
 ```
+
+---
+
+## Portal de Líderes — Configuración y uso
+
+El **Portal de Líderes** es una sección protegida dentro de la web pública (Connect) donde los líderes aprobados pueden:
+
+- 📊 Cargar reportes de célula
+- 📚 Acceder a materiales exclusivos
+- 👥 Ver miembros de su célula
+- 🙏 Gestionar pedidos de oración
+
+**URL de acceso:** `https://tuiglesia.com/connect/portal/login` (o subdirectorio `/portal` desde Connect)
+
+---
+
+### Paso 1 — Ejecutar el script SQL del portal
+
+**Archivo:** `supabase/portal_lideres.sql`
+
+Este script agrega las tablas y columnas necesarias para el portal. Es completamente independiente de `multitenant_migration.sql`.
+
+**¿Qué hace?**
+
+1. Agrega columna `estado_aprobacion` a la tabla `personas` ('pendiente', 'aprobado', 'rechazado')
+2. Crea tabla `leader_materials` — Materiales para líderes (PDFs, videos, links)
+3. Crea tabla `leader_cell_submissions` — Reportes de célula
+4. Crea tabla `leader_prayer_requests` — Pedidos de oración
+5. Configura RLS (Row Level Security) para cada tabla  
+6. Crea función `is_approved_leader(email)` para verificar permisos
+
+**Ejecutar en Supabase SQL Editor:**
+
+```sql
+-- Copia todo el contenido de supabase/portal_lideres.sql
+-- Pegalo en Supabase → SQL Editor → New query
+-- Click "Run"
+```
+
+**Verificación:** Al final del script, verás una tabla que confirma:
+
+```
+✓ personas.estado_aprobacion — Columna agregada
+✓ leader_materials — Tabla creada
+✓ leader_cell_submissions — Tabla creada
+✓ leader_prayer_requests — Tabla creada
+```
+
+---
+
+### Paso 2 — Configurar Google OAuth en Supabase
+
+Los líderes se loguean con su cuenta Gmail. Para que funcione, necesitás configurar Google OAuth en Supabase.
+
+**Ir a Supabase:** `https://supabase.com/dashboard/project/TU_PROJECT_ID/auth/providers`
+
+1. Hacer click en **"Google"** en la lista de providers
+2. **Habilitar Google provider**
+3. Conseguir credenciales:
+   - Ir a [Google Cloud Console](https://console.cloud.google.com/)
+   - Crear un proyecto (o usar uno existente)
+   - Habilitar "Google+ API"
+   - Ir a "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
+   - Tipo: **Web application**
+   - **Authorized redirect URIs:** `https://TU_PROJECT_REF.supabase.co/auth/v1/callback`
+     (Lo copiás de Supabase, está en la config de Google provider)
+   - Copiar **Client ID** y **Client Secret**
+4. Pegar Client ID y Client Secret en Supabase
+5. Click "Save"
+
+**URLs de callback permitidas:**
+
+```
+https://cfccasanova.com/connect/portal/callback
+http://localhost:3000/connect/portal/callback
+```
+
+(Agregar todas las iglesias que usen el portal)
+
+---
+
+### Paso 3 — Aprobar líderes desde el CRM
+
+**Flujo completo:**
+
+1. **Líder llena el censo** en `censo.tuiglesia.com` (formulario `/lider`)
+2. En la tabla `personas`, queda con:
+   - `es_lider = true`
+   - `estado_aprobacion = 'pendiente'` (default)
+3. **Pastor ve la persona en el CRM** → Sección "Líderes pendientes de aprobación"
+4. **Pastor aprueba** → Sistema actualiza:
+   ```sql
+   UPDATE personas 
+   SET estado_aprobacion = 'aprobado',
+       fecha_aprobacion = now(),
+       aprobado_por = <uuid_del_pastor>
+   WHERE id = <uuid_del_lider>;
+   ```
+5. **Líder recibe email automático** (opcional — requiere configurar email templates en Supabase)
+6. **Líder puede loguearse** en `tuiglesia.com/connect/portal/login` con su Gmail
+
+> 💡 **Nota:** Por ahora, la  aprobación se hace manualmente desde el SQL Editor de Supabase. En la próxima iteración se agregará un botón en el CRM.
+
+**Script SQL temporal para aprobar un líder:**
+
+```sql
+UPDATE personas 
+SET estado_aprobacion = 'aprobado'
+WHERE email = 'lider@gmail.com' AND es_lider = true;
+```
+
+---
+
+### Paso 4 — El líder accede al portal
+
+**URL:** `https://tuiglesia.com/connect/portal/login`
+
+1. Click en **"Continuar con Google"**
+2. Selecciona su cuenta Gmail
+3. Sistema verifica que:
+   - Email existe en tabla `personas`
+   - `es_lider = true`
+   - `estado_aprobacion = 'aprobado'`
+   - `church_id` coincide con el dominio actual
+4. Si todo OK → Redirige a `/connect/portal/dashboard`
+5. Si no está aprobado → Mensaje: "Tu cuenta aún no está aprobada como líder. Contactá al pastor."
+
+---
+
+### Funcionalidades del portal
+
+#### 1. Dashboard (`/connect/portal/dashboard`)
+
+Vista general con:
+
+- **Estadísticas:**
+  - Reportes enviados en los últimos 30 días
+  - Cantidad de miembros de su célula
+  - Pedidos de oración activos
+- **Accesos rápidos:** Cards para navegar a las 4 secciones
+
+#### 2. Reportes de célula (`/connect/portal/reportes`)
+
+**Formulario para cargar:**
+- Fecha de la reunión
+- Asistencia total
+- Visitantes nuevos
+- Ofrenda (opcional, en pesos)
+- Testimonios (texto libre)
+- Pedidos de oración (texto libre)
+- Observaciones generales
+
+**Historial:**
+- Últimos 5 reportes enviados
+- Estado: "Enviado" (azul) o "Revisado" (verde, cuando el pastor lo marca)
+
+**Los reportes aparecen automáticamente en el CRM** (tabla `leader_cell_submissions`)
+
+#### 3. Materiales exclusivos (`/connect/portal/materiales`)
+
+**Ver y descargar:**
+- PDFs (capacitaciones, manuales, liturgias)
+- Videos (YouTube, Vimeo, o archivos subidos a Supabase Storage)
+- Links externos (Google Drive, Dropbox, etc.)
+
+**Filtros por categoría:**
+- Capacitación
+- Recursos
+- Liturgia
+- Otros
+
+**El pastor sube materiales desde el CRM** (tabla `leader_materials`)
+
+#### 4. Miembros de mi célula (`/connect/portal/miembros`)
+
+**Lista completa con:**
+- Nombre y apellido
+- Email (click para enviar mail)
+- Teléfono (click para llamar)
+- Dirección
+- Indicador si es líder
+
+**Búsqueda en tiempo real** por nombre o email
+
+**Filtrado automático:** Solo ve los miembros de su propia célula (por `celula_id` en `personas`)
+
+#### 5. Pedidos de oración (`/connect/portal/oracion`)
+
+**Cargar nuevo pedido:**
+- Nombre de la persona por quien se ora
+- Descripción del pedido (texto libre)
+- Categoría: Salud | Familia | Trabajo | Ministerio | Otro
+- Marcar como urgente (checkbox)
+- Marcar como confidencial (checkbox) — Solo lo ve el pastor
+
+**Lista de pedidos:**
+- Filtros: Activos, Respondidos, Todos
+- Marcar como "Respondido" cuando Dios responde
+- Los pedidos se comparten con otros líderes (excepto los confidenciales)
+
+**El pastor ve todos los pedidos en el CRM** (tabla `leader_prayer_requests`)
+
+---
+
+### Seguridad y aislamiento
+
+- ✅ **RLS activo en todas las tablas** — Los líderes solo ven datos de su iglesia
+- ✅ **Verificación en cada request** — `church_id` se resuelve dinámicamente por dominio
+- ✅ **Políticas de Supabase:**
+  - Líderes solo ven sus propios reportes
+  - Líderes solo ven miembros de su célula
+  - Líderes no pueden editar datos de otros
+  - Admins del CRM ven todo de su iglesia
+
+---
+
+### Próximos pasos (para mejorar el portal)
+
+1. **Botón de aprobación en el CRM** — Interfaz visual para aprobar/rechazar líderes
+2. **Upload de materiales en el CRM** — Interfaz para que el pastor suba archivos
+3. **Dashboard de reportes en el CRM** — Vista consolidada de todos los reportes de células
+4. **Notificaciones por email** — Avisar al líder cuando es aprobado
+5. **Notificaciones push** — Avisar al pastor cuando llega un reporte nuevo
+6. **Estadísticas avanzadas** — Gráficos de asistencia, crecimiento, etc.
 
 ---
 

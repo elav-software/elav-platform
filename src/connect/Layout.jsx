@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from '@connect/lib/router-compat';
 import { createPageUrl } from '@connect/utils';
 import { api } from '@connect/api/apiClient';
+import UnderConstructionBanner from '@connect/components/UnderConstructionBanner';
 import { 
   Home, 
   Radio, 
@@ -189,6 +190,9 @@ export default function Layout({ children, currentPageName }) {
           </Button>
         </div>
       </header>
+
+      {/* Under Construction Banner */}
+      <UnderConstructionBanner />
 
       {/* Main Content */}
       <main className={`flex-1 ${!hideBottomNav ? 'pb-20' : ''}`}>

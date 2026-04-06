@@ -64,6 +64,13 @@ import LeadershipMaterials from './pages/LeadershipMaterials';
 import Live from './pages/Live';
 import MinistryReports from './pages/MinistryReports';
 import MyNotes from './pages/MyNotes';
+import PortalCallback from './pages/PortalCallback';
+import PortalDashboard from './pages/PortalDashboard';
+import PortalLogin from './pages/PortalLogin';
+import PortalMateriales from './pages/PortalMateriales';
+import PortalMiembros from './pages/PortalMiembros';
+import PortalOracion from './pages/PortalOracion';
+import PortalReportes from './pages/PortalReportes';
 import Prayer from './pages/Prayer';
 import Radio from './pages/Radio';
 import Sermons from './pages/Sermons';
@@ -88,6 +95,13 @@ export const PAGES = {
     "Live": Live,
     "MinistryReports": MinistryReports,
     "MyNotes": MyNotes,
+    "PortalCallback": PortalCallback,
+    "PortalDashboard": PortalDashboard,
+    "PortalLogin": PortalLogin,
+    "PortalMateriales": PortalMateriales,
+    "PortalMiembros": PortalMiembros,
+    "PortalOracion": PortalOracion,
+    "PortalReportes": PortalReportes,
     "Prayer": Prayer,
     "Radio": Radio,
     "Sermons": Sermons,
