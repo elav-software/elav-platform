@@ -27,8 +27,8 @@ ALTER TABLE public.personas
 
 -- Índice para búsquedas rápidas de líderes pendientes
 CREATE INDEX IF NOT EXISTS idx_personas_estado_aprobacion 
-  ON public.personas (church_id, es_lider, estado_aprobacion) 
-  WHERE es_lider = true;
+  ON public.personas (church_id, rol, estado_aprobacion) 
+  WHERE rol = 'Líder';
 
 COMMENT ON COLUMN public.personas.estado_aprobacion IS 
   'Estado de aprobación para líderes. Valores: pendiente (default), aprobado (puede acceder portal), rechazado';
@@ -191,7 +191,7 @@ AS $$
     SELECT 1 
     FROM public.personas
     WHERE email = user_email
-      AND es_lider = true
+      AND rol = 'Líder'
       AND estado_aprobacion = 'aprobado'
       AND church_id = public.my_church_id()
   );

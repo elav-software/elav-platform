@@ -42,7 +42,7 @@ export default function PortalMiembros() {
         .select('id, nombre, apellido, email, celula_id')
         .eq('church_id', churchId)
         .eq('email', session.user.email)
-        .eq('es_lider', true)
+        .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();
 
@@ -57,7 +57,7 @@ export default function PortalMiembros() {
       if (leaderData.celula_id) {
         const { data: membersData, error: membersError } = await supabase
           .from('personas')
-          .select('id, nombre, apellido, email, telefono, direccion, es_lider')
+          .select('id, nombre, apellido, email, telefono, direccion, rol')
           .eq('church_id', churchId)
           .eq('celula_id', leaderData.celula_id)
           .order('apellido');
@@ -157,7 +157,7 @@ export default function PortalMiembros() {
                       <h3 className="text-lg font-semibold text-gray-900">
                         {member.nombre} {member.apellido}
                       </h3>
-                      {member.es_lider && (
+                      {member.rol === 'Líder' && (
                         <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
                           <UserCheck className="w-3 h-3" />
                           Líder

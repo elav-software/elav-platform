@@ -32,10 +32,10 @@ export default function PortalCallback() {
       const churchId = await getCurrentChurchId();
       const { data: leader, error: leaderError } = await supabase
         .from('personas')
-        .select('id, nombre, apellido, es_lider, estado_aprobacion')
+        .select('id, nombre, apellido, rol, estado_aprobacion')
         .eq('church_id', churchId)
         .eq('email', session.user.email)
-        .eq('es_lider', true)
+        .eq('rol', 'Líder')
         .single();
 
       if (leaderError || !leader) {

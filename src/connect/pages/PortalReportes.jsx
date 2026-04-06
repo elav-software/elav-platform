@@ -53,7 +53,7 @@ export default function PortalReportes() {
         .select('id, nombre, apellido, email')
         .eq('church_id', churchId)
         .eq('email', session.user.email)
-        .eq('es_lider', true)
+        .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();
 

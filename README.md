@@ -91,7 +91,7 @@ Sistema completo de autenticación y gestión para líderes aprobados:
 
 **✅ Autenticación con Google OAuth**
 - Los líderes se loguean con su cuenta Gmail en `/connect/portal/login`
-- El sistema verifica que el email exista en la tabla `personas` con `es_lider = true` y `estado_aprobacion = 'aprobado'`
+- El sistema verifica que el email exista en la tabla `personas` con `rol = 'Líder'` y `estado_aprobacion = 'aprobado'`
 - Solo líderes aprobados por el pastor pueden acceder al portal
 
 **✅ Dashboard del líder** (`/connect/portal/dashboard`)
@@ -766,7 +766,7 @@ http://localhost:3000/connect/portal/callback
 
 1. **Líder llena el censo** en `censo.tuiglesia.com` (formulario `/lider`)
 2. En la tabla `personas`, queda con:
-   - `es_lider = true`
+   - `rol = 'Líder'`
    - `estado_aprobacion = 'pendiente'` (default)
 3. **Pastor ve la persona en el CRM** → Sección "Líderes pendientes de aprobación"
 4. **Pastor aprueba** → Sistema actualiza:
@@ -787,7 +787,7 @@ http://localhost:3000/connect/portal/callback
 ```sql
 UPDATE personas 
 SET estado_aprobacion = 'aprobado'
-WHERE email = 'lider@gmail.com' AND es_lider = true;
+WHERE email = 'lider@gmail.com' AND rol = 'Líder';
 ```
 
 ---
@@ -800,7 +800,7 @@ WHERE email = 'lider@gmail.com' AND es_lider = true;
 2. Selecciona su cuenta Gmail
 3. Sistema verifica que:
    - Email existe en tabla `personas`
-   - `es_lider = true`
+   - `rol = 'Líder'`
    - `estado_aprobacion = 'aprobado'`
    - `church_id` coincide con el dominio actual
 4. Si todo OK → Redirige a `/connect/portal/dashboard`

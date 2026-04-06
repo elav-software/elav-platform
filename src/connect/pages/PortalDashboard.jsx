@@ -45,7 +45,7 @@ export default function PortalDashboard() {
         .select('id, nombre, apellido, email, celula_id')
         .eq('church_id', churchId)
         .eq('email', session.user.email)
-        .eq('es_lider', true)
+        .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();
 

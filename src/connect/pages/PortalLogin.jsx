@@ -43,10 +43,10 @@ export default function PortalLogin() {
       
       const { data, error } = await supabase
         .from('personas')
-        .select('id, es_lider, estado_aprobacion')
+        .select('id, rol, estado_aprobacion')
         .eq('church_id', churchId)
         .eq('email', email)
-        .eq('es_lider', true)
+        .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();
 
