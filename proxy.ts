@@ -78,7 +78,8 @@ export function proxy(request: NextRequest) {
     !pathname.startsWith("/connect") &&
     !pathname.startsWith("/crm") &&
     !pathname.startsWith("/lider") &&
-    !pathname.startsWith("/miembros")
+    !pathname.startsWith("/miembros") &&
+    !pathname.startsWith("/superadmin")
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/connect" + pathname;
