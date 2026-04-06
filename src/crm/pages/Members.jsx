@@ -127,7 +127,14 @@ export default function Members() {
     setSyncing(true);
     setSyncMsg("");
     try {
-      const { data: personas, error } = await supabase.from("personas").select("*");
+      // Traer solo personas aprobadas:
+      // - Miembros normales: todos
+      // - Líderes: solo los aprobados (excluye pendientes y rechazados)
+      const { data: personas, error } = await supabase
+        .from("personas")
+        .select("*")
+        .or("rol.neq.Líder,and(rol.eq.Líder,estado_aprobacion.eq.aprobado)");
+      
       if (error) throw error;
 
       const currentMembers = await api.entities.Member.list("-created_date", 1000);

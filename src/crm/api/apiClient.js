@@ -135,6 +135,8 @@ function makeMemberEntity() {
       const churchId = await getMyChurchId();
       let q = supabase.from("personas").select("*");
       if (churchId) q = q.eq("church_id", churchId);
+      // Filtrar líderes no aprobados
+      q = q.or("rol.neq.Líder,and(rol.eq.Líder,estado_aprobacion.eq.aprobado)");
       const { data, error } = await q.order(column, { ascending }).limit(limit);
       if (error) throw new Error(error.message);
       return data.map(fromDB);
@@ -145,6 +147,8 @@ function makeMemberEntity() {
       const churchId = await getMyChurchId();
       let q = supabase.from("personas").select("*");
       if (churchId) q = q.eq("church_id", churchId);
+      // Filtrar líderes no aprobados
+      q = q.or("rol.neq.Líder,and(rol.eq.Líder,estado_aprobacion.eq.aprobado)");
       Object.entries(conditions).forEach(([k, v]) => {
         const mapping = MEMBER_FILTER_MAP[k];
         if (mapping) {
