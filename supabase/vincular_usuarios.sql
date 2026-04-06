@@ -134,9 +134,6 @@ BEGIN
     ON CONFLICT (church_id, email) DO NOTHING;
   END IF;
   RAISE NOTICE 'Datos creados';
-  
-END $$;
-
 END $$;
 
 -- VERIFICACIÓN
