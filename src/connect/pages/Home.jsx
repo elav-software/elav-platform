@@ -6,6 +6,7 @@ import Logo from '@connect/components/ui/Logo';
 import LiveBanner from '@connect/components/home/LiveBanner';
 import DailyVerse from '@connect/components/home/DailyVerse';
 import QuickActions from '@connect/components/home/QuickActions';
+import LeaderPortalBanner from '@connect/components/home/LeaderPortalBanner';
 import SermonCarousel from '@connect/components/home/SermonCarousel';
 import UpcomingServices from '@connect/components/home/UpcomingServices';
 import GivingCard from '@connect/components/home/GivingCard';
@@ -82,6 +83,9 @@ export default function Home() {
       <div className="px-4 space-y-6 pb-6">
         {/* Quick Actions */}
         <QuickActions />
+
+        {/* Leader Portal Banner */}
+        <LeaderPortalBanner />
 
         {/* Daily Verse */}
         <DailyVerse />

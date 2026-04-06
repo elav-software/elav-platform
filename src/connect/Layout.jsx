@@ -15,7 +15,8 @@ import {
   User,
   LogOut,
   Shield,
-  Bell
+  Bell,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@connect/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@connect/components/ui/sheet';
@@ -116,6 +117,20 @@ export default function Layout({ children, currentPageName }) {
                       {item.label}
                     </Link>
                   ))}
+
+                  {/* Portal de Líderes */}
+                  <div className="px-4 mt-6 mb-2">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                      <UserCheck className="w-3 h-3" /> Portal de Líderes
+                    </p>
+                  </div>
+                  <a
+                    href="/connect/portal/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Acceso Líderes
+                  </a>
 
                   {isAdmin && (
                     <>
