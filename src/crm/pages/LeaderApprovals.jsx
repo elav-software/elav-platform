@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@crm/api/supabaseClient";
-import { useNavigate } from "react-router-dom";
 import { 
   CheckCircle, 
   XCircle, 
@@ -22,7 +21,6 @@ export default function LeaderApprovals() {
   const [rejectedLeaders, setRejectedLeaders] = useState([]);
   const [filter, setFilter] = useState("pendiente");
   const [currentUser, setCurrentUser] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     checkAuth();
@@ -33,7 +31,7 @@ export default function LeaderApprovals() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        navigate("/crm/login");
+        window.location.href = "/crm/login";
         return;
       }
 
@@ -46,7 +44,7 @@ export default function LeaderApprovals() {
 
       if (!churchUser || churchUser.role !== 'admin') {
         toast.error("No tenés permisos de administrador");
-        navigate("/crm/dashboard");
+        window.location.href = "/crm/dashboard";
         return;
       }
 
@@ -54,7 +52,7 @@ export default function LeaderApprovals() {
       loadLeaders();
     } catch (err) {
       console.error("Error:", err);
-      navigate("/crm/login");
+      window.location.href = "/crm/login";
     }
   };
 
