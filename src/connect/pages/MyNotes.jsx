@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   FileText, 
@@ -37,7 +37,7 @@ export default function MyNotes() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -46,12 +46,12 @@ export default function MyNotes() {
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['sermonNotes', user?.email],
-    queryFn: () => base44.entities.SermonNote.filter({ created_by: user?.email }, '-date'),
+    queryFn: () => api.entities.SermonNote.filter({ created_by: user?.email }, '-date'),
     enabled: !!user,
   });
 
   const updateNoteMutation = useMutation({
-    mutationFn: ({ id, content }) => base44.entities.SermonNote.update(id, { content }),
+    mutationFn: ({ id, content }) => api.entities.SermonNote.update(id, { content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sermonNotes'] });
       toast.success('Notas actualizadas');
@@ -60,7 +60,7 @@ export default function MyNotes() {
   });
 
   const deleteNoteMutation = useMutation({
-    mutationFn: (id) => base44.entities.SermonNote.delete(id),
+    mutationFn: (id) => api.entities.SermonNote.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sermonNotes'] });
       toast.success('Notas eliminadas');
@@ -92,7 +92,7 @@ export default function MyNotes() {
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Mis Notas</h2>
           <p className="text-gray-500 mb-4">Inicia sesión para ver tus notas de sermones</p>
           <Button 
-            onClick={() => base44.auth.redirectToLogin()}
+            onClick={() => api.auth.redirectToLogin()}
             className="bg-red-600 hover:bg-red-700"
           >
             Iniciar Sesión

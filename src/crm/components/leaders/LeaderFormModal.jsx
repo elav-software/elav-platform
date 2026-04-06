@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@crm/components/ui/dialog";
 import { Button } from "@crm/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@crm/components/ui/input";
 import { Label } from "@crm/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@crm/components/ui/select";
 import { Textarea } from "@crm/components/ui/textarea";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { supabase, crmToSupabase } from "@crm/api/supabaseClient";
 import { MapPin, Loader2 } from "lucide-react";
 
@@ -31,7 +31,7 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
       } else {
         setForm(EMPTY);
       }
-      base44.entities.Member.filter({ member_status: "Leader" }, "-created_date", 200).then(setMembers).catch(() => {});
+      api.entities.Member.filter({ member_status: "Leader" }, "-created_date", 200).then(setMembers).catch(() => {});
     }
   }, [editing, open]);
 
@@ -42,7 +42,7 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
     if (!form.meeting_location) return;
     setGeocoding(true);
     try {
-      const res = await base44.functions.invoke('geocodeAddress', { address: form.meeting_location });
+      const res = await api.functions.invoke('geocodeAddress', { address: form.meeting_location });
       if (res?.data?.lat) setForm(f => ({ ...f, latitude: res.data.lat, longitude: res.data.lng }));
     } catch (e) { console.error('Geocoding failed', e); }
     setGeocoding(false);
@@ -72,9 +72,9 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
       };
 
       if (editing && editing.id) {
-        await base44.entities.Leader.update(editing.id, payload);
+        await api.entities.Leader.update(editing.id, payload);
         if (payload.member_id) {
-          await base44.entities.Member.update(payload.member_id, {
+          await api.entities.Member.update(payload.member_id, {
             full_name: form.full_name,
             phone_number: form.phone || undefined,
             email: form.email || undefined,
@@ -82,12 +82,12 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
           });
         }
       } else {
-        const allMembers = await base44.entities.Member.list("-created_date", 500);
+        const allMembers = await api.entities.Member.list("-created_date", 500);
         const nameToFind = form.full_name.toLowerCase().trim();
         let existingMember = allMembers.find(m => m.full_name?.toLowerCase().trim() === nameToFind);
         let memberId;
         if (existingMember) {
-          await base44.entities.Member.update(existingMember.id, {
+          await api.entities.Member.update(existingMember.id, {
             member_status: "Leader",
             phone_number: form.phone || existingMember.phone_number,
             email: form.email || existingMember.email,
@@ -107,11 +107,11 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
           const supaData = crmToSupabase(memberData);
           const { data } = await supabase.from("personas").insert([supaData]);
           if (data?.[0]?.id) memberData.supabase_id = data[0].id;
-          const newMember = await base44.entities.Member.create(memberData);
+          const newMember = await api.entities.Member.create(memberData);
           memberId = newMember?.id;
         }
         payload.member_id = memberId;
-        const result = await base44.entities.Leader.create(payload);
+        const result = await api.entities.Leader.create(payload);
         if (!result || !result.id) {
           setError("No se pudo crear el líder.");
           setSaving(false);

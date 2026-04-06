@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Play, 
@@ -45,7 +45,7 @@ export default function Sermons() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -54,7 +54,7 @@ export default function Sermons() {
 
   const loadSermonById = async (id) => {
     try {
-      const sermons = await base44.entities.Sermon.filter({ id });
+      const sermons = await api.entities.Sermon.filter({ id });
       if (sermons.length > 0) {
         setSelectedSermon(sermons[0]);
       }
@@ -65,12 +65,12 @@ export default function Sermons() {
 
   const { data: sermons = [], isLoading } = useQuery({
     queryKey: ['sermons'],
-    queryFn: () => base44.entities.Sermon.list('-date'),
+    queryFn: () => api.entities.Sermon.list('-date'),
   });
 
   const { data: savedNotes = [] } = useQuery({
     queryKey: ['sermonNotes', selectedSermon?.id],
-    queryFn: () => base44.entities.SermonNote.filter({ 
+    queryFn: () => api.entities.SermonNote.filter({ 
       sermon_id: selectedSermon?.id,
       created_by: user?.email 
     }),
@@ -114,9 +114,9 @@ export default function Sermons() {
     
     try {
       if (savedNotes.length > 0) {
-        await base44.entities.SermonNote.update(savedNotes[0].id, { content: myNotes });
+        await api.entities.SermonNote.update(savedNotes[0].id, { content: myNotes });
       } else {
-        await base44.entities.SermonNote.create({
+        await api.entities.SermonNote.create({
           sermon_id: selectedSermon.id,
           sermon_title: selectedSermon.title,
           content: myNotes,
@@ -238,7 +238,7 @@ export default function Sermons() {
                 <Pencil className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 mb-4">Inicia sesión para tomar notas</p>
                 <Button 
-                  onClick={() => base44.auth.redirectToLogin()}
+                  onClick={() => api.auth.redirectToLogin()}
                   className="bg-red-600 hover:bg-red-700"
                 >
                   Iniciar Sesión

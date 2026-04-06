@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@connect/lib/router-compat';
 import { createPageUrl } from '@connect/utils';
@@ -38,7 +38,7 @@ export default function AdminDashboard() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -47,31 +47,31 @@ export default function AdminDashboard() {
 
   const { data: prayerRequests = [], isLoading: loadingPrayer } = useQuery({
     queryKey: ['adminPrayerRequests'],
-    queryFn: () => base44.entities.PrayerRequest.list('-created_date', 50),
+    queryFn: () => api.entities.PrayerRequest.list('-created_date', 50),
     enabled: user?.role === 'admin',
   });
 
   const { data: counselingRequests = [], isLoading: loadingCounseling } = useQuery({
     queryKey: ['adminCounselingRequests'],
-    queryFn: () => base44.entities.CounselingRequest.list('-created_date', 50),
+    queryFn: () => api.entities.CounselingRequest.list('-created_date', 50),
     enabled: user?.role === 'admin',
   });
 
   const { data: events = [] } = useQuery({
     queryKey: ['adminEvents'],
-    queryFn: () => base44.entities.Event.list('-date', 20),
+    queryFn: () => api.entities.Event.list('-date', 20),
     enabled: user?.role === 'admin',
   });
 
   const { data: donations = [] } = useQuery({
     queryKey: ['adminDonations'],
-    queryFn: () => base44.entities.Donation.list('-created_date', 100),
+    queryFn: () => api.entities.Donation.list('-created_date', 100),
     enabled: user?.role === 'admin',
   });
 
   const { data: registrations = [] } = useQuery({
     queryKey: ['adminRegistrations'],
-    queryFn: () => base44.entities.EventRegistration.list('-created_date', 100),
+    queryFn: () => api.entities.EventRegistration.list('-created_date', 100),
     enabled: user?.role === 'admin',
   });
 

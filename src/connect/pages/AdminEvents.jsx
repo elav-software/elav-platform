@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Plus, Edit3, Trash2, ChevronLeft, Save, Users } from 'lucide-react';
 import { Button } from '@connect/components/ui/button';
@@ -43,17 +43,17 @@ export default function AdminEvents() {
 
   useEffect(() => { loadUser(); }, []);
   const loadUser = async () => {
-    try { setUser(await base44.auth.me()); } catch (e) { setUser(null); }
+    try { setUser(await api.auth.me()); } catch (e) { setUser(null); }
   };
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['adminEvents'],
-    queryFn: () => base44.entities.Event.list('-date'),
+    queryFn: () => api.entities.Event.list('-date'),
     enabled: user?.role === 'admin',
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Event.create(data),
+    mutationFn: (data) => api.entities.Event.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminEvents'] });
       resetForm(); toast.success('Evento creado');
@@ -61,7 +61,7 @@ export default function AdminEvents() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Event.update(id, data),
+    mutationFn: ({ id, data }) => api.entities.Event.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminEvents'] });
       resetForm(); toast.success('Evento actualizado');
@@ -69,7 +69,7 @@ export default function AdminEvents() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Event.delete(id),
+    mutationFn: (id) => api.entities.Event.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminEvents'] });
       toast.success('Evento eliminado');

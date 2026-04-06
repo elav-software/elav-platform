@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
@@ -75,7 +75,7 @@ export default function PrayerRequests() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const data = await base44.entities.PrayerRequest.list("-created_date", 200);
+    const data = await api.entities.PrayerRequest.list("-created_date", 200);
     setRequests(data);
     setLoading(false);
   };
@@ -87,20 +87,20 @@ export default function PrayerRequests() {
 
   const handleSave = async () => {
     setSaving(true);
-    if (editing) await base44.entities.PrayerRequest.update(editing.id, form);
-    else await base44.entities.PrayerRequest.create(form);
+    if (editing) await api.entities.PrayerRequest.update(editing.id, form);
+    else await api.entities.PrayerRequest.create(form);
     await load(); setModalOpen(false); setSaving(false);
   };
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta petición de oración?")) return;
-    await base44.entities.PrayerRequest.delete(id);
+    await api.entities.PrayerRequest.delete(id);
     setRequests(prev => prev.filter(r => r.id !== id));
   };
 
   const toggleStatus = async (r) => {
     const newStatus = r.status === "Active" ? "Answered" : "Active";
-    await base44.entities.PrayerRequest.update(r.id, { status: newStatus });
+    await api.entities.PrayerRequest.update(r.id, { status: newStatus });
     setRequests(prev => prev.map(x => x.id === r.id ? { ...x, status: newStatus } : x));
   };
 

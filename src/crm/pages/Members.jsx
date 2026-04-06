@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 // Módulo de gestión de miembros — CFC CASA CRM
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
@@ -78,7 +78,7 @@ export default function Members() {
   const [syncMsg, setSyncMsg] = useState("");
 
   const load = async () => {
-    const data = await base44.entities.Member.list("-created_date", 500);
+    const data = await api.entities.Member.list("-created_date", 500);
     setMembers(data);
     setLoading(false);
   };
@@ -106,13 +106,13 @@ export default function Members() {
       const payload = { ...form, household_size: form.household_size ? Number(form.household_size) : undefined };
 
       if (editing) {
-        await base44.entities.Member.update(editing.id, payload);
+        await api.entities.Member.update(editing.id, payload);
         await syncToSupabase(payload, payload.supabase_id);
       } else {
         // Crear en Supabase primero para obtener UUID
         const newSupabaseId = await syncToSupabase(payload, null);
         if (newSupabaseId) payload.supabase_id = newSupabaseId;
-        await base44.entities.Member.create(payload);
+        await api.entities.Member.create(payload);
       }
     } catch (err) {
       console.error("Error al guardar/sincronizar:", err);
@@ -130,7 +130,7 @@ export default function Members() {
       const { data: personas, error } = await supabase.from("personas").select("*");
       if (error) throw error;
 
-      const currentMembers = await base44.entities.Member.list("-created_date", 1000);
+      const currentMembers = await api.entities.Member.list("-created_date", 1000);
       const existingSupabaseIds = new Set(currentMembers.map(m => m.supabase_id).filter(Boolean));
       // Clave de deduplicación: nombre completo + fecha de nacimiento
       const existingKeys = new Set(currentMembers.map(m => {
@@ -139,7 +139,7 @@ export default function Members() {
         return `${name}||${dob}`;
       }));
 
-      const currentLeaders = await base44.entities.Leader.list("-created_date", 500);
+      const currentLeaders = await api.entities.Leader.list("-created_date", 500);
       const existingLeaderSupaIds = new Set(currentLeaders.map(l => {
         const m = currentMembers.find(mb => mb.id === l.member_id);
         return m?.supabase_id;
@@ -175,7 +175,7 @@ export default function Members() {
         const isLider = liderSupabaseIds.has(persona.id);
         const memberData = supabaseToCRM(persona);
         if (isLider) memberData.member_status = "Leader";
-        const created = await base44.entities.Member.create(memberData);
+        const created = await api.entities.Member.create(memberData);
         supaIdToMemberId[persona.id] = created.id;
         importedMembers++;
       }
@@ -209,20 +209,20 @@ export default function Members() {
         // Geocodificar dirección
         if (lugar) {
           try {
-            const geoRes = await base44.functions.invoke('geocodeAddress', { address: lugar });
+            const geoRes = await api.functions.invoke('geocodeAddress', { address: lugar });
             if (geoRes?.data?.lat) {
               leaderPayload.latitude = geoRes.data.lat;
               leaderPayload.longitude = geoRes.data.lng;
             }
           } catch (e) { console.warn('Geocoding failed for', lugar, e); }
         }
-        const leader = await base44.entities.Leader.create(leaderPayload);
+        const leader = await api.entities.Leader.create(leaderPayload);
         supaIdToLeaderId[supaId] = leader.id;
         importedLeaders++;
       }
 
       // Paso 3: crear CellMembers para personas con lider_id
-      const existingCellMembers = await base44.entities.CellMember.list("-created_date", 1000);
+      const existingCellMembers = await api.entities.CellMember.list("-created_date", 1000);
       const existingCellMemberKeys = new Set(
         existingCellMembers.map(cm => `${cm.leader_id}__${cm.member_name?.toLowerCase().trim()}`)
       );
@@ -234,7 +234,7 @@ export default function Members() {
         const fullName = [persona.nombre, persona.apellido].filter(Boolean).join(" ");
         const key = `${leaderId}__${fullName.toLowerCase().trim()}`;
         if (existingCellMemberKeys.has(key)) continue;
-        await base44.entities.CellMember.create({
+        await api.entities.CellMember.create({
           leader_id: leaderId,
           member_name: fullName,
           phone: persona.telefono || "",
@@ -254,7 +254,7 @@ export default function Members() {
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar este miembro del CRM?\n(El registro en el censo de Supabase se conservará y podrá volver a importarse)")) return;
-    await base44.entities.Member.delete(id);
+    await api.entities.Member.delete(id);
     setMembers(prev => prev.filter(m => m.id !== id));
   };
 

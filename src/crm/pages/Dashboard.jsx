@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Link } from "@crm/lib/router-compat";
 import { createPageUrl } from "@crm/utils";
 import { Card } from "@crm/components/ui/card";
@@ -27,10 +27,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.Member.list("-created_date", 200),
-      base44.entities.Visitor.list("-created_date", 100),
-      base44.entities.Donation.list("-created_date", 200),
-      base44.entities.Event.list("-date", 5),
+      api.entities.Member.list("-created_date", 200),
+      api.entities.Visitor.list("-created_date", 100),
+      api.entities.Donation.list("-created_date", 200),
+      api.entities.Event.list("-date", 5),
     ]).then(([m, v, d, e]) => {
       setMembers(m);
       setVisitors(v);

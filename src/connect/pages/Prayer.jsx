@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   HandHeart, 
@@ -46,7 +46,7 @@ export default function Prayer() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
       setFormData(prev => ({
         ...prev,
@@ -60,17 +60,17 @@ export default function Prayer() {
 
   const { data: publicRequests = [], isLoading: loadingPublic } = useQuery({
     queryKey: ['prayerRequests', 'public'],
-    queryFn: () => base44.entities.PrayerRequest.filter({ is_public: true, status: 'active' }, '-created_date'),
+    queryFn: () => api.entities.PrayerRequest.filter({ is_public: true, status: 'active' }, '-created_date'),
   });
 
   const { data: myRequests = [], isLoading: loadingMy } = useQuery({
     queryKey: ['prayerRequests', 'my'],
-    queryFn: () => base44.entities.PrayerRequest.filter({ created_by: user?.email }, '-created_date'),
+    queryFn: () => api.entities.PrayerRequest.filter({ created_by: user?.email }, '-created_date'),
     enabled: !!user,
   });
 
   const createRequestMutation = useMutation({
-    mutationFn: (data) => base44.entities.PrayerRequest.create(data),
+    mutationFn: (data) => api.entities.PrayerRequest.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prayerRequests'] });
       setShowForm(false);
@@ -87,7 +87,7 @@ export default function Prayer() {
 
   const prayForMutation = useMutation({
     mutationFn: async (request) => {
-      return base44.entities.PrayerRequest.update(request.id, {
+      return api.entities.PrayerRequest.update(request.id, {
         prayer_count: (request.prayer_count || 0) + 1,
       });
     },
@@ -210,7 +210,7 @@ export default function Prayer() {
                 <Lock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Inicia sesión para ver tus pedidos</p>
                 <Button 
-                  onClick={() => base44.auth.redirectToLogin()}
+                  onClick={() => api.auth.redirectToLogin()}
                   className="mt-4 bg-red-600 hover:bg-red-700"
                 >
                   Iniciar Sesión

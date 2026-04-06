@@ -1,10 +1,14 @@
-# CFC CASA — Plataforma Digital de la Iglesia
+# IglesiaSOS — Plataforma Digital Multi-Iglesia
 
-Sistema unificado de **CFC Isidro Casanova** que integra en un solo repositorio:
+Sistema unificado para la gestión digital de iglesias. Permite a múltiples iglesias operar de forma completamente independiente en una sola aplicación y base de datos, cada una con su propio dominio.
 
-- 🌐 **Web pública de la iglesia** (cfccasanova.com)
-- 📋 **Planilla de censo** de líderes y miembros
-- 🗂️ **CRM interno** de gestión pastoral
+**Primera iglesia activa:** CFC Isidro Casanova (`cfccasanova.com`)
+
+Incluye tres módulos por iglesia:
+
+- 🌐 **Connect** — Web pública de la iglesia (sin login)
+- 📋 **Censo** — Formularios de registro de líderes y miembros
+- 🗂️ **CRM** — Panel administrativo interno (requiere login)
 
 Todo corre sobre **Next.js 16**, **Supabase** como base de datos y autenticación, y **Tailwind CSS** para el diseño.
 
@@ -12,8 +16,8 @@ Todo corre sobre **Next.js 16**, **Supabase** como base de datos y autenticació
 
 ## Tabla de contenidos
 
-1. [Objetivo](#objetivo)
-2. [Arquitectura general](#arquitectura-general)
+1. [Estado actual del sistema](#estado-actual-del-sistema) — ✅ Migración completada
+2. [Arquitectura multi-iglesia](#arquitectura-multi-iglesia)
 3. [Submódulos de la aplicación](#submódulos-de-la-aplicación)
    - [Connect — Web pública](#connect--web-pública)
    - [Censo — Planilla de registro](#censo--planilla-de-registro)
@@ -22,48 +26,127 @@ Todo corre sobre **Next.js 16**, **Supabase** como base de datos y autenticació
 5. [Estructura de archivos](#estructura-de-archivos)
 6. [Variables de entorno](#variables-de-entorno)
 7. [Cómo levantar el proyecto](#cómo-levantar-el-proyecto)
-8. [Guía de trabajo — Ejemplos prácticos](#guía-de-trabajo--ejemplos-prácticos)
-   - [Modificar la web pública](#modificar-la-web-pública)
-   - [Agregar un campo al censo](#agregar-un-campo-al-censo)
-   - [Agregar una pantalla al CRM](#agregar-una-pantalla-al-crm)
-   - [Cambiar el menú de navegación](#cambiar-el-menú-de-navegación)
-   - [Cargar datos de prueba](#cargar-datos-de-prueba)
-9. [Routing por subdominio](#routing-por-subdominio)
-10. [Autenticación](#autenticación)
-11. [Tecnologías usadas](#tecnologías-usadas)
+8. [Sistema de Permisos — Cómo funcionan los usuarios admin](#sistema-de-permisos--cómo-funcionan-los-usuarios-admin)
+9. [Agregar una iglesia nueva](#agregar-una-iglesia-nueva) — Panel `/superadmin` + DNS + Vercel
+10. [Guía de trabajo — Ejemplos prácticos](#guía-de-trabajo--ejemplos-prácticos)
+11. [Routing por dominio](#routing-por-dominio)
+12. [Autenticación](#autenticación)
+13. [Migración Multi-tenant — Detalles técnicos](#migración-multi-tenant--detalles-técnicos)
+14. [Tecnologías usadas](#tecnologías-usadas)
 
 ---
 
-## Objetivo
+## Estado actual del sistema
 
-Centralizar en un solo sistema todo lo que la iglesia necesita digitalmente:
+✅ **Migración multi-tenant completada** — El sistema está listo para operar con múltiples iglesias.
 
-| Público | Líderes / Miembros | Administración |
-|---|---|---|
-| Web de la iglesia | Formulario de censo | CRM pastoral |
-| Sermones, eventos, devocionales | Registro de célula y ministerio | Miembros, donaciones, estadísticas |
-| Oración, Biblia, Radio | — | Visitantes, líderes, comunicación |
+### Base de datos
 
----
+- ✅ Tabla `churches` creada con todos los campos (slug, custom_domain, plan, módulos, etc.)
+- ✅ Tabla `church_users` creada para vincular usuarios de Supabase Auth con iglesias
+- ✅ Columna `church_id` agregada a todas las tablas (personas, connect_*, CRM)
+- ✅ Índices de performance creados en `church_id`
+- ✅ RLS (Row Level Security) actualizado para aislamiento completo por iglesia
+- ✅ Función `my_church_id()` instalada para políticas RLS
 
-## Arquitectura general
+### Autenticación del CRM
+
+- ✅ Login actualizado para usar tabla `church_users` en lugar de `user_metadata`
+- ✅ Verificación automática: usuario debe estar en `church_users` con `role = 'admin'` y `is_active = true`
+- ✅ Compatible con usuarios creados vía:
+  - Panel Superadmin (crea usuario + vincula automáticamente)
+  - Script de migración SQL
+  - Gestión de Usuarios dentro del CRM
+
+### Primera iglesia registrada
+
+**CFC Isidro Casanova** ya está operativa:
+- **Slug:** `cfc`
+- **Dominio:** `cfccasanova.com`
+- **Plan:** Pro (todos los módulos habilitados)
+- **Usuarios admin vinculados:** 2 (developing@, jonapereda@)
+- **Datos migrados:** 5 personas con `church_id` asignado
+
+### Sistema de resolución automática
+
+El `church_id` se resuelve **dinámicamente por dominio** — no requiere cambios de código para iglesias nuevas:
 
 ```
-cfccasanova.com
+Browser accede a elrefugio.com
+         ↓
+apiClient.js lee window.location.hostname  →  "elrefugio.com"
+         ↓
+Query a Supabase: SELECT id FROM churches WHERE custom_domain = 'elrefugio.com'
+         ↓
+Todas las queries filtran con .eq('church_id', churchId)
+         ↓
+RLS en Supabase verifica que el usuario pertenezca a esa iglesia
+```
+
+### Próximos pasos disponibles
+
+1. **Crear iglesias nuevas** — Usar `/superadmin` para onboarding automático
+2. **Google OAuth** — Permitir login con cuentas Google
+3. **Aprobación de líderes** — Validar líderes antes de darles acceso al portal
+4. **Portal de líderes** — Sección protegida en la web pública para reportes de célula y materiales
+
+---
+
+## Arquitectura multi-iglesia
+
+Una sola aplicación Next.js y un solo proyecto Supabase sirve a todas las iglesias. Cada iglesia está completamente aislada de las demás.
+
+```
+miiglesia.com               ←── dominio propio de la iglesia
+    │
+    ├── /connect/*          Web pública  (src/connect/)
+    ├── crm.miiglesia.com   CRM interno  (src/crm/)
+    └── censo.miiglesia.com Formularios  (app/lider/, app/miembros/)
+```
+
+**Aislamiento de datos — cómo funciona:**
+
+```
+Browser                   Next.js               Supabase
+──────────────────────────────────────────────────────────────
+miiglesia.com         →   proxy.ts          →   /connect/home
+                          (routing solo)
+                              │
+                          apiClient.js
+                          queria church_id
+                              │
+                          SELECT id FROM churches
+                          WHERE custom_domain = 'miiglesia.com'
+                              │
+                          Todas las queries:
+                          .eq('church_id', churchId)
+                              │
+                          RLS en Supabase:
+                          my_church_id() comprueba
+                          que el usuario pertenece
+                          a esa iglesia
+```
+
+**Regla clave:** Para agregar una iglesia, solo se toca Supabase. Nunca el código.
+
+---
+
+```
+miiglesia.com
 │
 ├── /connect/*        ← Web pública (acceso libre, sin login)
 │     └── src/connect/
 │
-├── censo.cfccasanova.com  → /lider     ← Planilla de líderes
-├──         "              → /miembros  ← Planilla de miembros
+├── censo.miiglesia.com → /lider     ← Planilla de líderes
+├──         "           → /miembros  ← Planilla de miembros
 │     └── app/lider/page.tsx
 │         app/miembros/page.tsx
 │
-└── crm.cfccasanova.com    → /crm/*    ← CRM interno (requiere login admin)
+└── crm.miiglesia.com   → /crm/*    ← CRM interno (requiere login admin)
       └── src/crm/
 ```
 
-**El enrutamiento por subdominio** es manejado por `proxy.ts` (middleware de Next.js).  
+**El routing por subdominio** es manejado por `proxy.ts` (middleware de Next.js).
 Cada módulo vive en su propia carpeta (`src/connect`, `src/crm`) con sus propios componentes, estilos y rutas.
 
 ---
@@ -72,7 +155,7 @@ Cada módulo vive en su propia carpeta (`src/connect`, `src/crm`) con sus propio
 
 ### Connect — Web pública
 
-**URL:** `cfccasanova.com` o `localhost:3000/connect/home`
+**URL:** `miiglesia.com` o `localhost:3000/connect/home`
 
 La web pública que ven todos los miembros e interesados. No requiere login.
 
@@ -101,7 +184,7 @@ La web pública que ven todos los miembros e interesados. No requiere login.
 
 ### Censo — Planilla de registro
 
-**URL:** `censo.cfccasanova.com` o `localhost:3000/lider` / `localhost:3000/miembros`
+**URL:** `censo.miiglesia.com` o `localhost:3000/lider` / `localhost:3000/miembros`
 
 Formularios multi-paso para que líderes y miembros se registren en la base de datos de la iglesia. Los datos van directo a la tabla `personas` en Supabase.
 
@@ -124,7 +207,7 @@ Formularios multi-paso para que líderes y miembros se registren en la base de d
 
 ### CRM — Sistema de gestión
 
-**URL:** `crm.cfccasanova.com` o `localhost:3000/crm`  
+**URL:** `crm.miiglesia.com` o `localhost:3000/crm`  
 **Requiere login** con cuenta de Supabase que tenga `user_metadata.role = "admin"`.
 
 | Módulo | Ruta | Archivo |
@@ -257,23 +340,23 @@ censo-iglesia/
 │   │   ├── pages/               ← Una página por pantalla
 │   │   ├── components/          ← Componentes reutilizables
 │   │   ├── api/
-│   │   │   ├── base44Client.js  ← SDK de acceso a Supabase (datos públicos)
-│   │   │   └── supabaseClient.js
-│   │   └── lib/
-│   │       ├── AuthContext.jsx  ← Auth (sin login en Connect)
-│   │       └── router-compat.js ← Compatibilidad Link/useLocation con Next.js
-│   │
-│   └── crm/                     ← Lógica y UI del CRM
-│       ├── CrmShell.tsx         ← Conecta rutas Next.js con Layout CRM
-│       ├── Layout.jsx           ← Sidebar lateral
-│       ├── pages/               ← Una página por módulo
-│       ├── components/          ← Tablas, modales, gráficos, etc.
-│       ├── api/
-│       │   ├── base44Client.js  ← SDK de acceso a Supabase (autenticado)
-│       │   └── supabaseClient.js ← Cliente + funciones de traducción
-│       └── lib/
-│           ├── AuthContext.jsx  ← Auth real con Supabase (requiere admin)
-│           └── router-compat.js
+│   │   ├── apiClient.js     ← SDK multi-tenant (inyecta church_id por dominio)
+│   │   └── supabaseClient.js
+│   └── lib/
+│       ├── AuthContext.jsx  ← Auth (sin login en Connect)
+│       └── router-compat.js ← Compatibilidad Link/useLocation con Next.js
+│
+└── crm/                     ← Lógica y UI del CRM
+    ├── CrmShell.tsx         ← Conecta rutas Next.js con Layout CRM
+    ├── Layout.jsx           ← Sidebar lateral
+    ├── pages/               ← Una página por módulo
+    ├── components/          ← Tablas, modales, gráficos, etc.
+    ├── api/
+    │   ├── apiClient.js     ← SDK multi-tenant (church_id desde church_users)
+    │   └── supabaseClient.js ← Cliente + funciones de traducción
+    └── lib/
+        ├── AuthContext.jsx  ← Auth real con Supabase (requiere admin)
+        └── router-compat.js
 │
 ├── lib/
 │   └── supabase.ts              ← Cliente Supabase para el App Router (censo)
@@ -303,14 +386,35 @@ censo-iglesia/
 
 ## Variables de entorno
 
-Crear el archivo `.env.local` en la raíz con:
+Crear el archivo `.env.local` en la raíz (copiar desde `.env.example`):
 
 ```env
+# ── Supabase (obligatorias) ────────────────────────────────────────────────
 NEXT_PUBLIC_SUPABASE_URL=https://TU-PROJECT-REF.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...tu-anon-key...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...anon-key...
+
+# Service role key — SOLO servidor, nunca al cliente
+# Supabase → Project Settings → API → service_role
+SUPABASE_SERVICE_ROLE_KEY=eyJ...service-role-key...
+
+# ── Multi-iglesia ──────────────────────────────────────────────────────────
+# Slug de iglesia por defecto en localhost
+NEXT_PUBLIC_DEFAULT_CHURCH_SLUG=cfc
+
+# ── Super Admin ────────────────────────────────────────────────────────────
+# Clave para acceder a /superadmin — generá con: openssl rand -hex 32
+SUPERADMIN_SECRET=una-clave-aleatoria-larga
 ```
 
-> ⚠️ Nunca commitear este archivo. Está en `.gitignore`.
+| Variable | Dónde obtenerla | Expuesta al cliente |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API | Sí |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API | Sí |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role | **No** |
+| `NEXT_PUBLIC_DEFAULT_CHURCH_SLUG` | Definido por vos | Sí |
+| `SUPERADMIN_SECRET` | `openssl rand -hex 32` | **No** |
+
+> ⚠️ Nunca commitear `.env.local`. Está en `.gitignore`.
 
 ---
 
@@ -338,6 +442,192 @@ npm run dev
 #   Censo líder: http://localhost:3000/lider
 #   Censo miembro: http://localhost:3000/miembros
 #   CRM:         http://localhost:3000/crm/login
+```
+
+---
+
+## Sistema de Permisos — Cómo funcionan los usuarios admin
+
+El sistema usa **Supabase Auth** para autenticación + tabla `church_users` para vincular usuarios con iglesias.
+
+### Tabla `church_users`
+
+Conecta un usuario de Supabase Auth con una iglesia específica y define su rol.
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `user_id` | uuid | FK a `auth.users` (usuario autenticado) |
+| `church_id` | uuid | FK a `churches` (iglesia a la que pertenece) |
+| `role` | text | `'admin'` o `'user'` (futuro: staff, etc.) |
+| `is_active` | boolean | Si el usuario puede acceder (para desactivar sin borrar) |
+
+**Constraint único:** Un usuario puede pertenecer a múltiples iglesias con roles diferentes, pero solo una vez por iglesia.
+
+### Flujo de login al CRM
+
+1. Usuario ingresa email/contraseña en `/crm/login`
+2. Supabase Auth valida credenciales
+3. **Query automática:** `SELECT role FROM church_users WHERE user_id = auth.uid() AND is_active = true`
+4. Si `role === 'admin'` → acceso al CRM
+5. Si no → mensaje "Tu cuenta no tiene permisos" + logout automático
+
+### Creación automática de admins
+
+**Método 1: Panel Superadmin** (recomendado para nuevas iglesias)
+
+`/superadmin` →
+1. Crea iglesia en tabla `churches`
+2. Crea usuario en Supabase Auth con contraseña temporal
+3. **Automáticamente inserta en `church_users`** con `role = 'admin'`
+4. Setea `user_metadata.role = 'admin'` (compatibilidad)
+
+**Método 2: Script SQL multi-tenant**
+
+```sql
+-- Paso 8 del multitenant_migration.sql
+INSERT INTO public.church_users (church_id, user_id, role, is_active)
+VALUES (church_id, user_id, 'admin', true);
+```
+
+**Método 3: Desde el CRM** (agregar colaboradores internos)
+
+CRM → **Gestión de Usuarios → Invitar Usuario**
+- Crea el usuario en Supabase Auth
+- Automáticamente lo vincula a la misma iglesia del admin que invita
+- Puede elegir rol: `admin` o `user`
+
+### Gestión de usuarios dentro del CRM
+
+El admin de cada iglesia puede desde **CRM → Gestión de Usuarios**:
+
+| Acción | Disponible |
+|---|---|
+| Invitar usuario nuevo (por email) | ✓ |
+| Cambiar rol (admin / usuario) | ✓ |
+| Activar / desactivar acceso | ✓ |
+| Eliminar usuario de la tabla | ✗ — intencional, los registros son permanentes |
+
+> **Nota:** Los usuarios de `church_users` son **internos del CRM** (pastores, staff, etc.).
+> Los **miembros y líderes** de la base de datos se crean a través del **censo público** y no tienen acceso al CRM.
+
+### Seguridad RLS (Row Level Security)
+
+- **Función SQL:** `my_church_id()` devuelve el `church_id` del usuario autenticado actual
+- **Políticas:** Todas las tablas filtran automáticamente por `church_id = my_church_id()`
+- **Resultado:** Un admin de CFC **nunca puede ver datos** de otra iglesia, aunque esté en la misma base de datos
+
+---
+
+## Agregar una iglesia nueva
+
+**No se toca ningún archivo de código.** El proceso completo se hace desde el panel `/superadmin` + DNS + Vercel.
+
+---
+
+### Paso 1 — Panel Super Admin (creación automática)
+
+Entrás a `https://tu-dominio.com/superadmin` (o `http://localhost:3000/superadmin` en dev).
+
+Te pide la **clave maestra** (`SUPERADMIN_SECRET` de tu `.env.local`). Esta clave solo la tenés vos.
+
+Completás el formulario:
+
+| Campo | Ejemplo | Notas |
+|---|---|---|
+| Nombre completo | `Comunidad El Refugio` | Se muestra en la UI |
+| Slug | `el-refugio` | Se auto-genera desde el nombre. Solo letras minúsculas, números y guiones. Único por iglesia. |
+| Nombre corto | `El Refugio` | Opcional |
+| Dominio | `elrefugio.com` | Sin `www.`. El dominio que la iglesia ya tiene o va a registrar. |
+| Plan | `basic` / `pro` | |
+| Email del pastor | `pastor@elrefugio.com` | Recibirá acceso al CRM |
+| Nombre del admin | `Pastor Juan García` | Opcional |
+
+Al hacer click en **"Crear iglesia y usuario admin"**, el sistema hace **automáticamente en una sola transacción:**
+
+1. **Crea la iglesia:** `INSERT INTO churches` con todos los datos (slug, dominio, plan)
+2. **Crea el usuario en Supabase Auth:** `supabase.auth.admin.createUser()` con contraseña temporal aleatoria (16 caracteres)
+3. **Vincula usuario como admin:** `INSERT INTO church_users` con `role = 'admin'` y `is_active = true`
+4. **Setea metadata:** `user_metadata.role = 'admin'` para compatibilidad
+5. **Rollback automático:** Si cualquier paso falla, revierte todo (sin datos sucios)
+
+**Resultado que muestra la pantalla:**
+
+```
+✓ Iglesia creada: Comunidad El Refugio
+
+Web:   https://elrefugio.com
+CRM:   https://crm.elrefugio.com
+Censo: https://censo.elrefugio.com
+
+⚠ Contraseña temporal — enviar al pastor de forma segura
+Email: pastor@elrefugio.com
+Clave: abc123xyz789...
+```
+
+> La contraseña temporal **solo aparece una vez** en esta pantalla. Enviásela al pastor por WhatsApp o email privado.
+
+---
+
+### Paso 2 — DNS de la iglesia
+
+En el panel de dominio de la iglesia (GoDaddy, Namecheap, Cloudflare, etc.), agregar:
+
+| Nombre | Tipo | Valor |
+|---|---|---|
+| `@` (raíz) | A | IP de Vercel (o CNAME a `cname.vercel-dns.com`) |
+| `www` | CNAME | `cname.vercel-dns.com` |
+| `crm` | CNAME | `cname.vercel-dns.com` |
+| `censo` | CNAME | `cname.vercel-dns.com` |
+
+> Con Cloudflare: activar la nube naranja (proxy) para SSL automático.
+
+---
+
+### Paso 3 — Agregar dominios en Vercel
+
+En **Vercel → tu proyecto → Settings → Domains**, agregar los cuatro:
+
+```
+elrefugio.com
+www.elrefugio.com
+crm.elrefugio.com
+censo.elrefugio.com
+```
+
+Vercel genera el certificado SSL automáticamente para cada uno.
+
+---
+
+### Paso 4 — El pastor recibe acceso
+
+El pastor entra a `crm.elrefugio.com` con su email y contraseña temporal. Desde el CRM puede:
+- Cambiar su contraseña
+- Invitar más usuarios internos desde **Gestión de Usuarios → Invitar Usuario**
+- Compartir el link `censo.elrefugio.com` con sus líderes y miembros
+
+---
+
+### Paso 5 — Los líderes y miembros completan el censo
+
+`censo.elrefugio.com` detecta automáticamente la iglesia por el dominio y asigna el `church_id` correcto en cada registro. Todo aparece en el CRM aislado de las demás iglesias.
+
+---
+
+### Resumen del flujo
+
+```
+Vos (superadmin)                  Pastor                    Líderes y miembros
+────────────────                  ──────                    ──────────────────
+/superadmin
+→ completás formulario
+→ sistema crea iglesia
+  y usuario admin                 → recibe email/WhatsApp
+                                    con clave temporal
+                                  → entra a crm.dominio.com
+                                  → cambia contraseña
+                                  → invita colaboradores
+                                  → comparte censo.dominio.com  → llenan el censo
+                                                                 → aparecen en CRM
 ```
 
 ---
@@ -610,19 +900,23 @@ WHERE id = 'pegar-uuid-aqui';
 
 ---
 
-## Routing por subdominio
+## Routing por dominio
 
-El archivo `proxy.ts` actúa como middleware de Next.js y enruta según el subdominio:
+El archivo `proxy.ts` actúa como middleware de Next.js. Su única función es decidir qué módulo mostrar según el subdominio — no necesita conocer la iglesia.
 
-| Subdominio | Redirige a | Requiere login |
+| Subdominio | Módulo que abre | Login requerido |
 |---|---|---|
-| `cfccasanova.com` | `/connect/home` | No |
-| `www.cfccasanova.com` | `/connect/home` | No |
-| `censo.cfccasanova.com` | `/lider` | No |
-| `portal.cfccasanova.com` | `/portal/*` | Sí (cookie Supabase) |
-| `crm.cfccasanova.com` | `/crm/*` | Sí (Supabase localStorage) |
+| `miiglesia.com` | Web pública (Connect) | No |
+| `www.miiglesia.com` | Web pública (Connect) | No |
+| `censo.miiglesia.com` | Formulario censo (`/lider`) | No |
+| `crm.miiglesia.com` | CRM (`/crm/login`) | Sí |
 
-En **localhost** el routing por subdominio no aplica — se accede por ruta directa.
+La **identificación de la iglesia** (qué `church_id` usar) se resuelve en el cliente: el `apiClient.js` consulta la tabla `churches` buscando `custom_domain = window.location.hostname`. Esto significa que agregar una nueva iglesia **no requiere ningún cambio en el código**.
+
+En **localhost**, el routing por subdominio no aplica — acceder directamente por ruta:
+- Web pública: `http://localhost:3000/connect/home?church=cfc`
+- CRM: `http://localhost:3000/crm/login` (church_id se obtiene del usuario logueado)
+- Censo: `http://localhost:3000/lider?church=cfc`
 
 ---
 
@@ -637,6 +931,57 @@ Usa **Supabase Auth** con email y contraseña.
 - Login en `/crm/login` → `src/crm/pages/Welcome.jsx`
 - Al ingresar se verifica que el usuario tenga `user_metadata.role === "admin"`. Sin ese rol la sesión se rechaza.
 - Si el token expira, Supabase lo renueva automáticamente en segundo plano.
+
+---
+
+## Migración Multi-tenant — Detalles técnicos
+
+El sistema fue convertido de single-tenant (solo CFC) a multi-iglesia (SaaS) mediante el script `supabase/multitenant_migration.sql` — **ya ejecutado**.
+
+### Qué hizo la migración
+
+**Paso 1:** Creó la tabla `churches`
+- Campos: name, slug, custom_domain, plan, módulos habilitados, branding
+- CFC registrada como primer tenant
+
+**Paso 2:** Agregó `church_id` a todas las tablas
+- 21 tablas afectadas: personas, connect_*, CRM tables
+- Datos existentes migrados automáticamente con el `church_id` de CFC
+
+**Paso 3:** Tabla `church_users`
+- Vincula usuarios de Supabase Auth con su iglesia y rol
+- CFC: 2 usuarios admin vinculados (developing@, jonapereda@)
+
+**Paso 4:** RLS actualizado
+- Función `my_church_id()` — lee el church_id del usuario autenticado
+- Políticas por tabla para aislamiento completo
+- Web pública: lectura pública, escritura con `church_id` correcto
+- CRM: solo usuarios autenticados de la misma iglesia
+
+### Archivo de migración
+
+```
+supabase/multitenant_migration.sql  (451 líneas)
+```
+
+**Para re-ejecutar** (ej: en otro ambiente):
+1. Editar Step 8 con los emails de admin de CFC
+2. Ejecutar todo el script en Supabase SQL Editor
+3. Verificar con la query final que muestra el resumen
+
+### Cómo revertir (solo si es necesario)
+
+```sql
+-- ⚠️ ADVERTENCIA: Esto borra TODAS las iglesias y datos multi-tenant
+DROP TABLE IF EXISTS public.church_users CASCADE;
+DROP TABLE IF EXISTS public.churches CASCADE;
+
+-- Quitar church_id de todas las tablas (ejemplo para personas):
+ALTER TABLE public.personas DROP COLUMN IF EXISTS church_id CASCADE;
+-- Repetir para las 21 tablas restantes...
+```
+
+> **Mejor práctica:** No revertir. Si hay un error, corregirlo con otro script de migración incremental.
 
 ---
 
@@ -656,20 +1001,3 @@ Usa **Supabase Auth** con email y contraseña.
 | **date-fns** | Manejo de fechas |
 | **Lucide React** | Íconos |
 | **react-hot-toast** | Notificaciones (censo) |
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

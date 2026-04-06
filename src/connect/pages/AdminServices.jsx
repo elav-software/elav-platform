@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Radio, Plus, Edit3, Trash2, ChevronLeft, Save, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@connect/components/ui/button';
@@ -40,17 +40,17 @@ export default function AdminServices() {
 
   useEffect(() => { loadUser(); }, []);
   const loadUser = async () => {
-    try { setUser(await base44.auth.me()); } catch (e) { setUser(null); }
+    try { setUser(await api.auth.me()); } catch (e) { setUser(null); }
   };
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['adminServices'],
-    queryFn: () => base44.entities.Service.list('-date'),
+    queryFn: () => api.entities.Service.list('-date'),
     enabled: user?.role === 'admin',
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Service.create(data),
+    mutationFn: (data) => api.entities.Service.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminServices'] });
       resetForm(); toast.success('Servicio creado');
@@ -58,7 +58,7 @@ export default function AdminServices() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Service.update(id, data),
+    mutationFn: ({ id, data }) => api.entities.Service.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminServices'] });
       resetForm(); toast.success('Servicio actualizado');
@@ -66,7 +66,7 @@ export default function AdminServices() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Service.delete(id),
+    mutationFn: (id) => api.entities.Service.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminServices'] });
       toast.success('Servicio eliminado');
@@ -74,7 +74,7 @@ export default function AdminServices() {
   });
 
   const toggleLive = async (service) => {
-    await base44.entities.Service.update(service.id, { is_live: !service.is_live });
+    await api.entities.Service.update(service.id, { is_live: !service.is_live });
     queryClient.invalidateQueries({ queryKey: ['adminServices'] });
     toast.success(service.is_live ? 'Transmisión finalizada' : 'Transmisión iniciada');
   };

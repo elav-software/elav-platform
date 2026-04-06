@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Video, Plus, Edit3, Trash2, ChevronLeft, Save, X } from 'lucide-react';
 import { Button } from '@connect/components/ui/button';
@@ -29,17 +29,17 @@ export default function AdminSermons() {
 
   useEffect(() => { loadUser(); }, []);
   const loadUser = async () => {
-    try { setUser(await base44.auth.me()); } catch (e) { setUser(null); }
+    try { setUser(await api.auth.me()); } catch (e) { setUser(null); }
   };
 
   const { data: sermons = [], isLoading } = useQuery({
     queryKey: ['adminSermons'],
-    queryFn: () => base44.entities.Sermon.list('-date'),
+    queryFn: () => api.entities.Sermon.list('-date'),
     enabled: user?.role === 'admin',
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Sermon.create(data),
+    mutationFn: (data) => api.entities.Sermon.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminSermons'] });
       resetForm(); toast.success('Sermón creado');
@@ -47,7 +47,7 @@ export default function AdminSermons() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Sermon.update(id, data),
+    mutationFn: ({ id, data }) => api.entities.Sermon.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminSermons'] });
       resetForm(); toast.success('Sermón actualizado');
@@ -55,7 +55,7 @@ export default function AdminSermons() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Sermon.delete(id),
+    mutationFn: (id) => api.entities.Sermon.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminSermons'] });
       toast.success('Sermón eliminado');

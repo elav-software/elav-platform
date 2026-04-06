@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
@@ -71,8 +71,8 @@ export default function Events() {
 
   const load = async () => {
     const [e, a] = await Promise.all([
-      base44.entities.Event.list("-date", 200),
-      base44.entities.Attendance.list("-created_date", 500),
+      api.entities.Event.list("-date", 200),
+      api.entities.Attendance.list("-created_date", 500),
     ]);
     setEvents(e);
     setAttendance(a);
@@ -91,21 +91,21 @@ export default function Events() {
 
   const saveEvent = async () => {
     setSaving(true);
-    if (editingEvent) await base44.entities.Event.update(editingEvent.id, eventForm);
-    else await base44.entities.Event.create(eventForm);
+    if (editingEvent) await api.entities.Event.update(editingEvent.id, eventForm);
+    else await api.entities.Event.create(eventForm);
     await load(); setEventModal(false); setSaving(false);
   };
 
   const saveAtt = async () => {
     setSaving(true);
-    if (editingAtt) await base44.entities.Attendance.update(editingAtt.id, attForm);
-    else await base44.entities.Attendance.create(attForm);
+    if (editingAtt) await api.entities.Attendance.update(editingAtt.id, attForm);
+    else await api.entities.Attendance.create(attForm);
     await load(); setAttModal(false); setSaving(false);
   };
 
   const deleteEvent = async (id) => {
     if (!confirm("¿Eliminar este evento?")) return;
-    await base44.entities.Event.delete(id);
+    await api.entities.Event.delete(id);
     setEvents(prev => prev.filter(e => e.id !== id));
   };
 

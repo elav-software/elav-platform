@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
+import { supabase } from '@connect/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   FileText, 
@@ -84,7 +85,7 @@ export default function LeadershipMaterials() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -93,12 +94,12 @@ export default function LeadershipMaterials() {
 
   const { data: materials = [], isLoading } = useQuery({
     queryKey: ['materials'],
-    queryFn: () => base44.entities.MinistryMaterial.list('-created_date'),
+    queryFn: () => api.entities.MinistryMaterial.list('-created_date'),
     enabled: user?.role === 'admin',
   });
 
   const createMaterialMutation = useMutation({
-    mutationFn: (data) => base44.entities.MinistryMaterial.create(data),
+    mutationFn: (data) => api.entities.MinistryMaterial.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       setShowUpload(false);
@@ -115,7 +116,7 @@ export default function LeadershipMaterials() {
   });
 
   const deleteMaterialMutation = useMutation({
-    mutationFn: (id) => base44.entities.MinistryMaterial.delete(id),
+    mutationFn: (id) => api.entities.MinistryMaterial.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       toast.success('Material eliminado');
@@ -128,8 +129,16 @@ export default function LeadershipMaterials() {
 
     setUploading(true);
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
-      setFormData({ ...formData, file_url: result.file_url });
+      const ext = file.name.split('.').pop();
+      const fileName = `materials/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('ministry-materials')
+        .upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage
+        .from('ministry-materials')
+        .getPublicUrl(fileName);
+      setFormData({ ...formData, file_url: urlData.publicUrl });
       toast.success('Archivo subido');
     } catch (error) {
       toast.error('Error al subir el archivo');

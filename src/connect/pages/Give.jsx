@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Heart, 
@@ -50,7 +50,7 @@ export default function Give() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -59,12 +59,12 @@ export default function Give() {
 
   const { data: myDonations = [], isLoading: loadingDonations } = useQuery({
     queryKey: ['donations', 'my'],
-    queryFn: () => base44.entities.Donation.filter({ donor_email: user?.email }, '-created_date'),
+    queryFn: () => api.entities.Donation.filter({ donor_email: user?.email }, '-created_date'),
     enabled: !!user,
   });
 
   const createDonationMutation = useMutation({
-    mutationFn: (data) => base44.entities.Donation.create(data),
+    mutationFn: (data) => api.entities.Donation.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['donations'] });
       toast.success('¡Gracias por tu generosidad!');

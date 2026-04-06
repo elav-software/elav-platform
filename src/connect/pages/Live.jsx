@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery } from '@tanstack/react-query';
 import { Radio, Play, Calendar, Clock, Users } from 'lucide-react';
 import { Button } from '@connect/components/ui/button';
@@ -14,12 +14,12 @@ import { motion } from 'framer-motion';
 export default function Live() {
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['services'],
-    queryFn: () => base44.entities.Service.list('-date', 10),
+    queryFn: () => api.entities.Service.list('-date', 10),
   });
 
   const { data: sermons = [] } = useQuery({
     queryKey: ['sermons'],
-    queryFn: () => base44.entities.Sermon.list('-date', 1),
+    queryFn: () => api.entities.Sermon.list('-date', 1),
   });
 
   const liveService = services.find(s => s.is_live);

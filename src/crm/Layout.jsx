@@ -41,8 +41,17 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user) return;
+      
+      // Verificar si el usuario está en church_users
+      const { data: churchUser } = await supabase
+        .from('church_users')
+        .select('role, is_active')
+        .eq('user_id', session.user.id)
+        .eq('is_active', true)
+        .single();
+      
       const u = {
         id: session.user.id,
         email: session.user.email,
@@ -50,7 +59,7 @@ export default function Layout({ children, currentPageName }) {
           session.user.user_metadata?.full_name ||
           session.user.user_metadata?.name ||
           session.user.email?.split("@")[0] || "",
-        role: session.user.user_metadata?.role ?? "user",
+        role: churchUser?.role ?? "user",
       };
       setUser(u);
       if (u.role !== "admin") {

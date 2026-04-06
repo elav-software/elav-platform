@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import PageHeader from "../components/shared/PageHeader";
 import { BarChart3, Users, UserPlus, Crown, Heart } from "lucide-react";
@@ -21,7 +21,7 @@ export default function Demographics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.Member.list("-created_date", 5000).then(data => {
+    api.entities.Member.list("-created_date", 5000).then(data => {
       setMembers(data);
       setLoading(false);
     });

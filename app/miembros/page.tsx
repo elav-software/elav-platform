@@ -2,6 +2,24 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+
+async function resolveChurchId(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  const hostname = window.location.hostname;
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  if (isLocal) {
+    const slug = new URLSearchParams(window.location.search).get('church')
+      ?? process.env.NEXT_PUBLIC_DEFAULT_CHURCH_SLUG
+      ?? 'cfc';
+    const { data } = await supabase.from('churches').select('id').eq('slug', slug).eq('is_active', true).single();
+    return data?.id ?? null;
+  }
+
+  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal)\./, '');
+  const { data } = await supabase.from('churches').select('id').eq('custom_domain', rootDomain).eq('is_active', true).single();
+  return data?.id ?? null;
+}
 import toast, { Toaster } from "react-hot-toast";
 import { motion } from "framer-motion";
 
@@ -76,6 +94,8 @@ export default function MiembrosPage() {
 
     setLoading(true);
 
+    const churchId = await resolveChurchId();
+
     const payload = {
       nombre: form.nombre,
       apellido: form.apellido,
@@ -92,6 +112,7 @@ export default function MiembrosPage() {
       hijos: form.hijos || null,
       rol: "Miembro",
       lider_id: form.lider_id,
+      ...(churchId ? { church_id: churchId } : {}),
     };
 
     const { error } = await supabase.from("personas").insert([payload]);

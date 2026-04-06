@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from '@connect/lib/router-compat';
 import { createPageUrl } from '@connect/utils';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { 
   Home, 
   Radio, 
@@ -55,7 +55,7 @@ export default function Layout({ children, currentPageName }) {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -63,7 +63,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const handleLogout = () => {
-    base44.auth.logout();
+    api.auth.logout();
   };
 
   const isAdmin = user?.role === 'admin';
@@ -73,7 +73,7 @@ export default function Layout({ children, currentPageName }) {
   const hideBottomNav = ['AdminDashboard', 'LeadershipMaterials', 'MinistryReports'].includes(currentPageName);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundImage: "url('https://media.base44.com/images/public/69878a2b6ba10a3126753b8e/436fcc4a6_FONDOAPP.jpg')", backgroundSize: "cover", backgroundPosition: "top center", backgroundAttachment: "fixed" }}>
+    <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Top Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 h-14">
@@ -166,7 +166,7 @@ export default function Layout({ children, currentPageName }) {
                   ) : (
                     <Button 
                       className="w-full bg-red-600 hover:bg-red-700"
-                      onClick={() => base44.auth.redirectToLogin()}
+                      onClick={() => api.auth.redirectToLogin()}
                     >
                       Iniciar Sesión
                     </Button>

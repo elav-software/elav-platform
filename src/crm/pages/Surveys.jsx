@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
@@ -63,7 +63,7 @@ export default function Surveys() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const data = await base44.entities.Survey.list("-created_date", 200);
+    const data = await api.entities.Survey.list("-created_date", 200);
     setSurveys(data);
     setLoading(false);
   };
@@ -76,14 +76,14 @@ export default function Surveys() {
   const handleSave = async () => {
     setSaving(true);
     const payload = { ...form, rating: form.rating ? Number(form.rating) : undefined };
-    if (editing) await base44.entities.Survey.update(editing.id, payload);
-    else await base44.entities.Survey.create(payload);
+    if (editing) await api.entities.Survey.update(editing.id, payload);
+    else await api.entities.Survey.create(payload);
     await load(); setModalOpen(false); setSaving(false);
   };
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar esta respuesta de encuesta?")) return;
-    await base44.entities.Survey.delete(id);
+    await api.entities.Survey.delete(id);
     setSurveys(prev => prev.filter(s => s.id !== id));
   };
 

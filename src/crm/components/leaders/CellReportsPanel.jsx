@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
@@ -17,7 +17,7 @@ export default function CellReportsPanel({ leader, refreshKey }) {
   const [view, setView] = useState("list");
 
   const load = async () => {
-    const data = await base44.entities.CellReport.filter({ leader_id: leader.id }, "-date", 100);
+    const data = await api.entities.CellReport.filter({ leader_id: leader.id }, "-date", 100);
     setReports(data);
     setLoading(false);
   };
@@ -26,7 +26,7 @@ export default function CellReportsPanel({ leader, refreshKey }) {
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar este reporte?")) return;
-    await base44.entities.CellReport.delete(id);
+    await api.entities.CellReport.delete(id);
     setReports(prev => prev.filter(r => r.id !== id));
   };
 

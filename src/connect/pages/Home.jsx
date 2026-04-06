@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery } from '@tanstack/react-query';
 import Logo from '@connect/components/ui/Logo';
 import LiveBanner from '@connect/components/home/LiveBanner';
@@ -21,7 +21,7 @@ export default function Home() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -30,12 +30,12 @@ export default function Home() {
 
   const { data: services = [], isLoading: loadingServices } = useQuery({
     queryKey: ['services'],
-    queryFn: () => base44.entities.Service.list('-date', 10)
+    queryFn: () => api.entities.Service.list('-date', 10)
   });
 
   const { data: sermons = [], isLoading: loadingSermons } = useQuery({
     queryKey: ['sermons'],
-    queryFn: () => base44.entities.Sermon.list('-date', 6)
+    queryFn: () => api.entities.Sermon.list('-date', 6)
   });
 
   const liveService = services.find((s) => s.is_live);

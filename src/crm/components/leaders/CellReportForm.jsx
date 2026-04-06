@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Button } from "@crm/components/ui/button";
 import { Input } from "@crm/components/ui/input";
 import { Label } from "@crm/components/ui/label";
@@ -24,7 +24,7 @@ export default function CellReportForm({ leader, onReportSaved }) {
   const handleSave = async () => {
     if (!form.date) return;
     setSaving(true);
-    await base44.entities.CellReport.create({
+    await api.entities.CellReport.create({
       leader_id: leader.id,
       date: form.date,
       topic: form.topic,

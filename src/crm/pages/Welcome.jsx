@@ -10,13 +10,20 @@ export default function Welcome() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const role = session.user.user_metadata?.role ?? "user";
-        if (role === "admin") {
+        // Verificar si el usuario está en church_users con rol admin
+        const { data: churchUser } = await supabase
+          .from('church_users')
+          .select('role, is_active')
+          .eq('user_id', session.user.id)
+          .eq('is_active', true)
+          .single();
+        
+        if (churchUser?.role === 'admin') {
           window.location.href = "/crm/dashboard";
         } else {
-          // Sesión activa pero sin rol admin — cerrar sesión
+          // Sesión activa pero sin permisos — cerrar sesión
           supabase.auth.signOut();
         }
       }
@@ -36,13 +43,36 @@ export default function Welcome() {
       setLoading(false);
       return;
     }
-    const role = data.user?.user_metadata?.role ?? "user";
-    if (role !== "admin") {
+    
+    console.log("🔍 Usuario autenticado:", data.user.id, data.user.email);
+    
+    // Verificar si el usuario está en church_users con rol admin
+    const { data: churchUser, error: churchError } = await supabase
+      .from('church_users')
+      .select('role, is_active')
+      .eq('user_id', data.user.id)
+      .eq('is_active', true)
+      .single();
+    
+    console.log("🔍 Query church_users result:", { churchUser, churchError });
+    
+    if (churchError) {
+      console.error("❌ Error al consultar church_users:", churchError);
+      await supabase.auth.signOut();
+      setError(`Error de permisos: ${churchError.message}`);
+      setLoading(false);
+      return;
+    }
+    
+    if (churchUser?.role !== 'admin') {
+      console.warn("⚠️ Usuario sin rol admin:", churchUser);
       await supabase.auth.signOut();
       setError("Tu cuenta no tiene permisos para acceder al CRM.");
       setLoading(false);
       return;
     }
+    
+    console.log("✅ Login exitoso como admin");
     window.location.href = "/crm/dashboard";
   };
 

@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ClipboardList, 
@@ -61,7 +61,7 @@ export default function MinistryReports() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -70,12 +70,12 @@ export default function MinistryReports() {
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['ministryReports'],
-    queryFn: () => base44.entities.MinistryReport.list('-report_date', 50),
+    queryFn: () => api.entities.MinistryReport.list('-report_date', 50),
     enabled: user?.role === 'admin',
   });
 
   const createReportMutation = useMutation({
-    mutationFn: (data) => base44.entities.MinistryReport.create({
+    mutationFn: (data) => api.entities.MinistryReport.create({
       ...data,
       submitted_by: user?.full_name || user?.email,
     }),

@@ -2,6 +2,26 @@
 
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
+
+/** Resuelve el church_id desde el dominio del navegador, consultando Supabase. */
+async function resolveChurchId(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  const hostname = window.location.hostname;
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  if (isLocal) {
+    const slug = new URLSearchParams(window.location.search).get('church')
+      ?? process.env.NEXT_PUBLIC_DEFAULT_CHURCH_SLUG
+      ?? 'cfc';
+    const { data } = await supabase.from('churches').select('id').eq('slug', slug).eq('is_active', true).single();
+    return data?.id ?? null;
+  }
+
+  // Producción: strip www. y subdominios (censo.) para obtener el dominio raíz
+  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal)\./, '');
+  const { data } = await supabase.from('churches').select('id').eq('custom_domain', rootDomain).eq('is_active', true).single();
+  return data?.id ?? null;
+}
 import toast, { Toaster } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -77,6 +97,8 @@ export default function Home() {
     if (!validate()) return;
     setLoading(true);
 
+    const churchId = await resolveChurchId();
+
     const payload = {
       ...form,
       rol: "Líder",
@@ -88,6 +110,7 @@ export default function Home() {
       fecha_llegada_cfc: form.fecha_llegada_cfc || null,
       area_servicio_actual: form.area_servicio_actual.join(", ") || null,
       disponibilidad_horaria: form.disponibilidad_horaria.join(", ") || null,
+      ...(churchId ? { church_id: churchId } : {}),
     };
 
     const { error } = await supabase.from("personas").insert([payload]);

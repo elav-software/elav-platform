@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Plus, Edit3, Trash2, ChevronLeft, Save, AlertTriangle } from 'lucide-react';
 import { Button } from '@connect/components/ui/button';
@@ -38,17 +38,17 @@ export default function AdminAnnouncements() {
 
   useEffect(() => { loadUser(); }, []);
   const loadUser = async () => {
-    try { setUser(await base44.auth.me()); } catch (e) { setUser(null); }
+    try { setUser(await api.auth.me()); } catch (e) { setUser(null); }
   };
 
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ['adminAnnouncements'],
-    queryFn: () => base44.entities.Announcement.list('-publish_date'),
+    queryFn: () => api.entities.Announcement.list('-publish_date'),
     enabled: user?.role === 'admin',
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Announcement.create(data),
+    mutationFn: (data) => api.entities.Announcement.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminAnnouncements'] });
       resetForm(); toast.success('Anuncio creado');
@@ -56,7 +56,7 @@ export default function AdminAnnouncements() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Announcement.update(id, data),
+    mutationFn: ({ id, data }) => api.entities.Announcement.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminAnnouncements'] });
       resetForm(); toast.success('Anuncio actualizado');
@@ -64,7 +64,7 @@ export default function AdminAnnouncements() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Announcement.delete(id),
+    mutationFn: (id) => api.entities.Announcement.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminAnnouncements'] });
       toast.success('Anuncio eliminado');
