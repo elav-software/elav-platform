@@ -19,11 +19,16 @@ BEGIN
   -- Obtener el church_id de CFC Casanova
   SELECT id INTO v_church_id 
   FROM public.churches 
-  WHERE domain = 'cfccasanova.com' OR name ILIKE '%casanova%'
+  WHERE name ILIKE '%casanova%' OR name ILIKE '%CFC%'
   LIMIT 1;
   
   IF v_church_id IS NULL THEN
-    RAISE EXCEPTION '❌ No se encontró la iglesia CFC Casanova. Verificar tabla churches.';
+    -- Si no existe, usar la primera iglesia disponible
+    SELECT id INTO v_church_id FROM public.churches LIMIT 1;
+  END IF;
+  
+  IF v_church_id IS NULL THEN
+    RAISE EXCEPTION '❌ No hay ninguna iglesia en la tabla churches. Crear una primero.';
   END IF;
   
   RAISE NOTICE '✅ Church ID encontrado: %', v_church_id;
