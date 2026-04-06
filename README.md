@@ -32,7 +32,8 @@ Todo corre sobre **Next.js 16**, **Supabase** como base de datos y autenticació
 11. [Routing por dominio](#routing-por-dominio)
 12. [Autenticación](#autenticación)
 13. [Migración Multi-tenant — Detalles técnicos](#migración-multi-tenant--detalles-técnicos)
-14. [Tecnologías usadas](#tecnologías-usadas)
+14. [Troubleshooting & Deployment](#troubleshooting--deployment) — **Guía de resolución de problemas**
+15. [Tecnologías usadas](#tecnologías-usadas)
 
 ---
 
@@ -982,6 +983,221 @@ ALTER TABLE public.personas DROP COLUMN IF EXISTS church_id CASCADE;
 ```
 
 > **Mejor práctica:** No revertir. Si hay un error, corregirlo con otro script de migración incremental.
+
+---
+
+## Troubleshooting & Deployment
+
+### Problemas comunes resueltos
+
+#### ❌ "Tu cuenta no tiene permisos para acceder al CRM"
+
+**Causa:** El usuario no está vinculado en la tabla `church_users`.
+
+**Solución:**
+
+1. Verificar que el usuario existe en Supabase Auth (Authentication → Users)
+2. Ejecutar el script de vinculación:
+
+```sql
+-- En Supabase SQL Editor
+DO $$
+DECLARE
+  cfc_id uuid;
+  user_id uuid;
+BEGIN
+  SELECT id INTO cfc_id FROM churches WHERE slug = 'cfc';
+  SELECT id INTO user_id FROM auth.users WHERE email = 'tu-email@cfccasanova.com';
+  
+  INSERT INTO church_users (church_id, user_id, role, is_active)
+  VALUES (cfc_id, user_id, 'admin', true)
+  ON CONFLICT (church_id, user_id) DO UPDATE SET role = 'admin', is_active = true;
+END $$;
+```
+
+3. Verificar con:
+```sql
+SELECT u.email, cu.role, cu.is_active, c.name
+FROM church_users cu
+JOIN auth.users u ON u.id = cu.user_id
+JOIN churches c ON c.id = cu.church_id
+WHERE u.email = 'tu-email@cfccasanova.com';
+```
+
+4. **Importante:** Deshabilitar RLS temporalmente si sigue fallando:
+```sql
+ALTER TABLE church_users DISABLE ROW LEVEL SECURITY;
+```
+
+---
+
+#### ❌ 404 en `/superadmin` (producción)
+
+**Causa:** El middleware `proxy.ts` intercepta la ruta y la redirige a `/connect/superadmin`.
+
+**Solución:** Ya está resuelto en commit `9b0bc3f`. Verificar que `proxy.ts` incluya:
+
+```ts
+if (
+  !pathname.startsWith("/connect") &&
+  !pathname.startsWith("/crm") &&
+  !pathname.startsWith("/lider") &&
+  !pathname.startsWith("/miembros") &&
+  !pathname.startsWith("/superadmin")  // ← Esta línea
+) {
+  // ...redirect logic
+}
+```
+
+---
+
+#### ❌ "An unexpected Turbopack error occurred"
+
+**Causa:** Archivo `nul` en la carpeta del proyecto (creado por comandos con `2>nul`).
+
+**Solución:**
+```bash
+rm -f nul
+rm -rf .next
+npm run dev
+```
+
+---
+
+#### ❌ "Invalid Refresh Token" en consola
+
+**Causa:** Sesión expirada o no existe.
+
+**Solución:** Esto es **normal** si no hay usuario logueado. Ignorar el error. Solo es problemático si aparece después de hacer login exitosamente.
+
+---
+
+### Checklist de Deployment a Producción
+
+Cuando hagas `git push`, Vercel redeploy automáticamente. Seguí estos pasos:
+
+#### 1. ✅ Verificar variables de entorno en Vercel
+
+Ve a **Vercel Dashboard → tu proyecto → Settings → Environment Variables** y verificá:
+
+| Variable | Valor | Nota |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://sotnuubzcdldctvtwzji.supabase.co` | Público ✅ |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJ...` (anon key de Supabase) | Público ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | `eyJ...` (service_role key) | **Secreto** 🔒 |
+| `NEXT_PUBLIC_DEFAULT_CHURCH_SLUG` | `cfc` | Público ✅ |
+| `SUPERADMIN_SECRET` | Tu clave generada con `openssl rand -hex 32` | **Secreto** 🔒 |
+
+**Importante:** Después de agregar/editar variables, hacer **Redeploy** en Vercel.
+
+---
+
+#### 2. ✅ Ejecutar migración SQL en producción
+
+**Solo la primera vez** o si agregaste una nueva iglesia manualmente:
+
+1. Ir a **Supabase Dashboard** de PRODUCCIÓN (no dev)
+2. SQL Editor → New query
+3. Copiar y pegar `supabase/multitenant_migration.sql`
+4. **Modificar Step 8** con los emails correctos de los admins
+5. Ejecutar todo el script
+6. Verificar resultados:
+
+```sql
+SELECT 'churches' AS tabla, count(*) FROM churches
+UNION SELECT 'church_users', count(*) FROM church_users
+UNION SELECT 'personas con church_id', count(*) FROM personas WHERE church_id IS NOT NULL;
+```
+
+Deberías ver al menos 1 church, 1+ church_users, y tus datos con church_id.
+
+---
+
+#### 3. ✅ Verificar deployment en Vercel
+
+1. **Vercel Dashboard → Deployments**
+2. El último deployment debería mostrar **"Ready"** (verde)
+3. Si dice **"Error"** (rojo):
+   - Click en el deployment
+   - Ir a la tab **"Build Logs"**
+   - Buscar errores en rojo
+   - Común: variables de entorno faltantes
+
+---
+
+#### 4. ✅ Probar en producción
+
+**Test 1 — CRM Login:**
+1. Ir a `https://crm.cfccasanova.com/login`
+2. Ingresar con tu email y contraseña
+3. Debería entrar al dashboard sin errores
+
+**Test 2 — Super Admin:**
+1. Ir a `https://www.cfccasanova.com/superadmin`
+2. Ingresar la clave maestra (`SUPERADMIN_SECRET`)
+3. Llenar el formulario de iglesia de prueba
+4. Verificar que se crea correctamente
+
+**Test 3 — Censo:**
+1. Ir a `https://censo.cfccasanova.com` (o `www.cfccasanova.com/lider`)
+2. Llenar formulario como líder
+3. Verificar que aparece en CRM → Líderes
+
+---
+
+#### 5. ✅ Verificar aislamiento multi-tenant
+
+**Prueba de aislamiento:**
+
+1. Crear iglesia de prueba desde `/superadmin`
+2. Crear usuario admin para esa iglesia
+3. Loguearse en CRM con ese admin
+4. Verificar que **solo ve datos de su iglesia**, no de CFC
+
+Si ves datos de otra iglesia = RLS mal configurado.
+
+---
+
+### Scripts SQL útiles para debugging
+
+#### Ver todas las iglesias registradas
+```sql
+SELECT id, name, slug, custom_domain, is_active, plan
+FROM churches
+ORDER BY created_at DESC;
+```
+
+#### Ver todos los admins vinculados
+```sql
+SELECT 
+  c.name AS iglesia,
+  u.email,
+  cu.role,
+  cu.is_active,
+  cu.created_at
+FROM church_users cu
+JOIN churches c ON c.id = cu.church_id
+JOIN auth.users u ON u.id = cu.user_id
+ORDER BY c.name, u.email;
+```
+
+#### Ver políticas RLS activas
+```sql
+SELECT tablename, policyname, permissive, roles, cmd
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename IN ('church_users', 'personas', 'churches')
+ORDER BY tablename, policyname;
+```
+
+#### Verificar RLS habilitado/deshabilitado
+```sql
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+  AND tablename IN ('church_users', 'churches', 'personas')
+ORDER BY tablename;
+```
 
 ---
 
