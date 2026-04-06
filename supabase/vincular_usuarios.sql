@@ -1,8 +1,8 @@
 --=============================================================================
--- Script de Testing: 10 Líderes + 20 Miembros (VERSIÓN SIMPLIFICADA)
+-- Script de Testing: 10 Líderes PENDIENTES + 20 Miembros ya vinculados
 -- 
--- Usa SOLO columnas básicas: nombre, apellido, email, telefono, 
--- fecha_nacimiento, genero, rol, estado_aprobacion, lider_id
+-- TODOS los líderes empiezan como PENDIENTES para aprobarlos manualmente
+-- Los miembros YA están asociados a cada líder (lider_id configurado)
 -- =============================================================================
 
 DO $$
@@ -15,9 +15,9 @@ BEGIN
   IF v_church_id IS NULL THEN RAISE EXCEPTION 'No hay iglesias'; END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L1: Samuel Mena (APROBADO)
+  -- L1: Samuel Mena
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
-  VALUES (v_church_id, 'Samuel', 'Mena', 'samuel.mena@cfccasanova.com', '3512001001', '1985-03-15', 'Masculino', 'Líder', 'aprobado')
+  VALUES (v_church_id, 'Samuel', 'Mena', 'samuel.mena@cfccasanova.com', '3512001001', '1985-03-15', 'Masculino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
   IF v_lider_id IS NOT NULL THEN
     INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, lider_id) VALUES 
@@ -27,7 +27,7 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L2: María González (PENDIENTE)
+  -- L2: María González
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
   VALUES (v_church_id, 'María', 'González', 'maria.gonzalez@cfccasanova.com', '3512002001', '1990-07-22', 'Femenino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
@@ -39,9 +39,9 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L3: Carlos Rodríguez (APROBADO)
+  -- L3: Carlos Rodríguez
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
-  VALUES (v_church_id, 'Carlos', 'Rodríguez', 'carlos.rodriguez@cfccasanova.com', '3512003001', '1988-11-05', 'Masculino', 'Líder', 'aprobado')
+  VALUES (v_church_id, 'Carlos', 'Rodríguez', 'carlos.rodriguez@cfccasanova.com', '3512003001', '1988-11-05', 'Masculino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
   IF v_lider_id IS NOT NULL THEN
     INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, lider_id) VALUES 
@@ -51,7 +51,7 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L4: Ana Martínez (PENDIENTE)
+  -- L4: Ana Martínez
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
   VALUES (v_church_id, 'Ana', 'Martínez', 'ana.martinez@cfccasanova.com', '3512004001', '1992-02-18', 'Femenino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
@@ -63,9 +63,9 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L5: Pedro Fernández (APROBADO)
+  -- L5: Pedro Fernández
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
-  VALUES (v_church_id, 'Pedro', 'Fernández', 'pedro.fernandez@cfccasanova.com', '3512005001', '1987-09-12', 'Masculino', 'Líder', 'aprobado')
+  VALUES (v_church_id, 'Pedro', 'Fernández', 'pedro.fernandez@cfccasanova.com', '3512005001', '1987-09-12', 'Masculino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
   IF v_lider_id IS NOT NULL THEN
     INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, lider_id) VALUES 
@@ -75,9 +75,9 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L6: Laura Gómez (RECHAZADO)
+  -- L6: Laura Gómez
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
-  VALUES (v_church_id, 'Laura', 'Gómez', 'laura.gomez@cfccasanova.com', '3512006001', '1995-05-30', 'Femenino', 'Líder', 'rechazado')
+  VALUES (v_church_id, 'Laura', 'Gómez', 'laura.gomez@cfccasanova.com', '3512006001', '1995-05-30', 'Femenino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
   IF v_lider_id IS NOT NULL THEN
     INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, lider_id) VALUES 
@@ -87,7 +87,7 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L7: Jorge López (PENDIENTE)
+  -- L7: Jorge López
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
   VALUES (v_church_id, 'Jorge', 'López', 'jorge.lopez@cfccasanova.com', '3512007001', '1983-12-08', 'Masculino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
@@ -99,9 +99,9 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L8: Silvia Ramírez (APROBADO)
+  -- L8: Silvia Ramírez
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
-  VALUES (v_church_id, 'Silvia', 'Ramírez', 'silvia.ramirez@cfccasanova.com', '3512008001', '1991-04-25', 'Femenino', 'Líder', 'aprobado')
+  VALUES (v_church_id, 'Silvia', 'Ramírez', 'silvia.ramirez@cfccasanova.com', '3512008001', '1991-04-25', 'Femenino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
   IF v_lider_id IS NOT NULL THEN
     INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, lider_id) VALUES 
@@ -111,7 +111,7 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L9: Roberto Díaz (PENDIENTE)
+  -- L9: Roberto Díaz
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
   VALUES (v_church_id, 'Roberto', 'Díaz', 'roberto.diaz@cfccasanova.com', '3512009001', '1989-06-14', 'Masculino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
@@ -123,9 +123,9 @@ BEGIN
   END IF;
   
   -- ═══════════════════════════════════════════════════════════════════════════
-  -- L10: Patricia Torres (APROBADO)
+  -- L10: Patricia Torres
   INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, estado_aprobacion)
-  VALUES (v_church_id, 'Patricia', 'Torres', 'patricia.torres@cfccasanova.com', '3512010001', '1986-10-03', 'Femenino', 'Líder', 'aprobado')
+  VALUES (v_church_id, 'Patricia', 'Torres', 'patricia.torres@cfccasanova.com', '3512010001', '1986-10-03', 'Femenino', 'Líder', 'pendiente')
   ON CONFLICT (church_id, email) DO NOTHING RETURNING id INTO v_lider_id;
   IF v_lider_id IS NOT NULL THEN
     INSERT INTO public.personas (church_id, nombre, apellido, email, telefono, fecha_nacimiento, genero, rol, lider_id) VALUES 
