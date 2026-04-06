@@ -5,7 +5,7 @@ import { supabase } from "@crm/api/supabaseClient";
 import {
   LayoutDashboard, Users, UserPlus, Church, Calendar,
   HandHeart, DollarSign, BarChart3, MessageSquare, ClipboardList,
-  Menu, X, LogOut, User, Crown, ShieldCheck } from
+  Menu, X, LogOut, User, Crown, ShieldCheck, UserCheck } from
 "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -37,6 +37,7 @@ export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [pendingLeadersCount, setPendingLeadersCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -65,8 +66,27 @@ export default function Layout({ children, currentPageName }) {
       if (u.role !== "admin") {
         setAccessDenied(true);
       }
+      
+      // Cargar contador de líderes pendientes
+      if (u.role === "admin") {
+        loadPendingLeaders();
+      }
     }).catch(() => {});
   }, [currentPageName, location.pathname]);
+  
+  const loadPendingLeaders = async () => {
+    try {
+      const { count } = await supabase
+        .from('personas')
+        .select('*', { count: 'exact', head: true })
+        .eq('rol', 'Líder')
+        .eq('estado_aprobacion', 'pendiente');
+      
+      setPendingLeadersCount(count || 0);
+    } catch (err) {
+      console.error("Error cargando líderes pendientes:", err);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -166,6 +186,27 @@ export default function Layout({ children, currentPageName }) {
                 </Link>
               );
             })}
+            
+            {/* Aprobación de Líderes (con badge) */}
+            {user?.role === "admin" && (
+              <Link
+                to="/crm/leaders/approvals"
+                onClick={() => setSidebarOpen(false)}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
+                  ${currentPageName === "LeaderApprovals" ?
+                "bg-[var(--church-gold)] text-[var(--church-navy)] shadow-lg shadow-amber-900/20" :
+                "text-slate-300 hover:bg-white/10 hover:text-white"}
+                `}>
+                <UserCheck className="w-5 h-5 flex-shrink-0" />
+                <span className="flex-1">Aprobación de Líderes</span>
+                {pendingLeadersCount > 0 && (
+                  <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">
+                    {pendingLeadersCount}
+                  </span>
+                )}
+              </Link>
+            )}
           </nav>
 
           {/* User Section */}
