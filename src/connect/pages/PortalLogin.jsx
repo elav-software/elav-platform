@@ -29,6 +29,7 @@ export default function PortalLogin() {
           navigate("/connect/portal/dashboard");
         } else {
           await supabase.auth.signOut();
+          // signOut ya hecho, quedarse en login
         }
       }
     } catch (err) {

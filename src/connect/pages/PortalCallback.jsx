@@ -34,7 +34,7 @@ export default function PortalCallback() {
         .from('personas')
         .select('id, nombre, apellido, rol, estado_aprobacion')
         .eq('church_id', churchId)
-        .eq('email', session.user.email)
+        .ilike('email', session.user.email)
         .eq('rol', 'Líder')
         .single();
 
