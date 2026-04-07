@@ -106,14 +106,21 @@ export default function LeaderApprovals() {
     try {
       const churchId = await getMyChurchId();
 
-      // 1. Obtener datos completos de la persona + ciudad de la iglesia
+      // 1. Obtener datos completos de la persona
       const { data: persona, error: fetchError } = await supabase
         .from('personas')
-        .select('*, churches(city, country)')
+        .select('*')
         .eq('id', leaderId)
         .single();
 
       if (fetchError) throw fetchError;
+
+      // Obtener ciudad de la iglesia por separado
+      const { data: church } = await supabase
+        .from('churches')
+        .select('city, country')
+        .eq('id', persona.church_id)
+        .single();
 
       // 2. Aprobar en personas
       const { error } = await supabase
@@ -142,8 +149,8 @@ export default function LeaderApprovals() {
         const addressParts = [
           persona.lugar_reunion,
           persona.barrio_zona,
-          persona.churches?.city,
-          persona.churches?.country || 'Argentina',
+          church?.city,
+          church?.country || 'Argentina',
         ].filter(Boolean);
 
         if (addressParts.length > 0) {
