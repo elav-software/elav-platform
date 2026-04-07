@@ -200,9 +200,18 @@ export default function Layout({ children, currentPageName }) {
             />
           </Link>
 
-          <Button variant="ghost" size="icon" className="text-gray-700">
-            <Bell className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <a
+              href="/connect/portal/login"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              Portal Líder
+            </a>
+            <Button variant="ghost" size="icon" className="text-gray-700">
+              <Bell className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </header>
 
