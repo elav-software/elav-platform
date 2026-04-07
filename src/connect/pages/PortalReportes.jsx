@@ -51,7 +51,7 @@ export default function PortalReportes() {
         .from('personas')
         .select('id, nombre, apellido, email')
         .eq('church_id', churchId)
-        .eq('email', session.user.email)
+        .ilike('email', session.user.email)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();
@@ -190,7 +190,7 @@ export default function PortalReportes() {
                 required
                 value={formData.report_date}
                 onChange={(e) => setFormData({ ...formData, report_date: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
               />
             </div>
 
@@ -207,7 +207,7 @@ export default function PortalReportes() {
                   min="0"
                   value={formData.attendance_count}
                   onChange={(e) => setFormData({ ...formData, attendance_count: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
                 />
               </div>
 
@@ -221,7 +221,7 @@ export default function PortalReportes() {
                   min="0"
                   value={formData.new_visitors}
                   onChange={(e) => setFormData({ ...formData, new_visitors: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
                 />
               </div>
             </div>
@@ -239,7 +239,7 @@ export default function PortalReportes() {
                 value={formData.offering_amount}
                 onChange={(e) => setFormData({ ...formData, offering_amount: e.target.value })}
                 placeholder="0.00"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
               />
             </div>
 
@@ -254,7 +254,7 @@ export default function PortalReportes() {
                 value={formData.testimonies}
                 onChange={(e) => setFormData({ ...formData, testimonies: e.target.value })}
                 placeholder="Compartí los testimonios de la reunión..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
               />
             </div>
 
@@ -269,7 +269,7 @@ export default function PortalReportes() {
                 value={formData.prayer_requests}
                 onChange={(e) => setFormData({ ...formData, prayer_requests: e.target.value })}
                 placeholder="Escribí los pedidos de oración..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
               />
             </div>
 
@@ -283,7 +283,7 @@ export default function PortalReportes() {
                 value={formData.observations}
                 onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
                 placeholder="Cualquier otra información relevante..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
               />
             </div>
 

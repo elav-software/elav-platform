@@ -47,12 +47,14 @@ export default function CellSubmissions() {
     const { error } = await supabase
       .from("leader_cell_submissions")
       .update({ status: "reviewed", reviewed_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("status", "submitted"); // solo si está en submitted
 
-    if (error) { toast.error("Error al actualizar"); return; }
+    if (error) { toast.error("Error al actualizar: " + error.message); return; }
     toast.success("Reporte marcado como revisado");
-    setReports(prev => prev.map(r => r.id === id ? { ...r, status: "reviewed" } : r));
-    if (selected?.id === id) setSelected(prev => ({ ...prev, status: "reviewed" }));
+    // Recargar para confirmar el cambio en DB
+    await loadReports();
+    setSelected(null);
   };
 
   const filtered = filter === "all" ? reports : reports.filter(r => r.status === filter);

@@ -39,6 +39,7 @@ export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
   const [pendingLeadersCount, setPendingLeadersCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -68,9 +69,10 @@ export default function Layout({ children, currentPageName }) {
         setAccessDenied(true);
       }
       
-      // Cargar contador de líderes pendientes
+      // Cargar contadores de pendientes
       if (u.role === "admin") {
         loadPendingLeaders();
+        loadPendingReports();
       }
     }).catch(() => {});
   }, [currentPageName, location.pathname]);
@@ -86,6 +88,18 @@ export default function Layout({ children, currentPageName }) {
       setPendingLeadersCount(count || 0);
     } catch (err) {
       console.error("Error cargando líderes pendientes:", err);
+    }
+  };
+
+  const loadPendingReports = async () => {
+    try {
+      const { count } = await supabase
+        .from('leader_cell_submissions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'submitted');
+      setPendingReportsCount(count || 0);
+    } catch (err) {
+      console.error("Error cargando reportes pendientes:", err);
     }
   };
 
@@ -171,6 +185,7 @@ export default function Layout({ children, currentPageName }) {
           <nav className="bg-slate-700 text-slate-50 px-3 py-4 flex-1 overflow-y-auto space-y-1">
             {visibleNavItems.map((item) => {
               const isActive = currentPageName === item.page;
+              const badge = item.page === "CellSubmissions" && pendingReportsCount > 0 ? pendingReportsCount : null;
               return (
                 <Link
                   key={item.page}
@@ -183,7 +198,12 @@ export default function Layout({ children, currentPageName }) {
                   "text-slate-300 hover:bg-white/10 hover:text-white"}
                   `}>
                   <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {badge && (
+                    <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">
+                      {badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
