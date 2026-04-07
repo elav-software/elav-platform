@@ -46,18 +46,24 @@ export default function PortalCallback() {
       setStatus("Verificando permisos...");
 
       const churchId = await getCurrentChurchId();
-      const { data: leader, error: leaderError } = await supabase
+      console.log("[Callback] churchId:", churchId, "email:", session.user.email);
+
+      let query = supabase
         .from('personas')
-        .select('id, nombre, apellido, rol, estado_aprobacion')
-        .eq('church_id', churchId)
+        .select('id, nombre, apellido, rol, estado_aprobacion, church_id')
         .ilike('email', session.user.email)
-        .eq('rol', 'Líder')
-        .single();
+        .eq('rol', 'Líder');
+
+      // Solo filtrar por church_id si se pudo resolver
+      if (churchId) query = query.eq('church_id', churchId);
+
+      const { data: leader, error: leaderError } = await query.single();
+      console.log("[Callback] leader:", leader, "error:", leaderError);
 
       if (leaderError || !leader) {
-        setStatus("No estás registrado como líder. Contactá al pastor.");
+        setStatus(`No estás registrado como líder. (email: ${session.user.email})`);
         await supabase.auth.signOut();
-        setTimeout(() => redirect("/connect/portal/login"), 3000);
+        setTimeout(() => redirect("/connect/portal/login"), 5000);
         return;
       }
 
