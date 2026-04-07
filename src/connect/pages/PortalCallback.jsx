@@ -1,54 +1,50 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "@connect/lib/router-compat";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId } from "@connect/api/apiClient";
 
 export default function PortalCallback() {
   const [status, setStatus] = useState("Verificando credenciales...");
-  const navigate = useNavigate();
 
   useEffect(() => {
     handleCallback();
   }, []);
 
+  const redirect = (path) => {
+    window.location.href = path;
+  };
+
   const handleCallback = async () => {
     try {
       // Esperar a que Supabase procese el token del hash de la URL
-      const { data: { session }, error: sessionError } = await new Promise((resolve) => {
-        // Primero intentar getSession directamente
-        supabase.auth.getSession().then(({ data, error }) => {
+      const session = await new Promise((resolve) => {
+        supabase.auth.getSession().then(({ data }) => {
           if (data.session) {
-            resolve({ data, error });
+            resolve(data.session);
           } else {
-            // Si no hay sesión, escuchar el evento SIGNED_IN (token viene en el hash)
             const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
               if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                 subscription.unsubscribe();
-                resolve({ data: { session }, error: null });
+                resolve(session);
               }
             });
-            // Timeout de seguridad 5 segundos
             setTimeout(() => {
               subscription.unsubscribe();
-              resolve({ data: { session: null }, error: new Error('Timeout') });
-            }, 5000);
+              resolve(null);
+            }, 6000);
           }
         });
       });
 
-      if (sessionError) throw sessionError;
-      
       if (!session?.user) {
-        setStatus("No se pudo obtener la sesión");
-        setTimeout(() => navigate("/connect/portal/login"), 2000);
+        setStatus("No se pudo obtener la sesión. Redirigiendo...");
+        setTimeout(() => redirect("/connect/portal/login"), 2000);
         return;
       }
 
-      // Verificar que sea líder aprobado
       setStatus("Verificando permisos...");
-      
+
       const churchId = await getCurrentChurchId();
       const { data: leader, error: leaderError } = await supabase
         .from('personas')
@@ -59,27 +55,26 @@ export default function PortalCallback() {
         .single();
 
       if (leaderError || !leader) {
-        setStatus("No estás registrado como líder");
+        setStatus("No estás registrado como líder. Contactá al pastor.");
         await supabase.auth.signOut();
-        setTimeout(() => navigate("/connect/portal/login"), 2000);
+        setTimeout(() => redirect("/connect/portal/login"), 3000);
         return;
       }
 
       if (leader.estado_aprobacion !== 'aprobado') {
-        setStatus(`Tu cuenta está: ${leader.estado_aprobacion}. Contactá al pastor.`);
+        setStatus(`Tu solicitud está ${leader.estado_aprobacion}. Contactá al pastor.`);
         await supabase.auth.signOut();
-        setTimeout(() => navigate("/connect/portal/login"), 3000);
+        setTimeout(() => redirect("/connect/portal/login"), 3000);
         return;
       }
 
-      // Todo OK — redirigir al dashboard
       setStatus("¡Bienvenido/a! Redirigiendo...");
-      setTimeout(() => navigate("/connect/portal/dashboard"), 1000);
-      
+      redirect("/connect/portal/dashboard");
+
     } catch (err) {
       console.error("Error en callback:", err);
-      setStatus("Error en la autenticación");
-      setTimeout(() => navigate("/connect/portal/login"), 2000);
+      setStatus("Error en la autenticación. Redirigiendo...");
+      setTimeout(() => redirect("/connect/portal/login"), 2000);
     }
   };
 

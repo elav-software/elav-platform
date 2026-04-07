@@ -26,5 +26,10 @@ export default function ConnectShell({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const currentPageName = PATH_TO_PAGE[pathname] ?? "Home";
 
+  // Portal pages render sin layout (tienen su propio diseño)
+  if (pathname?.startsWith("/connect/portal")) {
+    return <>{children}</>;
+  }
+
   return <Layout currentPageName={currentPageName}>{children}</Layout>;
 }
