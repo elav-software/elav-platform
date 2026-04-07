@@ -57,34 +57,71 @@ Debería mostrar `estado_aprobacion = 'aprobado'` ✅
 
 ---
 
-## 4. Configurar Google OAuth en Supabase
+## 4. Configurar Google OAuth en Supabase (10 minutos)
+
+### Paso 4.1: Google Cloud Console
+
+**Ve a:** https://console.cloud.google.com/
+
+1. **Crear nuevo proyecto:**
+   - Click en el selector de proyectos (arriba)
+   - "NEW PROJECT"
+   - Name: "CFC Multi-Tenant Auth"
+   - Click "CREATE"
+
+2. **Habilitar APIs (opcional pero recomendado):**
+   - En el buscador: "Google+ API"
+   - Click "ENABLE"
+
+3. **Configurar OAuth Consent Screen (si te lo pide):**
+   - APIs & Services → OAuth consent screen
+   - User Type: **External** → CREATE
+   - App name: "CFC Portal de Líderes"
+   - User support email: tu email
+   - Developer contact: tu email
+   - SAVE AND CONTINUE → SAVE AND CONTINUE → SAVE AND CONTINUE
+   - (Podés saltar todos los pasos opcionales)
+
+4. **Crear OAuth 2.0 Client ID:**
+   - APIs & Services → Credentials
+   - "+ CREATE CREDENTIALS" → "OAuth 2.0 Client ID"
+   - Application type: **Web application**
+   - Name: "CFC Portal Web"
+   
+5. **Configurar Authorized redirect URIs:**
+   - Click "+ ADD URI"
+   - Pegá esto EXACTAMENTE:
+     ```
+     https://sotnuubzcdldctvtwzji.supabase.co/auth/v1/callback
+     ```
+   - (Este URL es el de tu proyecto Supabase, copialo desde Auth → Providers → Google)
+
+6. **CREATE**
+   
+7. **Copiar credenciales:**
+   - Te aparece un popup con:
+     - ✅ **Client ID** (algo como: `123456-abc.apps.googleusercontent.com`)
+     - ✅ **Client Secret** (algo como: `GOCSPX-abc123xyz`)
+   - Copiá ambos (podés descargar el JSON también)
+
+### Paso 4.2: Configurar en Supabase
 
 **Ve a:** https://supabase.com/dashboard/project/sotnuubzcdldctvtwzji/auth/providers
 
-1. **Click en "Google"** en la lista de providers
-2. **Enable Google provider**
-3. **Necesitás credenciales de Google Cloud:**
+1. **Buscar Google en la lista**
+2. **Click en Google** para expandir
+3. **Enable Sign in with Google** → Toggle ON
+4. **Client ID:** Pegá el Client ID de Google Cloud
+5. **Client Secret:** Pegá el Client Secret de Google Cloud
+6. **Skip nonce checks:** Dejar en OFF
+7. **Save**
 
-### Opción A: Crear proyecto en Google Cloud (10 min)
+### Paso 4.3: Nota importante
 
-1. Ir a: https://console.cloud.google.com/
-2. Crear nuevo proyecto (o usar uno existente)
-3. Habilitar "Google+ API"
-4. **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
-5. **Application type:** Web application
-6. **Name:** "CFC Portal de Líderes"
-7. **Authorized redirect URIs:** 
-   ```
-   https://sotnuubzcdldctvtwzji.supabase.co/auth/v1/callback
-   ```
-   (Este URL lo copiás de la config de Supabase)
-8. **Create** → Te da Client ID y Client Secret
-9. Copiar y pegar en Supabase
-10. **Save**
-
-### Opción B: Modo de prueba rápido (si tenés un proyecto existente)
-
-Si ya tenés un proyecto de Google Cloud con OAuth configurado, podés reutilizar esas credenciales temporalmente para la prueba.
+✅ **Esta configuración sirve para TODAS las iglesias**
+- Acepta cualquier email: @cfccasanova.com, @otraiglesia.com, @gmail.com
+- No hay que crear un OAuth por cada iglesia
+- Una sola vez y listo para siempre
 
 ---
 

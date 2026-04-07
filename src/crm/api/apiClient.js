@@ -35,6 +35,8 @@ async function getMyChurchId() {
 }
 
 // Limpia la caché al hacer logout (llamar desde AuthContext)
+export { getMyChurchId };
+
 export function clearChurchIdCache() {
   _churchId = null;
 }

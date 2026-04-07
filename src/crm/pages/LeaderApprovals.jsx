@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@crm/api/supabaseClient";
+import { getMyChurchId } from "@crm/api/apiClient";
 import { 
   CheckCircle, 
   XCircle, 
@@ -59,10 +60,13 @@ export default function LeaderApprovals() {
   const loadLeaders = async () => {
     setLoading(true);
     try {
+      const churchId = await getMyChurchId();
+
       // Líderes pendientes
       const { data: pending } = await supabase
         .from('personas')
         .select('*')
+        .eq('church_id', churchId)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'pendiente')
         .order('created_at', { ascending: false });
@@ -71,6 +75,7 @@ export default function LeaderApprovals() {
       const { data: approved } = await supabase
         .from('personas')
         .select('*')
+        .eq('church_id', churchId)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .order('fecha_aprobacion', { ascending: false })
@@ -80,6 +85,7 @@ export default function LeaderApprovals() {
       const { data: rejected } = await supabase
         .from('personas')
         .select('*')
+        .eq('church_id', churchId)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'rechazado')
         .order('fecha_aprobacion', { ascending: false })
@@ -98,6 +104,18 @@ export default function LeaderApprovals() {
 
   const handleApprove = async (leaderId, leaderName) => {
     try {
+      const churchId = await getMyChurchId();
+
+      // 1. Obtener datos completos de la persona
+      const { data: persona, error: fetchError } = await supabase
+        .from('personas')
+        .select('*')
+        .eq('id', leaderId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // 2. Aprobar en personas
       const { error } = await supabase
         .from('personas')
         .update({
@@ -105,9 +123,31 @@ export default function LeaderApprovals() {
           fecha_aprobacion: new Date().toISOString(),
           aprobado_por: currentUser.id
         })
-        .eq('id', leaderId);
+        .eq('id', leaderId)
+        .eq('church_id', churchId);
 
       if (error) throw error;
+
+      // 3. Crear o actualizar registro en tabla leaders (si no existe ya)
+      const { data: existingLeader } = await supabase
+        .from('leaders')
+        .select('id')
+        .eq('member_id', leaderId)
+        .single();
+
+      if (!existingLeader) {
+        await supabase.from('leaders').insert({
+          church_id: churchId,
+          full_name: `${persona.nombre} ${persona.apellido}`.trim(),
+          phone: persona.telefono || null,
+          email: persona.email || null,
+          cell_name: persona.grupo_celula || null,
+          meeting_day: persona.dia_reunion || null,
+          meeting_time: persona.hora_reunion || null,
+          meeting_location: persona.lugar_reunion || null,
+          member_id: leaderId,
+        });
+      }
 
       toast.success(`✅ ${leaderName} aprobado como líder`);
       loadLeaders();
@@ -121,6 +161,7 @@ export default function LeaderApprovals() {
     if (!confirm(`¿Estás seguro de rechazar a ${leaderName}?`)) return;
 
     try {
+      const churchId = await getMyChurchId();
       const { error } = await supabase
         .from('personas')
         .update({
@@ -128,7 +169,8 @@ export default function LeaderApprovals() {
           fecha_aprobacion: new Date().toISOString(),
           aprobado_por: currentUser.id
         })
-        .eq('id', leaderId);
+        .eq('id', leaderId)
+        .eq('church_id', churchId);
 
       if (error) throw error;
 

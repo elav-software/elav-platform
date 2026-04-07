@@ -28,13 +28,22 @@ Todo corre sobre **Next.js 16**, **Supabase** como base de datos y autenticació
 7. [Cómo levantar el proyecto](#cómo-levantar-el-proyecto)
 8. [Sistema de Permisos — Cómo funcionan los usuarios admin](#sistema-de-permisos--cómo-funcionan-los-usuarios-admin)
 9. [Agregar una iglesia nueva](#agregar-una-iglesia-nueva) — Panel `/superadmin` + DNS + Vercel
-10. [Portal de Líderes — Configuración y uso](#portal-de-líderes--configuración-y-uso) — ✨ NUEVO
-11. [Guía de trabajo — Ejemplos prácticos](#guía-de-trabajo--ejemplos-prácticos)
-12. [Routing por dominio](#routing-por-dominio)
-13. [Autenticación](#autenticación)
+10. [Portal de Líderes — Configuración y uso](#portal-de-líderes--configuración-y-uso) — ✨ Ver [GUIA_RAPIDA_AUTH.md](GUIA_RAPIDA_AUTH.md)
+11. [Autenticación](#autenticación) — 🔐 Google OAuth + Email/Password ([ESTRATEGIA_AUTH.md](ESTRATEGIA_AUTH.md))
+12. [Guía de trabajo — Ejemplos prácticos](#guía-de-trabajo--ejemplos-prácticos)
+13. [Routing por dominio](#routing-por-dominio)
 14. [Migración Multi-tenant — Detalles técnicos](#migración-multi-tenant--detalles-técnicos)
 15. [Troubleshooting & Deployment](#troubleshooting--deployment) — **Guía de resolución de problemas**
 16. [Tecnologías usadas](#tecnologías-usadas)
+
+---
+
+## 📚 Documentación adicional
+
+- **[ESTRATEGIA_AUTH.md](ESTRATEGIA_AUTH.md)** — Arquitectura completa de autenticación
+- **[GUIA_RAPIDA_AUTH.md](GUIA_RAPIDA_AUTH.md)** — Setup rápido de Google OAuth (10 min)
+- **[supabase/INSTRUCCIONES_PRUEBA_PORTAL.md](supabase/INSTRUCCIONES_PRUEBA_PORTAL.md)** — Testing del portal de líderes
+- **[supabase/crear_usuarios_auth.sql](supabase/crear_usuarios_auth.sql)** — Scripts para gestión de usuarios
 
 ---
 
@@ -695,22 +704,33 @@ El **Portal de Líderes** es una sección protegida dentro de la web pública (C
 
 ---
 
-### Paso 1 — Ejecutar el script SQL del portal
+### 📖 Documentación de autenticación
+
+**Para configurar el login del portal, seguí estas guías:**
+
+1. **[GUIA_RAPIDA_AUTH.md](GUIA_RAPIDA_AUTH.md)** — ⚡ Setup completo en 10 minutos
+   - Checklist paso a paso
+   - Google OAuth configuración
+   - URLs importantes
+   - Queries SQL útiles
+   - Troubleshooting
+
+2. **[ESTRATEGIA_AUTH.md](ESTRATEGIA_AUTH.md)** — 📚 Arquitectura completa
+   - Estrategia híbrida (Google OAuth + Email/Password)
+   - Flujos de autenticación detallados
+   - Seguridad y validaciones
+   - Gestión de usuarios
+   - Multi-tenant setup
+
+3. **[supabase/INSTRUCCIONES_PRUEBA_PORTAL.md](supabase/INSTRUCCIONES_PRUEBA_PORTAL.md)** — 🧪 Testing y verificación
+
+---
+
+### Resumen rápido
+
+#### 1. Ejecutar el script SQL del portal
 
 **Archivo:** `supabase/portal_lideres.sql`
-
-Este script agrega las tablas y columnas necesarias para el portal. Es completamente independiente de `multitenant_migration.sql`.
-
-**¿Qué hace?**
-
-1. Agrega columna `estado_aprobacion` a la tabla `personas` ('pendiente', 'aprobado', 'rechazado')
-2. Crea tabla `leader_materials` — Materiales para líderes (PDFs, videos, links)
-3. Crea tabla `leader_cell_submissions` — Reportes de célula
-4. Crea tabla `leader_prayer_requests` — Pedidos de oración
-5. Configura RLS (Row Level Security) para cada tabla  
-6. Crea función `is_approved_leader(email)` para verificar permisos
-
-**Ejecutar en Supabase SQL Editor:**
 
 ```sql
 -- Copia todo el contenido de supabase/portal_lideres.sql
@@ -718,36 +738,36 @@ Este script agrega las tablas y columnas necesarias para el portal. Es completam
 -- Click "Run"
 ```
 
-**Verificación:** Al final del script, verás una tabla que confirma:
+**Agrega:**
+- Columna `estado_aprobacion` a tabla `personas`
+- Tabla `leader_materials`
+- Tabla `leader_cell_submissions`
+- Tabla `leader_prayer_requests`
+- RLS policies
 
+#### 2. Configurar Google OAuth (10 minutos)
+
+Ver **[GUIA_RAPIDA_AUTH.md](GUIA_RAPIDA_AUTH.md)** para pasos detallados.
+
+**TL;DR:**
+1. Google Cloud Console → Crear OAuth Client → Copiar credenciales
+2. Supabase → Auth → Providers → Google → Pegar credenciales
+3. Configurar Redirect URLs en Supabase
+
+**⚠️ Importante:** Una sola configuración sirve para todas las iglesias.
+
+#### 3. Aprobar líderes
+
+```sql
+-- Ver líderes pendientes
+SELECT nombre, apellido, email, estado_aprobacion
+FROM personas WHERE rol = 'Líder';
+
+-- Aprobar
+UPDATE personas 
+SET estado_aprobacion = 'aprobado', fecha_aprobacion = now()
+WHERE email = 'lider@tuiglesia.com' AND rol = 'Líder';
 ```
-✓ personas.estado_aprobacion — Columna agregada
-✓ leader_materials — Tabla creada
-✓ leader_cell_submissions — Tabla creada
-✓ leader_prayer_requests — Tabla creada
-```
-
----
-
-### Paso 2 — Configurar Google OAuth en Supabase
-
-Los líderes se loguean con su cuenta Gmail. Para que funcione, necesitás configurar Google OAuth en Supabase.
-
-**Ir a Supabase:** `https://supabase.com/dashboard/project/TU_PROJECT_ID/auth/providers`
-
-1. Hacer click en **"Google"** en la lista de providers
-2. **Habilitar Google provider**
-3. Conseguir credenciales:
-   - Ir a [Google Cloud Console](https://console.cloud.google.com/)
-   - Crear un proyecto (o usar uno existente)
-   - Habilitar "Google+ API"
-   - Ir a "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-   - Tipo: **Web application**
-   - **Authorized redirect URIs:** `https://TU_PROJECT_REF.supabase.co/auth/v1/callback`
-     (Lo copiás de Supabase, está en la config de Google provider)
-   - Copiar **Client ID** y **Client Secret**
-4. Pegar Client ID y Client Secret en Supabase
-5. Click "Save"
 
 **URLs de callback permitidas:**
 
@@ -1196,15 +1216,33 @@ En **localhost**, el routing por subdominio no aplica — acceder directamente p
 
 ## Autenticación
 
+El sistema utiliza una **estrategia de autenticación híbrida** diseñada para soportar múltiples iglesias con diferentes necesidades.
+
 ### Web pública (Connect)
 No requiere autenticación. El `AuthContext.jsx` de Connect siempre devuelve `isAuthenticated: false`.
 
-### CRM
+### CRM (Administradores)
 Usa **Supabase Auth** con email y contraseña.
 
 - Login en `/crm/login` → `src/crm/pages/Welcome.jsx`
 - Al ingresar se verifica que el usuario tenga `user_metadata.role === "admin"`. Sin ese rol la sesión se rechaza.
 - Si el token expira, Supabase lo renueva automáticamente en segundo plano.
+
+### Portal de Líderes
+Usa **autenticación híbrida**:
+- **Método principal:** Google OAuth (SSO) — Ideal para iglesias con Google Workspace
+- **Método alternativo:** Email + Contraseña — Para iglesias sin Google Workspace
+
+**📖 Documentación completa:**
+- **[ESTRATEGIA_AUTH.md](ESTRATEGIA_AUTH.md)** — Arquitectura completa, flujos, seguridad
+- **[GUIA_RAPIDA_AUTH.md](GUIA_RAPIDA_AUTH.md)** — Setup en 10 minutos, troubleshooting, queries útiles
+
+**Ventajas del enfoque híbrido:**
+- ✅ Una sola configuración de Google OAuth sirve para TODAS las iglesias
+- ✅ Acepta cualquier dominio (@cfccasanova.com, @otraiglesia.com, @gmail.com)
+- ✅ Mejor UX para líderes con cuentas corporativas
+- ✅ Fallback a email/password para iglesias sin Google Workspace
+- ✅ Completamente escalable sin configuración adicional
 
 ---
 

@@ -9,6 +9,8 @@ export default function PortalLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,13 +22,12 @@ export default function PortalLogin() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // Verificar si es líder aprobado
-        const approved = await verifyApprovedLeader(session.user.email);
+        const userEmail = session.user.email?.toLowerCase().trim();
+        const approved = await verifyApprovedLeader(userEmail);
         
         if (approved) {
           navigate("/connect/portal/dashboard");
         } else {
-          setError("Tu cuenta aún no está aprobada como líder. Contactá al pastor.");
           await supabase.auth.signOut();
         }
       }
@@ -45,7 +46,7 @@ export default function PortalLogin() {
         .from('personas')
         .select('id, rol, estado_aprobacion')
         .eq('church_id', churchId)
-        .eq('email', email)
+        .ilike('email', email)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();
@@ -86,6 +87,41 @@ export default function PortalLogin() {
     }
   };
 
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      // Login con email y password
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Verificar si es líder aprobado
+        const approved = await verifyApprovedLeader(data.user.email);
+        
+        if (approved) {
+          navigate("/connect/portal/dashboard");
+        } else {
+          setError("Tu cuenta aún no está aprobada como líder. Contactá al pastor.");
+          await supabase.auth.signOut();
+        }
+      }
+    } catch (err) {
+      console.error("Error en email login:", err);
+      setError(err.message === "Invalid login credentials" 
+        ? "Email o contraseña incorrectos" 
+        : "Error al iniciar sesión. Intentá de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50">
@@ -121,6 +157,63 @@ export default function PortalLogin() {
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
+
+          {/* Formulario de Email + Password */}
+          <form onSubmit={handleEmailLogin} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="tu-email@cfccasanova.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Contraseña
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+              ) : (
+                "Iniciar Sesión"
+              )}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500">o continuar con</span>
+            </div>
+          </div>
 
           {/* Botón de Google */}
           <button
@@ -158,7 +251,7 @@ export default function PortalLogin() {
           {/* Instrucciones */}
           <div className="pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-500 text-center leading-relaxed">
-              Usá el mismo email que usaste cuando completaste el formulario de censo de líderes.
+              Usá el mismo email que usaste cuando completaste el formulario de censo.
               Tu cuenta debe estar aprobada por el pastor para acceder.
             </p>
           </div>
@@ -167,7 +260,7 @@ export default function PortalLogin() {
         {/* Link de ayuda */}
         <div className="text-center">
           <p className="text-sm text-gray-600">
-            ¿Problemas para acceder?{" "}
+            ¿No tenés cuenta o problemas para acceder?{" "}
             <a 
               href="/connect/counseling" 
               className="text-red-600 hover:text-red-700 font-medium"

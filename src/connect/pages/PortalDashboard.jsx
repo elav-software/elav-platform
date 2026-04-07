@@ -38,28 +38,32 @@ export default function PortalDashboard() {
       }
 
       const churchId = await getCurrentChurchId();
+      const userEmail = session.user.email?.toLowerCase().trim();
       
-      // Verificar líder aprobado
+      // Verificar líder aprobado (case-insensitive)
       const { data: leaderData, error } = await supabase
         .from('personas')
-        .select('id, nombre, apellido, email, celula_id')
+        .select('id, nombre, apellido, email, grupo_celula')
         .eq('church_id', churchId)
-        .eq('email', session.user.email)
+        .ilike('email', userEmail)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();
 
       if (error || !leaderData) {
-        console.error("Líder no encontrado o no aprobado:", error);
+        console.error("Líder no encontrado o no aprobado. Email:", userEmail, "Error:", error);
+        // Cerrar sesión para evitar loop infinito
+        await supabase.auth.signOut();
         navigate("/connect/portal/login");
         return;
       }
 
       setLeader(leaderData);
-      await loadStats(leaderData.id, session.user.email);
+      await loadStats(leaderData.id, userEmail);
       
     } catch (err) {
       console.error("Error verificando líder:", err);
+      await supabase.auth.signOut();
       navigate("/connect/portal/login");
     } finally {
       setLoading(false);
