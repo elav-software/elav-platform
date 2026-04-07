@@ -40,7 +40,7 @@ export default function PortalMiembros() {
         .from('personas')
         .select('id, nombre, apellido, email, celula_id')
         .eq('church_id', churchId)
-        .eq('email', session.user.email)
+        .ilike('email', session.user.email)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();

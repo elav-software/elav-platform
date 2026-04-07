@@ -49,7 +49,7 @@ export default function PortalOracion() {
         .from('personas')
         .select('id, nombre, apellido, email')
         .eq('church_id', churchId)
-        .eq('email', session.user.email)
+        .ilike('email', session.user.email)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();

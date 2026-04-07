@@ -39,7 +39,7 @@ export default function PortalMateriales() {
         .from('personas')
         .select('id')
         .eq('church_id', churchId)
-        .eq('email', session.user.email)
+        .ilike('email', session.user.email)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .single();
