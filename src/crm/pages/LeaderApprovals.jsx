@@ -106,10 +106,10 @@ export default function LeaderApprovals() {
     try {
       const churchId = await getMyChurchId();
 
-      // 1. Obtener datos completos de la persona
+      // 1. Obtener datos completos de la persona + ciudad de la iglesia
       const { data: persona, error: fetchError } = await supabase
         .from('personas')
-        .select('*')
+        .select('*, churches(city, country)')
         .eq('id', leaderId)
         .single();
 
@@ -136,6 +136,33 @@ export default function LeaderApprovals() {
         .single();
 
       if (!existingLeader) {
+        // Geocodificar con dirección completa: lugar_reunion + barrio + ciudad de la iglesia
+        let latitude = null;
+        let longitude = null;
+        const addressParts = [
+          persona.lugar_reunion,
+          persona.barrio_zona,
+          persona.churches?.city,
+          persona.churches?.country || 'Argentina',
+        ].filter(Boolean);
+
+        if (addressParts.length > 0) {
+          try {
+            const address = addressParts.join(', ');
+            const geoRes = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+              { headers: { 'Accept-Language': 'es', 'User-Agent': 'CFC-CRM/1.0' } }
+            );
+            const geoData = await geoRes.json();
+            if (geoData.length > 0) {
+              latitude = parseFloat(geoData[0].lat);
+              longitude = parseFloat(geoData[0].lon);
+            }
+          } catch (_) {
+            // Si falla geocodificación, continúa sin coordenadas
+          }
+        }
+
         await supabase.from('leaders').insert({
           church_id: churchId,
           full_name: `${persona.nombre} ${persona.apellido}`.trim(),
@@ -145,6 +172,8 @@ export default function LeaderApprovals() {
           meeting_day: persona.dia_reunion || null,
           meeting_time: persona.hora_reunion || null,
           meeting_location: persona.lugar_reunion || null,
+          latitude,
+          longitude,
           member_id: leaderId,
         });
       }
