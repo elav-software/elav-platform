@@ -182,7 +182,7 @@ export default function Home() {
         <div className="flex flex-col items-center mb-10">
           <img src="/logo.png" alt="CFC Logo" className="w-16 h-auto object-contain mb-5" />
           <h2 className="text-slate-900 text-3xl font-black text-center tracking-tight">
-            Censo de Líderes
+            Registro de Líderes
           </h2>
           <p className="text-slate-500 mt-2 font-medium">Centro Familiar Cristiano</p>
         </div>
@@ -563,7 +563,7 @@ export default function Home() {
                   onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}
                   className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 disabled:scale-100"
                 >
-                  {loading ? "Procesando..." : "Completar Censo"}
+                  {loading ? "Procesando..." : "Completar Registro"}
                 </motion.button>
               )}
             </div>

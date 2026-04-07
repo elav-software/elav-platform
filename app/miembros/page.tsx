@@ -160,7 +160,7 @@ export default function MiembrosPage() {
           <img src="/logo.png" alt="CFC Logo" className="w-20 h-auto object-contain mb-4" />
           <h2 className="text-slate-800 text-2xl font-bold text-center leading-tight">
             Centro Familiar Cristiano<br />
-            <span className="text-blue-600">Censo de Miembros</span>
+            <span className="text-blue-600">Registro de Miembros</span>
           </h2>
         </div>
 
@@ -335,7 +335,7 @@ export default function MiembrosPage() {
                 onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}
                 className="px-8 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md transition-colors disabled:opacity-50"
               >
-                {loading ? "Enviando..." : "Enviar Censo"}
+                {loading ? "Enviando..." : "Enviar Registro"}
               </button>
             )}
           </div>
