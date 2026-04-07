@@ -181,10 +181,10 @@ export default function Home() {
       >
         <div className="flex flex-col items-center mb-10">
           <img src="/logo.png" alt="CFC Logo" className="w-16 h-auto object-contain mb-5" />
-          <h2 className="text-slate-900 text-3xl font-black text-center tracking-tight">
-            Registro de Líderes
+          <h2 className="text-slate-800 text-2xl font-bold text-center leading-tight">
+            Centro Familiar Cristiano<br />
+            <span className="text-blue-600">Registro de Líderes</span>
           </h2>
-          <p className="text-slate-500 mt-2 font-medium">Centro Familiar Cristiano</p>
         </div>
 
         <div className="mb-10">
