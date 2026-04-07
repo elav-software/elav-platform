@@ -3,6 +3,31 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
+const LOCALIDADES_BUENOS_AIRES = [
+  "Adrogué", "Almirante Brown", "Avellaneda", "Banfield", "Barracas",
+  "Beccar", "Berazategui", "Bernal", "Burzaco", "Caballito",
+  "Castelar", "Ciudadela", "Ciudad Autónoma de Buenos Aires", "Claypole",
+  "Don Bosco", "Don Torcuato", "El Palomar", "El Talar", "Ezeiza",
+  "Ezpeleta", "Florencio Varela", "Florida", "General Rodríguez",
+  "González Catán", "Gregorio de Laferrere", "Guernica", "Haedo",
+  "Hurlingham", "Ituzaingó", "José C. Paz", "La Matanza", "La Plata",
+  "Lanús", "Llavallol", "Lomas de Zamora", "Longchamps", "Luján",
+  "Luis Guillón", "Malvinas Argentinas", "Martínez", "Merlo",
+  "Monte Grande", "Moreno", "Morón", "Munro", "Olivos",
+  "Palermo", "Pilar", "Quilmes", "Rafael Calzada", "Ramos Mejía",
+  "Ranelagh", "Remedios de Escalada", "San Fernando", "San Isidro",
+  "San Justo", "San Martín", "San Miguel", "San Nicolás",
+  "Temperley", "Tigre", "Tres de Febrero", "Tristán Suárez",
+  "Turdera", "Varela", "Vicente López", "Villa Ballester",
+  "Villa del Parque", "Villa Devoto", "Villa Luro", "Villa Madero",
+  "Villa Urquiza", "Wilde", "Zárate",
+  // Partido de La Matanza (localidades frecuentes CFC)
+  "Isidro Casanova", "La Tablada", "Lomas del Mirador",
+  "Rafael Castillo", "Tapiales", "Villa Luzuriaga",
+  "Virrey del Pino", "20 de Junio",
+  "Otro",
+].sort((a, b) => a.localeCompare(b, "es"));
+
 /** Resuelve el church_id desde el dominio del navegador, consultando Supabase. */
 async function resolveChurchId(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
@@ -231,10 +256,6 @@ export default function Home() {
                       <label className={labelClasses}>Teléfono *</label>
                       <input type="tel" className={inputClasses} value={form.telefono} onChange={set("telefono")} placeholder="Ej: 1123456789" />
                     </div>
-                    <div className={fieldGroupClasses}>
-                      <label className={labelClasses}>WhatsApp</label>
-                      <input type="tel" className={inputClasses} value={form.whatsapp} onChange={set("whatsapp")} placeholder="Ej: 1123456789" />
-                    </div>
                     <div className={`${fieldGroupClasses} md:col-span-2`}>
                       <label className={labelClasses}>Email</label>
                       <input type="email" className={inputClasses} value={form.email} onChange={set("email")} placeholder="correo@ejemplo.com" />
@@ -250,8 +271,13 @@ export default function Home() {
                       <input className={inputClasses} value={form.direccion} onChange={set("direccion")} placeholder="Tu dirección" />
                     </div>
                     <div className={fieldGroupClasses}>
-                      <label className={labelClasses}>Barrio / Zona</label>
-                      <input className={inputClasses} value={form.barrio_zona} onChange={set("barrio_zona")} placeholder="Ej: Isidro Casanova" />
+                      <label className={labelClasses}>Localidad / Barrio</label>
+                      <select className={selectClasses} value={form.barrio_zona} onChange={set("barrio_zona")}>
+                        <option value="">Seleccionar localidad...</option>
+                        {LOCALIDADES_BUENOS_AIRES.map(loc => (
+                          <option key={loc} value={loc}>{loc}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Ocupación</label>
