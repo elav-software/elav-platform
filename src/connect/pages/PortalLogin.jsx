@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "@connect/lib/router-compat";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId } from "@connect/api/apiClient";
 
@@ -11,7 +10,8 @@ export default function PortalLogin() {
   const [checking, setChecking] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+
+  const redirect = (path) => { window.location.href = path; };
 
   useEffect(() => {
     checkExistingSession();
@@ -26,7 +26,7 @@ export default function PortalLogin() {
         const approved = await verifyApprovedLeader(userEmail);
         
         if (approved) {
-          navigate("/connect/portal/dashboard");
+          redirect("/connect/portal/dashboard");
         } else {
           await supabase.auth.signOut();
           // signOut ya hecho, quedarse en login
@@ -107,7 +107,7 @@ export default function PortalLogin() {
         const approved = await verifyApprovedLeader(data.user.email);
         
         if (approved) {
-          navigate("/connect/portal/dashboard");
+          redirect("/connect/portal/dashboard");
         } else {
           setError("Tu cuenta aún no está aprobada como líder. Contactá al pastor.");
           await supabase.auth.signOut();

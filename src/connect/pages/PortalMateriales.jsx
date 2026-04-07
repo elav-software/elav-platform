@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "@connect/lib/router-compat";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId } from "@connect/api/apiClient";
 import { 
@@ -18,7 +17,7 @@ export default function PortalMateriales() {
   const [loading, setLoading] = useState(true);
   const [materials, setMaterials] = useState([]);
   const [filter, setFilter] = useState('all');
-  const navigate = useNavigate();
+  const redirect = (path) => { window.location.href = path; };
 
   useEffect(() => {
     verifyAndLoadMaterials();
@@ -29,7 +28,7 @@ export default function PortalMateriales() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
-        navigate("/connect/portal/login");
+        redirect("/connect/portal/login");
         return;
       }
 
@@ -46,7 +45,7 @@ export default function PortalMateriales() {
         .single();
 
       if (!leader) {
-        navigate("/connect/portal/login");
+        redirect("/connect/portal/login");
         return;
       }
 
@@ -64,7 +63,7 @@ export default function PortalMateriales() {
       
     } catch (err) {
       console.error("Error:", err);
-      navigate("/connect/portal/login");
+      redirect("/connect/portal/login");
     } finally {
       setLoading(false);
     }
@@ -104,7 +103,7 @@ export default function PortalMateriales() {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
           <button
-            onClick={() => navigate("/connect/portal/dashboard")}
+            onClick={() => redirect("/connect/portal/dashboard")}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-700" />

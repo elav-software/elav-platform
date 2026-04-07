@@ -17,6 +17,14 @@ export default function Home() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    // Si llegamos aquí con tokens OAuth en la URL (Supabase redirect fallback),
+    // redirigir al callback del portal para que procese la sesión
+    const hash = window.location.hash;
+    const search = window.location.search;
+    if (hash.includes('access_token') || hash.includes('refresh_token') || new URLSearchParams(search).get('code')) {
+      window.location.href = '/connect/portal/callback' + search + hash;
+      return;
+    }
     loadUser();
   }, []);
 

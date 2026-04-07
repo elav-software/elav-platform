@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "@connect/lib/router-compat";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId } from "@connect/api/apiClient";
 import { 
@@ -22,7 +21,8 @@ export default function PortalDashboard() {
     cellMembers: 0,
     prayerRequests: 0
   });
-  const navigate = useNavigate();
+
+  const redirect = (path) => { window.location.href = path; };
 
   useEffect(() => {
     verifyAndLoadLeader();
@@ -33,7 +33,7 @@ export default function PortalDashboard() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
-        navigate("/connect/portal/login");
+        redirect("/connect/portal/login");
         return;
       }
 
@@ -52,9 +52,8 @@ export default function PortalDashboard() {
 
       if (error || !leaderData) {
         console.error("Líder no encontrado o no aprobado. Email:", userEmail, "Error:", error);
-        // Cerrar sesión para evitar loop infinito
         await supabase.auth.signOut();
-        navigate("/connect/portal/login");
+        redirect("/connect/portal/login");
         return;
       }
 
@@ -64,7 +63,7 @@ export default function PortalDashboard() {
     } catch (err) {
       console.error("Error verificando líder:", err);
       await supabase.auth.signOut();
-      navigate("/connect/portal/login");
+      redirect("/connect/portal/login");
     } finally {
       setLoading(false);
     }
@@ -82,16 +81,11 @@ export default function PortalDashboard() {
         .eq('leader_id', leaderId)
         .gte('report_date', thirtyDaysAgo.toISOString().split('T')[0]);
 
-      // Contar miembros de mi célula
+      // Contar miembros de mi célula (por lider_id en personas)
       const { count: membersCount } = await supabase
         .from('personas')
         .select('*', { count: 'exact', head: true })
-        .eq('celula_id', (await supabase
-          .from('personas')
-          .select('celula_id')
-          .eq('id', leaderId)
-          .single()
-        ).data?.celula_id || '');
+        .eq('lider_id', leaderId);
 
       // Contar pedidos de oración activos
       const { count: prayersCount } = await supabase
@@ -112,7 +106,7 @@ export default function PortalDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/connect/portal/login");
+    redirect("/connect/portal/login");
   };
 
   const menuItems = [
@@ -233,7 +227,7 @@ export default function PortalDashboard() {
           {menuItems.map((item) => (
             <button
               key={item.href}
-              onClick={() => navigate(item.href)}
+              onClick={() => redirect(item.href)}
               className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-200 text-left group"
             >
               <div className="flex items-start justify-between mb-4">

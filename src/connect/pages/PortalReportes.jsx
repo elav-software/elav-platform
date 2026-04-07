@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "@connect/lib/router-compat";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId } from "@connect/api/apiClient";
 import { 
@@ -21,7 +20,7 @@ export default function PortalReportes() {
   const [submitting, setSubmitting] = useState(false);
   const [recentReports, setRecentReports] = useState([]);
   const [success, setSuccess] = useState(false);
-  const navigate = useNavigate();
+  const redirect = (path) => { window.location.href = path; };
 
   const [formData, setFormData] = useState({
     report_date: new Date().toISOString().split('T')[0],
@@ -42,7 +41,7 @@ export default function PortalReportes() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
-        navigate("/connect/portal/login");
+        redirect("/connect/portal/login");
         return;
       }
 
@@ -58,7 +57,7 @@ export default function PortalReportes() {
         .single();
 
       if (error || !leaderData) {
-        navigate("/connect/portal/login");
+        redirect("/connect/portal/login");
         return;
       }
 
@@ -67,7 +66,7 @@ export default function PortalReportes() {
       
     } catch (err) {
       console.error("Error:", err);
-      navigate("/connect/portal/login");
+      redirect("/connect/portal/login");
     } finally {
       setLoading(false);
     }
@@ -150,7 +149,7 @@ export default function PortalReportes() {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
           <button
-            onClick={() => navigate("/connect/portal/dashboard")}
+            onClick={() => redirect("/connect/portal/dashboard")}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-700" />
