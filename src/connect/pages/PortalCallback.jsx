@@ -15,9 +15,29 @@ export default function PortalCallback() {
 
   const handleCallback = async () => {
     try {
-      // Obtener sesión de Supabase
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      // Esperar a que Supabase procese el token del hash de la URL
+      const { data: { session }, error: sessionError } = await new Promise((resolve) => {
+        // Primero intentar getSession directamente
+        supabase.auth.getSession().then(({ data, error }) => {
+          if (data.session) {
+            resolve({ data, error });
+          } else {
+            // Si no hay sesión, escuchar el evento SIGNED_IN (token viene en el hash)
+            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+              if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                subscription.unsubscribe();
+                resolve({ data: { session }, error: null });
+              }
+            });
+            // Timeout de seguridad 5 segundos
+            setTimeout(() => {
+              subscription.unsubscribe();
+              resolve({ data: { session: null }, error: new Error('Timeout') });
+            }, 5000);
+          }
+        });
+      });
+
       if (sessionError) throw sessionError;
       
       if (!session?.user) {
