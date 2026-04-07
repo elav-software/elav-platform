@@ -337,9 +337,14 @@ export default function Members() {
                       <p className="text-xs text-slate-400 mt-0.5">{age ? `${age} años` : ""}{age && m.gender ? " · " : ""}{m.gender === "Male" ? "Masculino" : m.gender === "Female" ? "Femenino" : m.gender || ""}</p>
                     </div>
                   </div>
-                  <Badge className={`text-xs border ${STATUS_COLORS[m.member_status] || "bg-slate-100 text-slate-600"}`}>
-                    {STATUS_LABELS[m.member_status] || m.member_status || "—"}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(m)} className="h-7 w-7 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="Editar">
+                      <Edit className="w-3.5 h-3.5" />
+                    </Button>
+                    <Badge className={`text-xs border ${STATUS_COLORS[m.member_status] || "bg-slate-100 text-slate-600"}`}>
+                      {STATUS_LABELS[m.member_status] || m.member_status || "—"}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="space-y-1.5 mb-4">
                   {m.phone_number && <div className="flex items-center gap-2 text-xs text-slate-500"><Phone className="w-3.5 h-3.5" />{m.phone_number}</div>}

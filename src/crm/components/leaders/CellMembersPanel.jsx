@@ -1,6 +1,7 @@
 ﻿"use client";
 import React, { useEffect, useState } from "react";
 import { api } from "@crm/api/apiClient";
+import { supabase } from "@crm/api/supabaseClient";
 import { Button } from "@crm/components/ui/button";
 import { Input } from "@crm/components/ui/input";
 import { Badge } from "@crm/components/ui/badge";
@@ -19,8 +20,44 @@ export default function CellMembersPanel({ leader }) {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const data = await api.entities.CellMember.filter({ leader_id: leader.id }, "-created_date");
-    setMembers(data);
+    // 1. Miembros del CRM cell_members (agregados manualmente)
+    const crmMembers = await api.entities.CellMember.filter({ leader_id: leader.id }, "-created_date");
+
+    // 2. Miembros de Supabase personas con lider_id apuntando a este líder
+    let supabaseMembers = [];
+    try {
+      if (leader.email) {
+        const { data: leaderPersona } = await supabase
+          .from('personas')
+          .select('id')
+          .ilike('email', leader.email)
+          .eq('rol', 'Líder')
+          .single();
+
+        if (leaderPersona) {
+          const { data: personasData } = await supabase
+            .from('personas')
+            .select('id, nombre, apellido, telefono')
+            .eq('lider_id', leaderPersona.id)
+            .eq('rol', 'Miembro');
+
+          const crmNames = new Set(crmMembers.map(m => m.member_name?.toLowerCase().trim()));
+          supabaseMembers = (personasData || [])
+            .map(p => ({
+              id: `supa_${p.id}`,
+              member_name: `${p.nombre || ''} ${p.apellido || ''}`.trim(),
+              phone: p.telefono || '',
+              status: 'Active',
+              source: 'supabase',
+            }))
+            .filter(m => !crmNames.has(m.member_name.toLowerCase().trim()));
+        }
+      }
+    } catch (e) {
+      console.warn('Error cargando miembros de Supabase:', e);
+    }
+
+    setMembers([...crmMembers, ...supabaseMembers]);
     setLoading(false);
   };
 

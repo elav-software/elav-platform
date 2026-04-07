@@ -124,8 +124,12 @@ export default function Home() {
 
     const churchId = await resolveChurchId();
 
+    const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+
     const payload = {
       ...form,
+      nombre: cap(form.nombre),
+      apellido: cap(form.apellido),
       rol: "Líder",
       edad: form.edad ? Number(form.edad) : null,
       tamano_hogar: form.tamano_hogar ? Number(form.tamano_hogar) : null,

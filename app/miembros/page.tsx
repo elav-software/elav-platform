@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
 const LOCALIDADES_BUENOS_AIRES = [
-  "Adrogué", "Almirante Brown", "Avellaneda", "Banfield", "Barracas",
+  "Adrogué", "Almirante Brown", "Avellaneda", "Cañuelas", "Ciudad Evita", "Banfield", "Barracas",
   "Beccar", "Berazategui", "Bernal", "Burzaco", "Caballito",
   "Castelar", "Ciudadela", "Ciudad Autónoma de Buenos Aires", "Claypole",
   "Don Bosco", "Don Torcuato", "El Palomar", "El Talar", "Ezeiza",
@@ -120,9 +120,11 @@ export default function MiembrosPage() {
 
     const churchId = await resolveChurchId();
 
+    const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+
     const payload = {
-      nombre: form.nombre,
-      apellido: form.apellido,
+      nombre: cap(form.nombre),
+      apellido: cap(form.apellido),
       telefono: form.telefono,
       direccion: form.direccion || null,
       fecha_nacimiento: form.fecha_nacimiento || null,
