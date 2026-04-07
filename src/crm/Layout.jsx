@@ -28,6 +28,7 @@ const navItems = [
 { name: "Métricas", icon: BarChart3, page: "Demographics", adminOnly: false },
 { name: "Comunicación", icon: MessageSquare, page: "Communication", adminOnly: false },
 { name: "Líderes y Células", icon: Crown, page: "Leaders", adminOnly: false },
+{ name: "Reportes de Células", icon: ClipboardList, page: "CellSubmissions", adminOnly: false },
 { name: "Encuestas", icon: ClipboardList, page: "Surveys", adminOnly: false },
 { name: "Usuarios", icon: ShieldCheck, page: "UserManagement", adminOnly: true },
 ];
