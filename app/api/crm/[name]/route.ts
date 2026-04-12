@@ -57,6 +57,10 @@ export async function POST(
 
       case "updateUser": {
         const { id, role, is_active } = body;
+        const VALID_ROLES = ["admin", "user", "leader"];
+        if (role !== undefined && !VALID_ROLES.includes(role)) {
+          return NextResponse.json({ error: `Invalid role: ${role}` }, { status: 400 });
+        }
         const updateData: Record<string, unknown> = {};
         if (role !== undefined) updateData.role = role;
         if (is_active !== undefined) updateData.is_active = is_active;
@@ -76,6 +80,10 @@ export async function POST(
 
       case "invite-user": {
         const { email, role } = body;
+        const VALID_ROLES = ["admin", "user", "leader"];
+        if (role !== undefined && !VALID_ROLES.includes(role)) {
+          return NextResponse.json({ error: `Invalid role: ${role}` }, { status: 400 });
+        }
         const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
           data: { role: role ?? "user" },
         });

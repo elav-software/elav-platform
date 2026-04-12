@@ -20,7 +20,7 @@ function normaliseUser(supabaseUser) {
       supabaseUser.user_metadata?.name ||
       supabaseUser.email?.split('@')[0] ||
       '',
-    role: supabaseUser.user_metadata?.role ?? 'user',
+    role: supabaseUser.app_metadata?.role ?? supabaseUser.user_metadata?.role ?? 'user',
   };
 }
 
