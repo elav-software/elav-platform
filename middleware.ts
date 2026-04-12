@@ -22,7 +22,7 @@ import { NextRequest, NextResponse } from "next/server";
  *   El church puede pasarse como ?church=cfc (o via NEXT_PUBLIC_DEFAULT_CHURCH_SLUG)
  */
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const hostname = request.headers.get("host") ?? "";
 

@@ -30,7 +30,7 @@ async function requireAdmin(request: NextRequest): Promise<boolean> {
   if (!token) return false;
   const supabase = getAdminClient();
   const { data: { user } } = await supabase.auth.getUser(token);
-  return user?.user_metadata?.role === "admin";
+  return user?.app_metadata?.role === "admin";
 }
 
 export async function POST(
@@ -61,7 +61,7 @@ export async function POST(
         if (role !== undefined) updateData.role = role;
         if (is_active !== undefined) updateData.is_active = is_active;
         const { data, error } = await supabase.auth.admin.updateUserById(id, {
-          user_metadata: updateData,
+          app_metadata: updateData,
         });
         if (error) throw error;
         return NextResponse.json({ data });
@@ -80,6 +80,12 @@ export async function POST(
           data: { role: role ?? "user" },
         });
         if (error) throw error;
+        // Set app_metadata so the role is not user-editable
+        if (data.user?.id) {
+          await supabase.auth.admin.updateUserById(data.user.id, {
+            app_metadata: { role: role ?? "user" },
+          });
+        }
         return NextResponse.json({ data });
       }
 
