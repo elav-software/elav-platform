@@ -53,7 +53,6 @@ export default function PortalLogin() {
         .single();
 
       if (error || !data) {
-        console.log("Líder no aprobado o no existe:", error);
         return false;
       }
 

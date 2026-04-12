@@ -54,7 +54,7 @@ export default function Welcome() {
     
     if (churchError) {
       await supabase.auth.signOut();
-      setError(`Error de permisos: ${churchError.message}`);
+      setError("Acceso denegado. Contactá al administrador.");
       setLoading(false);
       return;
     }

@@ -16,7 +16,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@crm/components/ui/tooltip";
 import { Button } from "@crm/components/ui/button";
 
-const USER_ALLOWED_PAGES = ["Visitors", "Ministries", "Events", "PrayerRequests", "Communication", "Surveys"];
 
 const navItems = [
 { name: "Panel Principal", icon: LayoutDashboard, page: "Dashboard", adminOnly: false },

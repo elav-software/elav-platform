@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "CFC Casanova",
-    template: "%s | CFC Casanova",
+    default: "Iglesia SaaS",
+    template: "%s | CRM",
   },
-  description: "Centro Familiar Cristiano Isidro Casanova",
+  description: "Sistema de gestión para iglesias",
   icons: {
     icon: "/logo.png",
   },
