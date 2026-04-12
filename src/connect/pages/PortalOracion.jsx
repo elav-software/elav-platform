@@ -60,7 +60,7 @@ export default function PortalOracion() {
       }
 
       setLeader(leaderData);
-      await loadPrayers(leaderData.email);
+      await loadPrayers(leaderData.id);
       
     } catch (err) {
       console.error("Error:", err);
@@ -70,12 +70,12 @@ export default function PortalOracion() {
     }
   };
 
-  const loadPrayers = async (email) => {
+  const loadPrayers = async (leaderId) => {
     try {
       const { data, error } = await supabase
         .from('leader_prayer_requests')
         .select('*')
-        .eq('leader_email', email)
+        .eq('submitted_by_leader', leaderId)
         .order('created_at', { ascending: false });
 
       if (!error && data) {
@@ -115,7 +115,7 @@ export default function PortalOracion() {
       });
 
       setShowForm(false);
-      await loadPrayers(leader.email);
+      await loadPrayers(leader.id);
       
     } catch (err) {
       console.error("Error:", err);

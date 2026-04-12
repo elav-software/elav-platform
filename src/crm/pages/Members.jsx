@@ -223,9 +223,9 @@ export default function Members() {
         if (lugar) {
           try {
             const geoRes = await api.functions.invoke('geocodeAddress', { address: lugar });
-            if (geoRes?.data?.lat) {
-              leaderPayload.latitude = geoRes.data.lat;
-              leaderPayload.longitude = geoRes.data.lng;
+            if (geoRes?.lat) {
+              leaderPayload.latitude = geoRes.lat;
+              leaderPayload.longitude = geoRes.lng;
             }
           } catch (e) { console.warn('Geocoding failed for', lugar, e); }
         }

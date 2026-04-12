@@ -21,7 +21,7 @@ export default function Demographics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.entities.Member.list("-created_date", 5000).then(data => {
+    api.entities.Member.list("-created_date", 2000).then(data => {
       setMembers(data);
       setLoading(false);
     });

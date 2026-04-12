@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "@crm/lib/router-compat";
 import { createPageUrl } from "@crm/utils";
 import { supabase } from "@crm/api/supabaseClient";
+import { clearChurchIdCache } from "@crm/api/apiClient";
 import {
   LayoutDashboard, Users, UserPlus, Church, Calendar,
   HandHeart, DollarSign, BarChart3, MessageSquare, ClipboardList,
@@ -75,7 +76,7 @@ export default function Layout({ children, currentPageName }) {
         loadPendingReports();
       }
     }).catch(() => {});
-  }, [currentPageName, location.pathname]);
+  }, []);  // run once on mount — session doesn’t change while navigating
   
   const loadPendingLeaders = async () => {
     try {
@@ -104,6 +105,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const handleLogout = async () => {
+    clearChurchIdCache();
     await supabase.auth.signOut();
     window.location.href = "/crm/login";
   };
@@ -128,7 +130,10 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  const visibleNavItems = navItems;
+  // Only show adminOnly items to admins
+  const visibleNavItems = user?.role === 'admin'
+    ? navItems
+    : navItems.filter(item => !item.adminOnly);
 
   return (
     <div className="min-h-screen bg-slate-50">

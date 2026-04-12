@@ -211,7 +211,7 @@ export const auth = {
         user.user_metadata?.name ||
         user.email?.split("@")[0] ||
         "",
-      role: user.user_metadata?.role ?? "user",
+      role: user.app_metadata?.role ?? user.user_metadata?.role ?? "user",
     };
   },
 

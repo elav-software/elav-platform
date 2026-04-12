@@ -138,11 +138,28 @@ function createEntity(tableName) {
 }
 
 // ---------------------------------------------------------------------------
-// Auth stub — la web pública no requiere login
+// Auth — la web pública es anónima, pero líderes pueden estar autenticados
 // ---------------------------------------------------------------------------
 const auth = {
-  me: async () => null,
-  logout: () => {},
+  async me() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      full_name:
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split('@')[0] ||
+        '',
+      role: user.app_metadata?.role ?? user.user_metadata?.role ?? 'user',
+    };
+  },
+  logout: async (redirectUrl = '/') => {
+    _churchId = null;
+    await supabase.signOut();
+    window.location.href = redirectUrl;
+  },
   redirectToLogin: () => {},
 };
 
