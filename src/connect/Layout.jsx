@@ -90,7 +90,7 @@ export default function Layout({ children, currentPageName }) {
                 {/* Menu Header */}
                 <div className="p-6 bg-gradient-to-br from-red-600 to-red-700 text-white">
                   <img 
-                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69878a2b6ba10a3126753b8e/6932d40b5_ChatGPTImage9feb202609_56_36pm.png" 
+                    src="/logo.png" 
                     alt="CFC" 
                     className="w-20 h-auto mb-4 bg-white rounded-lg p-2"
                   />
@@ -194,7 +194,7 @@ export default function Layout({ children, currentPageName }) {
 
           <Link to={createPageUrl('Home')} className="flex items-center gap-2">
             <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69878a2b6ba10a3126753b8e/6932d40b5_ChatGPTImage9feb202609_56_36pm.png" 
+              src="/logo.png" 
               alt="CFC" 
               className="h-8 w-auto object-contain"
             />

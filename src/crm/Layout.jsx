@@ -151,7 +151,7 @@ export default function Layout({ children, currentPageName }) {
           <Menu className="text-slate-50 lucide lucide-menu w-6 h-6" />
         </button>
         <div className="flex items-center gap-2">
-          <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69aee310d84123cf531d4bcb/959fffeb5_IMG_0496.jpeg" alt="CFC Logo" className="w-8 h-8 rounded-full object-cover" />
+          <img src="/logo.png" alt="CFC Logo" className="w-8 h-8 rounded-full object-cover" />
           <span className="text-slate-50 font-bold">CFC CASA CRM</span>
         </div>
         <div className="w-10" />
@@ -174,7 +174,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="bg-slate-800 text-slate-50 p-6 border-b border-white/10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69aee310d84123cf531d4bcb/959fffeb5_IMG_0496.jpeg" alt="CFC Logo" className="w-10 h-10 rounded-full object-cover shadow-lg" />
+                <img src="/logo.png" alt="CFC Logo" className="w-10 h-10 rounded-full object-cover shadow-lg" />
                 <div>
                   <h1 className="font-bold text-lg leading-tight">CFC CASA</h1>
                   <p className="text-xs text-slate-400">Sistema de Gestión</p>

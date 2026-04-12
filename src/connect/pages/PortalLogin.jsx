@@ -137,7 +137,7 @@ export default function PortalLogin() {
         {/* Logo y título */}
         <div className="text-center">
           <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69878a2b6ba10a3126753b8e/6932d40b5_ChatGPTImage9feb202609_56_36pm.png"
+            src="/logo.png"
             alt="CFC Logo" 
             className="h-24 w-auto mx-auto mb-6"
           />
