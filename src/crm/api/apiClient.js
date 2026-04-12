@@ -168,6 +168,8 @@ function makeMemberEntity() {
       const churchId = await getMyChurchId();
       const dbData = toDB(payload);
       if (churchId) dbData.church_id = churchId;
+      // Creado desde el CRM → aprobado automáticamente (el admin es quien carga)
+      dbData.estado_aprobacion = "aprobado";
       const { data, error } = await supabase
         .from("personas")
         .insert(dbData)
