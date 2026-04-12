@@ -242,9 +242,13 @@ const functions = {
       return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
     }
 
+    const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch(`/api/crm/${name}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
       body: JSON.stringify(params),
     });
     if (!res.ok) {
@@ -260,9 +264,13 @@ const functions = {
 // ---------------------------------------------------------------------------
 const users = {
   async inviteUser(email, role) {
+    const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch("/api/crm/invite-user", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
       body: JSON.stringify({ email, role }),
     });
     if (!res.ok) throw new Error("Failed to invite user");

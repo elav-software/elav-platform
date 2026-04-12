@@ -101,6 +101,8 @@ export async function POST(req: NextRequest) {
     email_confirm: true,
     user_metadata: {
       full_name: admin_name ?? "",
+    },
+    app_metadata: {
       role: "admin",
     },
   });

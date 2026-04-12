@@ -157,7 +157,7 @@ const auth = {
   },
   logout: async (redirectUrl = '/') => {
     _churchId = null;
-    await supabase.signOut();
+    await supabase.auth.signOut();
     window.location.href = redirectUrl;
   },
   redirectToLogin: () => {},
