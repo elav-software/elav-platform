@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "@crm/lib/router-compat";
 import { createPageUrl } from "@crm/utils";
 import { supabase } from "@crm/api/supabaseClient";
-import { clearChurchIdCache } from "@crm/api/apiClient";
+import { clearChurchIdCache, getMyChurchId } from "@crm/api/apiClient";
 import {
   LayoutDashboard, Users, UserPlus, Church, Calendar,
   HandHeart, DollarSign, BarChart3, MessageSquare, ClipboardList,
@@ -80,9 +80,11 @@ export default function Layout({ children, currentPageName }) {
   
   const loadPendingLeaders = async () => {
     try {
+      const churchId = await getMyChurchId();
       const { count } = await supabase
         .from('personas')
         .select('*', { count: 'exact', head: true })
+        .eq('church_id', churchId)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'pendiente');
       
@@ -94,9 +96,11 @@ export default function Layout({ children, currentPageName }) {
 
   const loadPendingReports = async () => {
     try {
+      const churchId = await getMyChurchId();
       const { count } = await supabase
         .from('leader_cell_submissions')
         .select('*', { count: 'exact', head: true })
+        .eq('church_id', churchId)
         .eq('status', 'submitted');
       setPendingReportsCount(count || 0);
     } catch (err) {

@@ -115,10 +115,12 @@ export default function Members() {
         await api.entities.Member.update(editing.id, payload);
         await syncToSupabase(payload, payload.supabase_id);
       } else {
-        // Crear en Supabase primero para obtener UUID
-        const newSupabaseId = await syncToSupabase(payload, null);
-        if (newSupabaseId) payload.supabase_id = newSupabaseId;
-        await api.entities.Member.create(payload);
+        // api.entities.Member.create ya inserta en personas con church_id
+        const created = await api.entities.Member.create(payload);
+        // Guardar el supabase_id para futuros updates de sincronización
+        if (created?.id) {
+          await api.entities.Member.update(created.id, { supabase_id: created.id });
+        }
       }
     } catch (err) {
       console.error("Error al guardar/sincronizar:", err);

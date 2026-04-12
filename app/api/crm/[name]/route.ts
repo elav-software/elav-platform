@@ -71,21 +71,30 @@ export async function POST(
 
     switch (name) {
       case "listUsers": {
-        // Get only users that belong to this church
+        // Get the user_ids that belong to this church
         const { data: churchUsers, error: cuError } = await supabase
           .from("church_users")
           .select("user_id, role, is_active")
           .eq("church_id", churchId);
         if (cuError) throw cuError;
 
-        // Fetch auth details for each user in the church
-        const userDetails = await Promise.all(
-          (churchUsers ?? []).map(async (cu) => {
-            const { data: { user } } = await supabase.auth.admin.getUserById(cu.user_id);
-            return user ? { ...user, church_role: cu.role, church_is_active: cu.is_active } : null;
-          })
+        if (!churchUsers || churchUsers.length === 0) {
+          return NextResponse.json({ data: { users: [] } });
+        }
+
+        // Fetch all auth users in one call, then filter to this church
+        const churchUserIds = new Set(churchUsers.map((cu) => cu.user_id));
+        const { data: { users: allUsers }, error: listError } =
+          await supabase.auth.admin.listUsers({ perPage: 1000 });
+        if (listError) throw listError;
+
+        const roleMap = new Map(
+          churchUsers.map((cu) => [cu.user_id, { church_role: cu.role, church_is_active: cu.is_active }])
         );
-        const users = userDetails.filter(Boolean);
+        const users = allUsers
+          .filter((u) => churchUserIds.has(u.id))
+          .map((u) => ({ ...u, ...roleMap.get(u.id) }));
+
         return NextResponse.json({ data: { users } });
       }
 
