@@ -25,12 +25,32 @@ function getAdminClient() {
   });
 }
 
-async function requireAdmin(request: NextRequest): Promise<boolean> {
+interface AdminContext {
+  churchId: string;
+}
+
+/**
+ * Validates the Bearer token, confirms the user has role=admin in app_metadata,
+ * and resolves their church_id from the church_users table.
+ * Returns null if the token is missing, invalid, or not scoped to a church.
+ */
+async function requireAdmin(request: NextRequest): Promise<AdminContext | null> {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return false;
+  if (!token) return null;
   const supabase = getAdminClient();
   const { data: { user } } = await supabase.auth.getUser(token);
-  return user?.app_metadata?.role === "admin";
+  if (!user || user.app_metadata?.role !== "admin") return null;
+
+  // Resolve the church this admin belongs to
+  const { data: churchUser } = await supabase
+    .from("church_users")
+    .select("church_id")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  if (!churchUser?.church_id) return null;
+  return { churchId: churchUser.church_id };
 }
 
 export async function POST(
@@ -40,18 +60,32 @@ export async function POST(
   const { name } = await params;
 
   try {
-    const isAdmin = await requireAdmin(request);
-    if (!isAdmin) {
+    const admin = await requireAdmin(request);
+    if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const { churchId } = admin;
     const supabase = getAdminClient();
     const body = await request.json();
 
     switch (name) {
       case "listUsers": {
-        const { data: { users }, error } = await supabase.auth.admin.listUsers();
-        if (error) throw error;
+        // Get only users that belong to this church
+        const { data: churchUsers, error: cuError } = await supabase
+          .from("church_users")
+          .select("user_id, role, is_active")
+          .eq("church_id", churchId);
+        if (cuError) throw cuError;
+
+        // Fetch auth details for each user in the church
+        const userDetails = await Promise.all(
+          (churchUsers ?? []).map(async (cu) => {
+            const { data: { user } } = await supabase.auth.admin.getUserById(cu.user_id);
+            return user ? { ...user, church_role: cu.role, church_is_active: cu.is_active } : null;
+          })
+        );
+        const users = userDetails.filter(Boolean);
         return NextResponse.json({ data: { users } });
       }
 
@@ -61,6 +95,18 @@ export async function POST(
         if (role !== undefined && !VALID_ROLES.includes(role)) {
           return NextResponse.json({ error: `Invalid role: ${role}` }, { status: 400 });
         }
+
+        // Verify the target user belongs to this admin's church
+        const { data: membership } = await supabase
+          .from("church_users")
+          .select("id")
+          .eq("user_id", id)
+          .eq("church_id", churchId)
+          .single();
+        if (!membership) {
+          return NextResponse.json({ error: "User not found in your church" }, { status: 404 });
+        }
+
         const updateData: Record<string, unknown> = {};
         if (role !== undefined) updateData.role = role;
         if (is_active !== undefined) updateData.is_active = is_active;
@@ -73,6 +119,18 @@ export async function POST(
 
       case "deleteUser": {
         const { id } = body;
+
+        // Verify the target user belongs to this admin's church
+        const { data: membership } = await supabase
+          .from("church_users")
+          .select("id")
+          .eq("user_id", id)
+          .eq("church_id", churchId)
+          .single();
+        if (!membership) {
+          return NextResponse.json({ error: "User not found in your church" }, { status: 404 });
+        }
+
         const { error } = await supabase.auth.admin.deleteUser(id);
         if (error) throw error;
         return NextResponse.json({ success: true });
@@ -88,10 +146,18 @@ export async function POST(
           data: { role: role ?? "user" },
         });
         if (error) throw error;
-        // Set app_metadata so the role is not user-editable
+
         if (data.user?.id) {
+          // Set app_metadata so the role is not user-editable
           await supabase.auth.admin.updateUserById(data.user.id, {
             app_metadata: { role: role ?? "user" },
+          });
+          // Link the new user to this church
+          await supabase.from("church_users").insert({
+            church_id: churchId,
+            user_id: data.user.id,
+            role: role ?? "user",
+            is_active: true,
           });
         }
         return NextResponse.json({ data });
