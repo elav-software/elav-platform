@@ -1,7 +1,7 @@
 ﻿"use client";
 // Módulo de gestión de miembros — CFC CASA CRM
 import React, { useEffect, useState } from "react";
-import { api } from "@crm/api/apiClient";
+import { api, getMyChurchId } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
@@ -94,8 +94,14 @@ export default function Members() {
     if (supabaseId) {
       await supabase.from("personas").update(supaData).eq("id", supabaseId);
     } else {
-      const { data } = await supabase.from("personas").insert([supaData]);
-      return data?.[0]?.id;
+      const churchId = await getMyChurchId();
+      const { data, error } = await supabase
+        .from("personas")
+        .insert([{ ...supaData, church_id: churchId }])
+        .select("id")
+        .single();
+      if (error) console.error("Error al insertar en personas:", error);
+      return data?.id ?? null;
     }
     return supabaseId;
   };

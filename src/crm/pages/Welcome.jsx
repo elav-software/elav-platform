@@ -44,8 +44,6 @@ export default function Welcome() {
       return;
     }
     
-    console.log("🔍 Usuario autenticado:", data.user.id, data.user.email);
-    
     // Verificar si el usuario está en church_users con rol admin
     const { data: churchUser, error: churchError } = await supabase
       .from('church_users')
@@ -54,10 +52,7 @@ export default function Welcome() {
       .eq('is_active', true)
       .single();
     
-    console.log("🔍 Query church_users result:", { churchUser, churchError });
-    
     if (churchError) {
-      console.error("❌ Error al consultar church_users:", churchError);
       await supabase.auth.signOut();
       setError(`Error de permisos: ${churchError.message}`);
       setLoading(false);
@@ -65,14 +60,12 @@ export default function Welcome() {
     }
     
     if (churchUser?.role !== 'admin') {
-      console.warn("⚠️ Usuario sin rol admin:", churchUser);
       await supabase.auth.signOut();
       setError("Tu cuenta no tiene permisos para acceder al CRM.");
       setLoading(false);
       return;
     }
     
-    console.log("✅ Login exitoso como admin");
     window.location.href = "/crm/dashboard";
   };
 

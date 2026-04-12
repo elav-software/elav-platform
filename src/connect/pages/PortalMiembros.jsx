@@ -35,10 +35,10 @@ export default function PortalMiembros() {
 
       const churchId = await getCurrentChurchId();
       
-      // Verificar líder aprobado y obtener su celula_id
+      // Verificar líder aprobado — personas no tiene celula_id, se busca por email
       const { data: leaderData, error: leaderError } = await supabase
         .from('personas')
-        .select('id, nombre, apellido, email, celula_id')
+        .select('id, nombre, apellido, email')
         .eq('church_id', churchId)
         .ilike('email', session.user.email)
         .eq('rol', 'Líder')
@@ -52,18 +52,16 @@ export default function PortalMiembros() {
 
       setLeader(leaderData);
 
-      // Cargar miembros de mi célula
-      if (leaderData.celula_id) {
-        const { data: membersData, error: membersError } = await supabase
-          .from('personas')
-          .select('id, nombre, apellido, email, telefono, direccion, rol')
-          .eq('church_id', churchId)
-          .eq('celula_id', leaderData.celula_id)
-          .order('apellido');
+      // Cargar miembros cuyo lider_id apunta a este líder
+      const { data: membersData, error: membersError } = await supabase
+        .from('personas')
+        .select('id, nombre, apellido, email, telefono, direccion, rol')
+        .eq('church_id', churchId)
+        .eq('lider_id', leaderData.id)
+        .order('apellido');
 
-        if (!membersError && membersData) {
-          setMembers(membersData);
-        }
+      if (!membersError && membersData) {
+        setMembers(membersData);
       }
       
     } catch (err) {

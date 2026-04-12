@@ -114,6 +114,19 @@ export async function POST(
           app_metadata: updateData,
         });
         if (error) throw error;
+
+        // Keep church_users in sync so role-based nav/access reflects the change
+        const churchUsersUpdate: Record<string, unknown> = {};
+        if (role !== undefined) churchUsersUpdate.role = role;
+        if (is_active !== undefined) churchUsersUpdate.is_active = is_active;
+        if (Object.keys(churchUsersUpdate).length > 0) {
+          await supabase
+            .from("church_users")
+            .update(churchUsersUpdate)
+            .eq("user_id", id)
+            .eq("church_id", churchId);
+        }
+
         return NextResponse.json({ data });
       }
 
