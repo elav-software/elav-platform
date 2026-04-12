@@ -262,25 +262,6 @@ const functions = {
 };
 
 // ---------------------------------------------------------------------------
-// Capa Users — invitaciones via Next.js API
-// ---------------------------------------------------------------------------
-const users = {
-  async inviteUser(email, role) {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch("/api/crm/invite-user", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-      },
-      body: JSON.stringify({ email, role }),
-    });
-    if (!res.ok) throw new Error("Failed to invite user");
-    return res.json();
-  },
-};
-
-// ---------------------------------------------------------------------------
 // Exportación principal
 // ---------------------------------------------------------------------------
 export const api = {
@@ -300,5 +281,4 @@ export const api = {
   },
   auth,
   functions,
-  users,
 };

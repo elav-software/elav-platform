@@ -16,7 +16,6 @@ const PATH_TO_PAGE: Record<string, string> = {
   "/crm/demographics":    "Demographics",
   "/crm/communication":   "Communication",
   "/crm/surveys":         "Surveys",
-  "/crm/user-management": "UserManagement",
   "/crm/login":           "Welcome",
 };
 

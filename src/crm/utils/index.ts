@@ -11,7 +11,6 @@ const PAGE_ROUTES: Record<string, string> = {
   Demographics:   "/crm/demographics",
   Communication:  "/crm/communication",
   Surveys:        "/crm/surveys",
-  UserManagement: "/crm/user-management",
   Welcome:        "/crm/login",
 };
 

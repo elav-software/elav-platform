@@ -6,7 +6,7 @@ import { clearChurchIdCache, getMyChurchId } from "@crm/api/apiClient";
 import {
   LayoutDashboard, Users, UserPlus, Church, Calendar,
   HandHeart, DollarSign, BarChart3, MessageSquare, ClipboardList,
-  Menu, X, LogOut, User, Crown, ShieldCheck, UserCheck } from
+  Menu, X, LogOut, User, Crown, UserCheck } from
 "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -30,7 +30,7 @@ const navItems = [
 { name: "Líderes y Células", icon: Crown, page: "Leaders", adminOnly: false },
 { name: "Reportes de Células", icon: ClipboardList, page: "CellSubmissions", adminOnly: false },
 { name: "Encuestas", icon: ClipboardList, page: "Surveys", adminOnly: false },
-{ name: "Usuarios", icon: ShieldCheck, page: "UserManagement", adminOnly: true },
+
 ];
 
 
