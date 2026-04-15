@@ -221,6 +221,7 @@ export default function Leaders() {
                 leaders={leaders}
                 selectedLeader={selectedLeader}
                 onSelectLeader={(l) => { setSelectedLeader(l); }}
+                onLeadersUpdated={load}
               />
             )}
           </div>

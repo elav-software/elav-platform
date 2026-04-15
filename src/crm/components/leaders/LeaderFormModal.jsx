@@ -27,7 +27,11 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
   useEffect(() => {
     if (open) {
       if (editing) {
-        setForm({ ...EMPTY, ...editing, latitude: editing.latitude ?? "", longitude: editing.longitude ?? "" });
+        // Reemplazar null por "" para evitar inputs controlados con null
+        const sanitized = Object.fromEntries(
+          Object.entries(editing).map(([k, v]) => [k, v ?? ""])
+        );
+        setForm({ ...EMPTY, ...sanitized, latitude: editing.latitude ?? "", longitude: editing.longitude ?? "" });
       } else {
         setForm(EMPTY);
       }
@@ -42,8 +46,10 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
     if (!form.meeting_location) return;
     setGeocoding(true);
     try {
-      const res = await api.functions.invoke('geocodeAddress', { address: form.meeting_location });
-      if (res?.data?.lat) setForm(f => ({ ...f, latitude: res.data.lat, longitude: res.data.lng }));
+      // Combinar dirección + localidad para mayor precisión
+      const fullAddress = [form.meeting_location, form.district].filter(Boolean).join(', ');
+      const res = await api.functions.invoke('geocodeAddress', { address: fullAddress });
+      if (res?.lat) setForm(f => ({ ...f, latitude: res.lat, longitude: res.lng }));
     } catch (e) { console.error('Geocoding failed', e); }
     setGeocoding(false);
   };
@@ -168,8 +174,8 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
             <Input type="time" value={form.meeting_time} onChange={set("meeting_time")} className="h-9 text-sm" />
           </div>
           <div>
-            <Label className="text-xs font-medium text-slate-600 mb-1 block">Distrito / Zona</Label>
-            <Input value={form.district} onChange={set("district")} className="h-9 text-sm" placeholder="Ej: Zona Norte" />
+            <Label className="text-xs font-medium text-slate-600 mb-1 block">Localidad / Barrio</Label>
+            <Input value={form.district} onChange={set("district")} className="h-9 text-sm" placeholder="Ej: Isidro Casanova" />
           </div>
           <div>
             <Label className="text-xs font-medium text-slate-600 mb-1 block">Vincular a Miembro</Label>
@@ -190,7 +196,7 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
               value={form.meeting_location}
               onChange={set("meeting_location")}
               className="h-9 text-sm flex-1"
-              placeholder="Dirección o nombre del lugar..."
+              placeholder="Ej: Av. San Martín 1234"
             />
             <Button
               type="button"
@@ -208,7 +214,9 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
               📍 Coordenadas: {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)}
             </p>
           ) : (
-            <p className="text-xs text-slate-400 mt-1">Toca el pin 📍 para obtener coordenadas y aparecer en el mapa</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Completá la dirección y la localidad, luego tocá 📍 para geocodificar
+            </p>
           )}
         </div>
 

@@ -234,8 +234,13 @@ export const auth = {
 const functions = {
   async invoke(name, params = {}) {
     if (name === "geocodeAddress") {
-      const query = encodeURIComponent(params.address || "");
-      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&accept-language=es`;
+      const address = params.address || "";
+      // Agregar contexto de Argentina si no está incluido para mejorar precisión
+      const queryStr = address.toLowerCase().includes("argentina")
+        ? address
+        : `${address}, Buenos Aires, Argentina`;
+      // Usar parámetros estructurados de Nominatim para mejor precisión
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryStr)}&format=json&limit=1&accept-language=es&countrycodes=ar&addressdetails=1`;
       const res = await fetch(url, {
         headers: { "User-Agent": "censo-iglesia-crm/1.0" },
       });

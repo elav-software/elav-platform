@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { MapPin, Clock, Navigation, ExternalLink, Phone, Mail } from "lucide-react";
+import { MapPin, Clock, Navigation, ExternalLink, Phone, Loader2 } from "lucide-react";
+import { api } from "@crm/api/apiClient";
 
 const DAY_ES = {
   Monday: "Lunes", Tuesday: "Martes", Wednesday: "Miércoles",
@@ -23,14 +24,16 @@ function getGoogleMapsLink(leader) {
   return null;
 }
 
-export default function CellsMap({ leaders, selectedLeader, onSelectLeader }) {
+export default function CellsMap({ leaders, selectedLeader, onSelectLeader, onLeadersUpdated }) {
   const mapRef = useRef(null);        // referencia al div contenedor
   const leafletMapRef = useRef(null); // instancia de L.Map
   const markersRef = useRef({});      // id → L.Marker
   const [focused, setFocused] = useState(selectedLeader || null);
   const [leafletReady, setLeafletReady] = useState(false);
+  const [geocodingAll, setGeocodingAll] = useState(false);
 
   const mappable = leaders.filter(l => l.latitude && l.longitude);
+  const withoutCoords = leaders.filter(l => l.meeting_location && (!l.latitude || !l.longitude));
 
   // ── 1. Cargar Leaflet y CSS dinámicamente ──────────────────────────────
   useEffect(() => {
@@ -155,8 +158,44 @@ export default function CellsMap({ leaders, selectedLeader, onSelectLeader }) {
     }
   };
 
+  const geocodeAllMissing = async () => {
+    if (withoutCoords.length === 0) return;
+    setGeocodingAll(true);
+    let updated = 0;
+    for (const leader of withoutCoords) {
+      try {
+        // Combinar dirección + localidad (district) para mayor precisión
+        const fullAddress = [leader.meeting_location, leader.district].filter(Boolean).join(', ');
+        const res = await api.functions.invoke('geocodeAddress', { address: fullAddress });
+        if (res?.lat) {
+          await api.entities.Leader.update(leader.id, { latitude: res.lat, longitude: res.lng });
+          updated++;
+        }
+      } catch (_) { /* continuar con el siguiente */ }
+    }
+    setGeocodingAll(false);
+    if (updated > 0 && onLeadersUpdated) onLeadersUpdated();
+  };
+
   return (
     <div className="space-y-4">
+      {/* Barra de acciones */}
+      {withoutCoords.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+          <p className="text-sm text-amber-700">
+            <strong>{withoutCoords.length}</strong> líder{withoutCoords.length !== 1 ? "es tienen" : " tiene"} dirección pero sin coordenadas y no aparece{withoutCoords.length !== 1 ? "n" : ""} en el mapa.
+          </p>
+          <button
+            onClick={geocodeAllMissing}
+            disabled={geocodingAll}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium rounded-lg disabled:opacity-60 transition-colors"
+          >
+            {geocodingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MapPin className="w-3.5 h-3.5" />}
+            {geocodingAll ? "Geocodificando..." : "Geocodificar faltantes"}
+          </button>
+        </div>
+      )}
+
       {/* Mapa */}
       <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-slate-100">
         {/* Header */}
