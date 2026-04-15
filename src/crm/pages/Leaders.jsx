@@ -74,7 +74,7 @@ export default function Leaders() {
     load();
   };
 
-  const mappableLeaders = leaders.filter(l => (l.latitude && l.longitude) || l.meeting_location);
+  const mappableLeaders = leaders.filter(l => l.latitude && l.longitude);
 
   if (loading) {
     return (
@@ -209,35 +209,19 @@ export default function Leaders() {
 
         {/* MAP TAB */}
         <TabsContent value="map">
-          <div className="mb-3 flex justify-end">
-            <button
-              onClick={async () => {
-                if (!confirm("¿Limpiar coordenadas de todos los líderes con dirección de texto? Esto hará que Google Maps use el texto directamente.")) return;
-                for (const leader of leaders) {
-                  if (leader.meeting_location && (leader.latitude || leader.longitude)) {
-                    await api.entities.Leader.update(leader.id, { latitude: null, longitude: null });
-                  }
-                }
-                await load();
-                alert("Coordenadas limpiadas correctamente.");
-              }}
-              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-rose-300 hover:text-rose-600 transition-colors shadow-sm"
-            >
-              Limpiar coordenadas incorrectas
-            </button>
-          </div>
           <div className="space-y-4">
             {mappableLeaders.length === 0 ? (
               <Card className="p-10 border-0 shadow-sm flex flex-col items-center gap-3 text-slate-400">
                 <Map className="w-12 h-12 opacity-30" />
-                <p className="font-medium">Aún no hay células con ubicación</p>
-                <p className="text-sm">Agrega la dirección de reunión a cada líder y toca el botón de pin para geocodificar.</p>
+                <p className="font-medium">Aún no hay células con ubicación geocodificada</p>
+                <p className="text-sm">Agrega la dirección de reunión a cada líder y usá el botón de pin para geocodificar.</p>
               </Card>
             ) : (
               <CellsMap
                 leaders={leaders}
                 selectedLeader={selectedLeader}
                 onSelectLeader={(l) => { setSelectedLeader(l); }}
+                onLeadersUpdated={load}
               />
             )}
           </div>
