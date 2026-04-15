@@ -95,7 +95,7 @@ const EMPTY_FORM = {
   how_did_you_find_us: "", who_invited_you: "",
   technical_skills: "", schedule_availability: "", current_service_area: "",
   church_family_ties: "",
-  dia_reunion: "", hora_reunion: "", lugar_reunion: "",
+  dia_reunion: "", hora_reunion: "", lugar_reunion: "", lugar_reunion_localidad: "",
   supabase_id: ""
 };
 
@@ -546,9 +546,10 @@ export default function Members() {
             {/* CÉLULA — solo líderes */}
             <TabsContent value="celula" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <F label="Nombre del Grupo / Célula" name="small_group" form={form} setForm={setForm} />
-              <F label="Día de Reunión" name="dia_reunion" options={DIAS_SEMANA} form={form} setForm={setForm} />
-              <F label="Hora de Reunión" name="hora_reunion" form={form} setForm={setForm} />
-              <F label="Lugar de Reunión" name="lugar_reunion" form={form} setForm={setForm} />
+              <F label="Día de Reunión de la Célula" name="dia_reunion" options={DIAS_SEMANA} form={form} setForm={setForm} />
+              <F label="Hora de Reunión de la Célula" name="hora_reunion" type="time" form={form} setForm={setForm} />
+              <F label="Dirección de la Célula" name="lugar_reunion" form={form} setForm={setForm} />
+              <F label="Localidad / Barrio de la Célula" name="lugar_reunion_localidad" options={LOCALIDADES} form={form} setForm={setForm} />
             </TabsContent>
 
             {/* FAMILIA */}

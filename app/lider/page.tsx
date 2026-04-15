@@ -59,7 +59,7 @@ type FormData = {
   nivel_formacion: string; como_conociste: string; quien_te_invito: string;
   habilidades_tecnicas: string; disponibilidad_horaria: string[]; 
   area_servicio_actual: string[]; ministerio: string; grupo_celula: string;
-  dia_reunion: string; hora_reunion: string; lugar_reunion: string;
+  dia_reunion: string; hora_reunion: string; lugar_reunion: string; lugar_reunion_localidad: string;
   conyuge: string; hijos: string; tamano_hogar: string; vinculos_familiares_iglesia: string;
 };
 
@@ -70,7 +70,7 @@ const INITIAL_FORM: FormData = {
   bautizado: "", ano_bautismo: "", fue_encuentro: "", nivel_formacion: "",
   como_conociste: "", quien_te_invito: "", habilidades_tecnicas: "", 
   disponibilidad_horaria: [], area_servicio_actual: [], 
-  ministerio: "", grupo_celula: "", dia_reunion: "", hora_reunion: "", lugar_reunion: "",
+  ministerio: "", grupo_celula: "", dia_reunion: "", hora_reunion: "", lugar_reunion: "", lugar_reunion_localidad: "",
   conyuge: "", hijos: "", tamano_hogar: "", vinculos_familiares_iglesia: "",
 };
 
@@ -467,7 +467,7 @@ export default function Home() {
                       </select>
                     </div>
                     <div className={fieldGroupClasses}>
-                      <label className={labelClasses}>Día de reunión</label>
+                      <label className={labelClasses}>Día de Reunión de la Célula</label>
                       <select className={selectClasses} value={form.dia_reunion} onChange={set("dia_reunion")}>
                         <option value="">Seleccionar...</option>
                         <option value="Lunes">Lunes</option>
@@ -480,12 +480,21 @@ export default function Home() {
                       </select>
                     </div>
                     <div className={fieldGroupClasses}>
-                      <label className={labelClasses}>Hora de reunión</label>
+                      <label className={labelClasses}>Hora de Reunión de la Célula</label>
                       <input type="time" className={inputClasses} value={form.hora_reunion} onChange={set("hora_reunion")} />
                     </div>
-                    <div className={`${fieldGroupClasses} md:col-span-2`}>
-                      <label className={labelClasses}>Lugar de reunión (dirección)</label>
-                      <input className={inputClasses} value={form.lugar_reunion} onChange={set("lugar_reunion")} />
+                    <div className={fieldGroupClasses}>
+                      <label className={labelClasses}>Dirección de la Célula</label>
+                      <input className={inputClasses} value={form.lugar_reunion} onChange={set("lugar_reunion")} placeholder="Ej: Av. San Martín 1234" />
+                    </div>
+                    <div className={fieldGroupClasses}>
+                      <label className={labelClasses}>Localidad / Barrio de la Célula</label>
+                      <select className={selectClasses} value={form.lugar_reunion_localidad} onChange={set("lugar_reunion_localidad")}>
+                        <option value="">Seleccionar localidad...</option>
+                        {LOCALIDADES_BUENOS_AIRES.map(loc => (
+                          <option key={loc} value={loc}>{loc}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
