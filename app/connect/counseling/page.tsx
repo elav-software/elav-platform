@@ -1,6 +1,10 @@
-"use client";
+import type { Metadata } from "next";
 import Counseling from "@connect/pages/Counseling";
 
-export default function CounselingPage() {{
+export const metadata: Metadata = {
+  title: "Consejería",
+};
+
+export default function CounselingPage() {
   return <Counseling />;
-}}
+}

@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CFC - Censo Iglesia",
-  description: "Centro Familiar Cristiano - Censo de Líderes y Miembros",
+  title: {
+    default: "Iglesia SaaS",
+    template: "%s | CRM",
+  },
+  description: "Sistema de gestión para iglesias",
   icons: {
     icon: "/logo.png",
   },
@@ -27,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

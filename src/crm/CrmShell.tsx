@@ -8,6 +8,7 @@ const PATH_TO_PAGE: Record<string, string> = {
   "/crm/members":         "Members",
   "/crm/visitors":        "Visitors",
   "/crm/leaders":         "Leaders",
+  "/crm/cell-submissions": "CellSubmissions",
   "/crm/ministries":      "Ministries",
   "/crm/events":          "Events",
   "/crm/prayer-requests": "PrayerRequests",
@@ -15,7 +16,6 @@ const PATH_TO_PAGE: Record<string, string> = {
   "/crm/demographics":    "Demographics",
   "/crm/communication":   "Communication",
   "/crm/surveys":         "Surveys",
-  "/crm/user-management": "UserManagement",
   "/crm/login":           "Welcome",
 };
 

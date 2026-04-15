@@ -2,6 +2,51 @@
 
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
+
+const LOCALIDADES_BUENOS_AIRES = [
+  "Adrogué", "Almirante Brown", "Avellaneda", "Banfield", "Barracas",
+  "Beccar", "Berazategui", "Bernal", "Burzaco", "Caballito",
+  "Castelar", "Ciudadela", "Ciudad Autónoma de Buenos Aires", "Claypole",
+  "Don Bosco", "Don Torcuato", "El Palomar", "El Talar", "Ezeiza",
+  "Ezpeleta", "Florencio Varela", "Florida", "General Rodríguez",
+  "González Catán", "Gregorio de Laferrere", "Guernica", "Haedo",
+  "Hurlingham", "Ituzaingó", "José C. Paz", "La Matanza", "La Plata",
+  "Lanús", "Llavallol", "Lomas de Zamora", "Longchamps", "Luján",
+  "Luis Guillón", "Malvinas Argentinas", "Martínez", "Merlo",
+  "Monte Grande", "Moreno", "Morón", "Munro", "Olivos",
+  "Palermo", "Pilar", "Quilmes", "Rafael Calzada", "Ramos Mejía",
+  "Ranelagh", "Remedios de Escalada", "San Fernando", "San Isidro",
+  "San Justo", "San Martín", "San Miguel", "San Nicolás",
+  "Temperley", "Tigre", "Tres de Febrero", "Tristán Suárez",
+  "Turdera", "Varela", "Vicente López", "Villa Ballester",
+  "Villa del Parque", "Villa Devoto", "Villa Luro", "Villa Madero",
+  "Villa Urquiza", "Wilde", "Zárate",
+  // Partido de La Matanza (localidades frecuentes CFC)
+  "Isidro Casanova", "La Tablada", "Lomas del Mirador",
+  "Rafael Castillo", "Tapiales", "Villa Luzuriaga",
+  "Virrey del Pino", "20 de Junio",
+  "Otro",
+].sort((a, b) => a.localeCompare(b, "es"));
+
+/** Resuelve el church_id desde el dominio del navegador, consultando Supabase. */
+async function resolveChurchId(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  const hostname = window.location.hostname;
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  if (isLocal) {
+    const slug = new URLSearchParams(window.location.search).get('church')
+      ?? process.env.NEXT_PUBLIC_DEFAULT_CHURCH_SLUG
+      ?? 'cfc';
+    const { data } = await supabase.from('churches').select('id').eq('slug', slug).eq('is_active', true).single();
+    return data?.id ?? null;
+  }
+
+  // Producción: strip www. y subdominios (censo.) para obtener el dominio raíz
+  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal)\./, '');
+  const { data } = await supabase.from('churches').select('id').eq('custom_domain', rootDomain).eq('is_active', true).single();
+  return data?.id ?? null;
+}
 import toast, { Toaster } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -77,8 +122,14 @@ export default function Home() {
     if (!validate()) return;
     setLoading(true);
 
+    const churchId = await resolveChurchId();
+
+    const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+
     const payload = {
       ...form,
+      nombre: cap(form.nombre),
+      apellido: cap(form.apellido),
       rol: "Líder",
       edad: form.edad ? Number(form.edad) : null,
       tamano_hogar: form.tamano_hogar ? Number(form.tamano_hogar) : null,
@@ -88,6 +139,7 @@ export default function Home() {
       fecha_llegada_cfc: form.fecha_llegada_cfc || null,
       area_servicio_actual: form.area_servicio_actual.join(", ") || null,
       disponibilidad_horaria: form.disponibilidad_horaria.join(", ") || null,
+      ...(churchId ? { church_id: churchId } : {}),
     };
 
     const { error } = await supabase.from("personas").insert([payload]);
@@ -133,10 +185,10 @@ export default function Home() {
       >
         <div className="flex flex-col items-center mb-10">
           <img src="/logo.png" alt="CFC Logo" className="w-16 h-auto object-contain mb-5" />
-          <h2 className="text-slate-900 text-3xl font-black text-center tracking-tight">
-            Censo de Líderes
+          <h2 className="text-slate-800 text-2xl font-bold text-center leading-tight">
+            Centro Familiar Cristiano<br />
+            <span className="text-blue-600">Registro de Líderes</span>
           </h2>
-          <p className="text-slate-500 mt-2 font-medium">Centro Familiar Cristiano</p>
         </div>
 
         <div className="mb-10">
@@ -208,10 +260,6 @@ export default function Home() {
                       <label className={labelClasses}>Teléfono *</label>
                       <input type="tel" className={inputClasses} value={form.telefono} onChange={set("telefono")} placeholder="Ej: 1123456789" />
                     </div>
-                    <div className={fieldGroupClasses}>
-                      <label className={labelClasses}>WhatsApp</label>
-                      <input type="tel" className={inputClasses} value={form.whatsapp} onChange={set("whatsapp")} placeholder="Ej: 1123456789" />
-                    </div>
                     <div className={`${fieldGroupClasses} md:col-span-2`}>
                       <label className={labelClasses}>Email</label>
                       <input type="email" className={inputClasses} value={form.email} onChange={set("email")} placeholder="correo@ejemplo.com" />
@@ -227,8 +275,13 @@ export default function Home() {
                       <input className={inputClasses} value={form.direccion} onChange={set("direccion")} placeholder="Tu dirección" />
                     </div>
                     <div className={fieldGroupClasses}>
-                      <label className={labelClasses}>Barrio / Zona</label>
-                      <input className={inputClasses} value={form.barrio_zona} onChange={set("barrio_zona")} placeholder="Ej: Isidro Casanova" />
+                      <label className={labelClasses}>Localidad / Barrio</label>
+                      <select className={selectClasses} value={form.barrio_zona} onChange={set("barrio_zona")}>
+                        <option value="">Seleccionar localidad...</option>
+                        {LOCALIDADES_BUENOS_AIRES.map(loc => (
+                          <option key={loc} value={loc}>{loc}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Ocupación</label>
@@ -514,7 +567,7 @@ export default function Home() {
                   onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}
                   className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 disabled:scale-100"
                 >
-                  {loading ? "Procesando..." : "Completar Censo"}
+                  {loading ? "Procesando..." : "Completar Registro"}
                 </motion.button>
               )}
             </div>

@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Calendar, 
@@ -61,7 +62,7 @@ export default function Events() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
       setFormData({
         attendee_name: currentUser.full_name || '',
@@ -76,11 +77,11 @@ export default function Events() {
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['events'],
-    queryFn: () => base44.entities.Event.filter({ is_published: true }, 'date'),
+    queryFn: () => api.entities.Event.filter({ is_published: true }, 'date'),
   });
 
   const registerMutation = useMutation({
-    mutationFn: (data) => base44.entities.EventRegistration.create(data),
+    mutationFn: (data) => api.entities.EventRegistration.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       setShowRegister(false);

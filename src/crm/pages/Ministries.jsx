@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Button } from "@crm/components/ui/button";
 import { Input } from "@crm/components/ui/input";
@@ -49,8 +50,8 @@ export default function Ministries() {
 
   const load = async () => {
     const [m, v] = await Promise.all([
-      base44.entities.Ministry.list("-created_date", 100),
-      base44.entities.Volunteer.list("-created_date", 200),
+      api.entities.Ministry.list("-created_date", 100),
+      api.entities.Volunteer.list("-created_date", 200),
     ]);
     setMinistries(m);
     setVolunteers(v);
@@ -67,27 +68,27 @@ export default function Ministries() {
   const saveMin = async () => {
     setSaving(true);
     const payload = { ...minForm, number_of_volunteers: Number(minForm.number_of_volunteers) || 0 };
-    if (editingMin) await base44.entities.Ministry.update(editingMin.id, payload);
-    else await base44.entities.Ministry.create(payload);
+    if (editingMin) await api.entities.Ministry.update(editingMin.id, payload);
+    else await api.entities.Ministry.create(payload);
     await load(); setMinModal(false); setSaving(false);
   };
 
   const saveVol = async () => {
     setSaving(true);
-    if (editingVol) await base44.entities.Volunteer.update(editingVol.id, volForm);
-    else await base44.entities.Volunteer.create(volForm);
+    if (editingVol) await api.entities.Volunteer.update(editingVol.id, volForm);
+    else await api.entities.Volunteer.create(volForm);
     await load(); setVolModal(false); setSaving(false);
   };
 
   const deleteMin = async (id) => {
     if (!confirm("¿Eliminar este ministerio?")) return;
-    await base44.entities.Ministry.delete(id);
+    await api.entities.Ministry.delete(id);
     setMinistries(prev => prev.filter(m => m.id !== id));
   };
 
   const deleteVol = async (id) => {
     if (!confirm("¿Eliminar este voluntario?")) return;
-    await base44.entities.Volunteer.delete(id);
+    await api.entities.Volunteer.delete(id);
     setVolunteers(prev => prev.filter(v => v.id !== id));
   };
 

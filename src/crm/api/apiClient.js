@@ -1,60 +1,78 @@
 /**
- * base44Client.js — Compatibility shim
+ * apiClient.js — CRM (panel administrativo)
  *
- * Exports the same `base44` object the CRM pages expect, but every call
- * is backed by Supabase instead of the Base44 SDK.
+ * Cliente Supabase multi-tenant para el módulo CRM.
+ * Todas las operaciones de escritura incluyen automáticamente el church_id
+ * del usuario autenticado. Las lecturas son filtradas además por RLS.
  *
- * API contract preserved:
- *   base44.entities.<Entity>.list(orderBy, limit)
- *   base44.entities.<Entity>.filter(conditions, orderBy, limit)
- *   base44.entities.<Entity>.create(data)
- *   base44.entities.<Entity>.update(id, data)
- *   base44.entities.<Entity>.delete(id)
- *   base44.auth.me()
- *   base44.auth.logout(redirectUrl)
- *   base44.auth.redirectToLogin(redirectUrl)
- *   base44.functions.invoke(name, params)
- *   base44.users.inviteUser(email, role)
+ * Reemplaza a base44Client.js (que era solo un shim de compatibilidad).
+ * Uso: import { api } from '@crm/api/apiClient'
  */
-
 import { supabase, supabaseToCRM, crmToSupabase } from "./supabaseClient";
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Resolución de church_id — se obtiene de la tabla church_users una sola vez
 // ---------------------------------------------------------------------------
 
-/**
- * Parses a Base44-style order string ("-created_date", "name", etc.)
- * into a Supabase-compatible order descriptor.
- */
+let _churchId = null;
+
+async function getMyChurchId() {
+  if (_churchId) return _churchId;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from('church_users')
+    .select('church_id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single();
+  if (error || !data) {
+    console.warn('[apiClient/crm] No se encontró church_id para este usuario.');
+    return null;
+  }
+  _churchId = data.church_id;
+  return _churchId;
+}
+
+// Limpia la caché al hacer logout (llamar desde AuthContext)
+export { getMyChurchId };
+
+export function clearChurchIdCache() {
+  _churchId = null;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: parse sort string ("-created_date" → { column, ascending })
+// ---------------------------------------------------------------------------
 function parseOrder(orderStr = "-created_at") {
   const desc = orderStr.startsWith("-");
   const raw = desc ? orderStr.slice(1) : orderStr;
-  // Base44 used "created_date"; Supabase auto-column is "created_at"
   const col = raw === "created_date" ? "created_at" : raw;
   return { column: col, ascending: !desc };
 }
 
 // ---------------------------------------------------------------------------
-// Generic entity factory — direct column mapping (no translation needed)
-// Used for all tables whose columns already match the CRM field names.
+// Factory genérica — tablas CRM con columnas que ya coinciden con el CRM
 // ---------------------------------------------------------------------------
 function makeEntity(tableName) {
   return {
     async list(orderBy = "-created_at", limit = 500) {
       const { column, ascending } = parseOrder(orderBy);
-      const { data, error } = await supabase
-        .from(tableName)
-        .select("*")
-        .order(column, { ascending })
-        .limit(limit);
+      // RLS ya filtra por church_id, pero lo agregamos explícitamente
+      // para claridad y como defensa en profundidad
+      const churchId = await getMyChurchId();
+      let q = supabase.from(tableName).select("*");
+      if (churchId) q = q.eq("church_id", churchId);
+      const { data, error } = await q.order(column, { ascending }).limit(limit);
       if (error) throw new Error(error.message);
       return data;
     },
 
     async filter(conditions = {}, orderBy = "-created_at", limit = 500) {
       const { column, ascending } = parseOrder(orderBy);
+      const churchId = await getMyChurchId();
       let q = supabase.from(tableName).select("*");
+      if (churchId) q = q.eq("church_id", churchId);
       Object.entries(conditions).forEach(([k, v]) => {
         q = q.eq(k, v);
       });
@@ -64,13 +82,15 @@ function makeEntity(tableName) {
     },
 
     async create(payload) {
-      const { data, error } = await supabase
+      const churchId = await getMyChurchId();
+      const data = churchId ? { ...payload, church_id: churchId } : payload;
+      const { data: inserted, error } = await supabase
         .from(tableName)
-        .insert(payload)
+        .insert(data)
         .select()
         .single();
       if (error) throw new Error(error.message);
-      return data;
+      return inserted;
     },
 
     async update(id, payload) {
@@ -93,10 +113,8 @@ function makeEntity(tableName) {
 }
 
 // ---------------------------------------------------------------------------
-// Member entity — maps to `personas` table with Spanish↔English translation
+// Entidad Member — tabla `personas` con traducción ES ↔ EN
 // ---------------------------------------------------------------------------
-
-// Translates CRM filter keys → Supabase column names for `personas`
 const MEMBER_FILTER_MAP = {
   member_status: {
     col: "rol",
@@ -116,18 +134,23 @@ function makeMemberEntity() {
   return {
     async list(orderBy = "-created_at", limit = 500) {
       const { column, ascending } = parseOrder(orderBy);
-      const { data, error } = await supabase
-        .from("personas")
-        .select("*")
-        .order(column, { ascending })
-        .limit(limit);
+      const churchId = await getMyChurchId();
+      let q = supabase.from("personas").select("*");
+      if (churchId) q = q.eq("church_id", churchId);
+      // Filtrar líderes no aprobados
+      q = q.or("rol.neq.Líder,and(rol.eq.Líder,estado_aprobacion.eq.aprobado)");
+      const { data, error } = await q.order(column, { ascending }).limit(limit);
       if (error) throw new Error(error.message);
       return data.map(fromDB);
     },
 
     async filter(conditions = {}, orderBy = "-created_at", limit = 500) {
       const { column, ascending } = parseOrder(orderBy);
+      const churchId = await getMyChurchId();
       let q = supabase.from("personas").select("*");
+      if (churchId) q = q.eq("church_id", churchId);
+      // Filtrar líderes no aprobados
+      q = q.or("rol.neq.Líder,and(rol.eq.Líder,estado_aprobacion.eq.aprobado)");
       Object.entries(conditions).forEach(([k, v]) => {
         const mapping = MEMBER_FILTER_MAP[k];
         if (mapping) {
@@ -142,9 +165,14 @@ function makeMemberEntity() {
     },
 
     async create(payload) {
+      const churchId = await getMyChurchId();
+      const dbData = toDB(payload);
+      if (churchId) dbData.church_id = churchId;
+      // Creado desde el CRM → aprobado automáticamente (el admin es quien carga)
+      dbData.estado_aprobacion = "aprobado";
       const { data, error } = await supabase
         .from("personas")
-        .insert(toDB(payload))
+        .insert(dbData)
         .select()
         .single();
       if (error) throw new Error(error.message);
@@ -171,14 +199,11 @@ function makeMemberEntity() {
 }
 
 // ---------------------------------------------------------------------------
-// Auth layer — replaces base44.auth.*
+// Capa Auth — Supabase Auth para el CRM
 // ---------------------------------------------------------------------------
 export const auth = {
   async me() {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) return null;
     return {
       id: user.id,
@@ -188,25 +213,23 @@ export const auth = {
         user.user_metadata?.name ||
         user.email?.split("@")[0] ||
         "",
-      role: user.user_metadata?.role ?? "user",
+      role: user.app_metadata?.role ?? user.user_metadata?.role ?? "user",
     };
   },
 
   async logout(redirectUrl = "/") {
+    clearChurchIdCache();
     await supabase.auth.signOut();
     window.location.href = redirectUrl;
   },
 
   redirectToLogin(_redirectUrl) {
-    // Sends the user to the CRM login page inside censo-iglesia
     window.location.href = "/crm/login";
   },
 };
 
 // ---------------------------------------------------------------------------
-// Functions layer — replaces base44.functions.invoke()
-// geocodeAddress: uses Nominatim (OpenStreetMap, free, no key required)
-// User-management functions: delegated to Next.js API routes (/api/crm/*)
+// Capa Functions — geocodificación y rutas admin via Next.js API
 // ---------------------------------------------------------------------------
 const functions = {
   async invoke(name, params = {}) {
@@ -218,16 +241,16 @@ const functions = {
       });
       const results = await res.json();
       if (results.length === 0) return null;
-      return {
-        lat: parseFloat(results[0].lat),
-        lng: parseFloat(results[0].lon),
-      };
+      return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
     }
 
-    // Admin functions go through Next.js API routes (require service-role key)
+    const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch(`/api/crm/${name}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
       body: JSON.stringify(params),
     });
     if (!res.ok) {
@@ -239,39 +262,23 @@ const functions = {
 };
 
 // ---------------------------------------------------------------------------
-// Users layer — replaces base44.users.*
+// Exportación principal
 // ---------------------------------------------------------------------------
-const users = {
-  async inviteUser(email, role) {
-    const res = await fetch("/api/crm/invite-user", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, role }),
-    });
-    if (!res.ok) throw new Error("Failed to invite user");
-    return res.json();
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Main export — drop-in replacement for the old base44 SDK client
-// ---------------------------------------------------------------------------
-export const base44 = {
+export const api = {
   entities: {
-    Member: makeMemberEntity(),
-    Visitor: makeEntity("visitors"),
-    Donation: makeEntity("donations"),
-    Event: makeEntity("events"),
-    Attendance: makeEntity("event_attendance"),
-    Leader: makeEntity("leaders"),
-    CellMember: makeEntity("cell_members"),
-    CellReport: makeEntity("cell_reports"),
-    Ministry: makeEntity("ministries"),
-    Volunteer: makeEntity("volunteers"),
+    Member:        makeMemberEntity(),
+    Visitor:       makeEntity("visitors"),
+    Donation:      makeEntity("donations"),
+    Event:         makeEntity("events"),
+    Attendance:    makeEntity("event_attendance"),
+    Leader:        makeEntity("leaders"),
+    CellMember:    makeEntity("cell_members"),
+    CellReport:    makeEntity("cell_reports"),
+    Ministry:      makeEntity("ministries"),
+    Volunteer:     makeEntity("volunteers"),
     PrayerRequest: makeEntity("prayer_requests"),
-    Survey: makeEntity("surveys"),
+    Survey:        makeEntity("surveys"),
   },
   auth,
   functions,
-  users,
 };

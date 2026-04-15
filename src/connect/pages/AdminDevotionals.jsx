@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Plus, Edit3, Trash2, ChevronLeft, Save, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@connect/components/ui/button';
@@ -30,17 +31,17 @@ export default function AdminDevotionals() {
 
   useEffect(() => { loadUser(); }, []);
   const loadUser = async () => {
-    try { setUser(await base44.auth.me()); } catch (e) { setUser(null); }
+    try { setUser(await api.auth.me()); } catch (e) { setUser(null); }
   };
 
   const { data: devotionals = [], isLoading } = useQuery({
     queryKey: ['adminDevotionals'],
-    queryFn: () => base44.entities.Devotional.list('-publish_date'),
+    queryFn: () => api.entities.Devotional.list('-publish_date'),
     enabled: user?.role === 'admin',
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Devotional.create(data),
+    mutationFn: (data) => api.entities.Devotional.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminDevotionals'] });
       resetForm(); toast.success('Devocional creado');
@@ -48,7 +49,7 @@ export default function AdminDevotionals() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Devotional.update(id, data),
+    mutationFn: ({ id, data }) => api.entities.Devotional.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminDevotionals'] });
       resetForm(); toast.success('Devocional actualizado');
@@ -56,7 +57,7 @@ export default function AdminDevotionals() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Devotional.delete(id),
+    mutationFn: (id) => api.entities.Devotional.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminDevotionals'] });
       toast.success('Devocional eliminado');

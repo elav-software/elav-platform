@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import { MapPin, Clock, Navigation, ExternalLink } from "lucide-react";
 
@@ -18,23 +19,24 @@ export default function CellsMap({ leaders, selectedLeader, onSelectLeader }) {
   const mappable = leaders.filter(l => (l.latitude && l.longitude) || l.meeting_location);
 
   const getEmbedUrl = (leader) => {
+    // Coordenadas exactas = un solo pin (loc: evita búsqueda con múltiples resultados)
+    if (leader.latitude && leader.longitude) {
+      return `https://maps.google.com/maps?q=loc:${leader.latitude},${leader.longitude}&z=16&output=embed`;
+    }
     if (leader.meeting_location) {
       const address = leader.meeting_location.includes("Argentina") ? leader.meeting_location : leader.meeting_location + GEO_CONTEXT;
       return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&z=16&output=embed`;
-    }
-    if (leader.latitude && leader.longitude) {
-      return `https://maps.google.com/maps?q=${leader.latitude},${leader.longitude}&z=16&output=embed`;
     }
     return null;
   };
 
   const getGoogleMapsLink = (leader) => {
+    if (leader.latitude && leader.longitude) {
+      return `https://www.google.com/maps?q=${leader.latitude},${leader.longitude}`;
+    }
     if (leader.meeting_location) {
       const address = leader.meeting_location.includes("Argentina") ? leader.meeting_location : leader.meeting_location + GEO_CONTEXT;
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-    }
-    if (leader.latitude && leader.longitude) {
-      return `https://www.google.com/maps?q=${leader.latitude},${leader.longitude}`;
     }
     return null;
   };

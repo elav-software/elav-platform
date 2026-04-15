@@ -1,6 +1,10 @@
-"use client";
+import type { Metadata } from "next";
 import Devotionals from "@connect/pages/Devotionals";
 
-export default function DevotionalsPage() {{
+export const metadata: Metadata = {
+  title: "Devocionales",
+};
+
+export default function DevotionalsPage() {
   return <Devotionals />;
-}}
+}

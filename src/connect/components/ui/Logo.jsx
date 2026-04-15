@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69878a2b6ba10a3126753b8e/6932d40b5_ChatGPTImage9feb202609_56_36pm.png";
+const LOGO_URL = "/logo.png";
 
 export default function Logo({ size = "md", showTagline = false }) {
   const sizes = {

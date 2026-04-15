@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@crm/components/ui/tabs";
 import PageHeader from "../components/shared/PageHeader";
@@ -27,8 +28,8 @@ export default function Leaders() {
   const load = async () => {
     setLoading(true);
     const [data, memberData] = await Promise.all([
-      base44.entities.Leader.list("-created_date", 200),
-      base44.entities.Member.filter({ member_status: "Leader" }, "-created_date", 200)
+      api.entities.Leader.list("-created_date", 200),
+      api.entities.Member.filter({ member_status: "Leader" }, "-created_date", 200)
     ]);
     setLeaders(data);
 
@@ -39,9 +40,9 @@ export default function Leaders() {
     // Load counts
     const mc = {}, rc = {};
     await Promise.all(data.map(async l => {
-      const members = await base44.entities.CellMember.filter({ leader_id: l.id });
+      const members = await api.entities.CellMember.filter({ leader_id: l.id });
       mc[l.id] = members.length;
-      const reports = await base44.entities.CellReport.filter({ leader_id: l.id });
+      const reports = await api.entities.CellReport.filter({ leader_id: l.id });
       rc[l.id] = reports.length;
     }));
     setMemberCounts(mc);
@@ -58,7 +59,7 @@ export default function Leaders() {
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar este líder y todos sus datos?")) return;
-    await base44.entities.Leader.delete(id);
+    await api.entities.Leader.delete(id);
     if (selectedLeader?.id === id) setSelectedLeader(null);
     setLeaders(prev => prev.filter(l => l.id !== id));
   };
@@ -214,7 +215,7 @@ export default function Leaders() {
                 if (!confirm("¿Limpiar coordenadas de todos los líderes con dirección de texto? Esto hará que Google Maps use el texto directamente.")) return;
                 for (const leader of leaders) {
                   if (leader.meeting_location && (leader.latitude || leader.longitude)) {
-                    await base44.entities.Leader.update(leader.id, { latitude: null, longitude: null });
+                    await api.entities.Leader.update(leader.id, { latitude: null, longitude: null });
                   }
                 }
                 await load();

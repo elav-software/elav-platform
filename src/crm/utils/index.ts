@@ -3,6 +3,7 @@ const PAGE_ROUTES: Record<string, string> = {
   Members:        "/crm/members",
   Visitors:       "/crm/visitors",
   Leaders:        "/crm/leaders",
+  CellSubmissions: "/crm/cell-submissions",
   Ministries:     "/crm/ministries",
   Events:         "/crm/events",
   PrayerRequests: "/crm/prayer-requests",
@@ -10,7 +11,6 @@ const PAGE_ROUTES: Record<string, string> = {
   Demographics:   "/crm/demographics",
   Communication:  "/crm/communication",
   Surveys:        "/crm/surveys",
-  UserManagement: "/crm/user-management",
   Welcome:        "/crm/login",
 };
 

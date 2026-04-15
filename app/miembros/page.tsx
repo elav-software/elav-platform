@@ -2,6 +2,48 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+
+const LOCALIDADES_BUENOS_AIRES = [
+  "Adrogué", "Almirante Brown", "Avellaneda", "Cañuelas", "Ciudad Evita", "Banfield", "Barracas",
+  "Beccar", "Berazategui", "Bernal", "Burzaco", "Caballito",
+  "Castelar", "Ciudadela", "Ciudad Autónoma de Buenos Aires", "Claypole",
+  "Don Bosco", "Don Torcuato", "El Palomar", "El Talar", "Ezeiza",
+  "Ezpeleta", "Florencio Varela", "Florida", "General Rodríguez",
+  "González Catán", "Gregorio de Laferrere", "Guernica", "Haedo",
+  "Hurlingham", "Ituzaingó", "José C. Paz", "La Matanza", "La Plata",
+  "Lanús", "Llavallol", "Lomas de Zamora", "Longchamps", "Luján",
+  "Luis Guillón", "Malvinas Argentinas", "Martínez", "Merlo",
+  "Monte Grande", "Moreno", "Morón", "Munro", "Olivos",
+  "Palermo", "Pilar", "Quilmes", "Rafael Calzada", "Ramos Mejía",
+  "Ranelagh", "Remedios de Escalada", "San Fernando", "San Isidro",
+  "San Justo", "San Martín", "San Miguel", "San Nicolás",
+  "Temperley", "Tigre", "Tres de Febrero", "Tristán Suárez",
+  "Turdera", "Varela", "Vicente López", "Villa Ballester",
+  "Villa del Parque", "Villa Devoto", "Villa Luro", "Villa Madero",
+  "Villa Urquiza", "Wilde", "Zárate",
+  "Isidro Casanova", "La Tablada", "Lomas del Mirador",
+  "Rafael Castillo", "Tapiales", "Villa Luzuriaga",
+  "Virrey del Pino", "20 de Junio",
+  "Otro",
+].sort((a, b) => a.localeCompare(b, "es"));
+
+async function resolveChurchId(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  const hostname = window.location.hostname;
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  if (isLocal) {
+    const slug = new URLSearchParams(window.location.search).get('church')
+      ?? process.env.NEXT_PUBLIC_DEFAULT_CHURCH_SLUG
+      ?? 'cfc';
+    const { data } = await supabase.from('churches').select('id').eq('slug', slug).eq('is_active', true).single();
+    return data?.id ?? null;
+  }
+
+  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal)\./, '');
+  const { data } = await supabase.from('churches').select('id').eq('custom_domain', rootDomain).eq('is_active', true).single();
+  return data?.id ?? null;
+}
 import toast, { Toaster } from "react-hot-toast";
 import { motion } from "framer-motion";
 
@@ -34,11 +76,13 @@ export default function MiembrosPage() {
 
   useEffect(() => {
     const fetchLideres = async () => {
+      const churchId = await resolveChurchId();
+      if (!churchId) {
+        console.error("No se pudo resolver church_id para cargar líderes");
+        return;
+      }
       const { data, error } = await supabase
-        .from("personas")
-        .select("id, nombre, apellido")
-        .eq("rol", "Líder")
-        .order("apellido", { ascending: true });
+        .rpc("get_lideres_publicos", { p_church_id: churchId });
 
       if (error) {
         console.error("Error cargando líderes:", error);
@@ -76,9 +120,13 @@ export default function MiembrosPage() {
 
     setLoading(true);
 
+    const churchId = await resolveChurchId();
+
+    const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+
     const payload = {
-      nombre: form.nombre,
-      apellido: form.apellido,
+      nombre: cap(form.nombre),
+      apellido: cap(form.apellido),
       telefono: form.telefono,
       direccion: form.direccion || null,
       fecha_nacimiento: form.fecha_nacimiento || null,
@@ -92,6 +140,7 @@ export default function MiembrosPage() {
       hijos: form.hijos || null,
       rol: "Miembro",
       lider_id: form.lider_id,
+      ...(churchId ? { church_id: churchId } : {}),
     };
 
     const { error } = await supabase.from("personas").insert([payload]);
@@ -139,7 +188,7 @@ export default function MiembrosPage() {
           <img src="/logo.png" alt="CFC Logo" className="w-20 h-auto object-contain mb-4" />
           <h2 className="text-slate-800 text-2xl font-bold text-center leading-tight">
             Centro Familiar Cristiano<br />
-            <span className="text-blue-600">Censo de Miembros</span>
+            <span className="text-blue-600">Registro de Miembros</span>
           </h2>
         </div>
 
@@ -206,8 +255,13 @@ export default function MiembrosPage() {
                 <input className={inputClasses} value={form.direccion} onChange={set("direccion")} placeholder="Tu dirección" />
               </div>
               <div className={fieldGroupClasses}>
-                <label className={labelClasses}>Barrio / Zona</label>
-                <input className={inputClasses} value={form.barrio_zona} onChange={set("barrio_zona")} placeholder="Ej: Isidro Casanova" />
+                <label className={labelClasses}>Localidad / Barrio</label>
+                <select className={inputClasses} value={form.barrio_zona} onChange={set("barrio_zona")}>
+                  <option value="">Seleccionar localidad...</option>
+                  {LOCALIDADES_BUENOS_AIRES.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
               </div>
               <div className={`${fieldGroupClasses} md:col-span-2`}>
                 <label className={labelClasses}>Ocupación</label>
@@ -314,7 +368,7 @@ export default function MiembrosPage() {
                 onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}
                 className="px-8 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md transition-colors disabled:opacity-50"
               >
-                {loading ? "Enviando..." : "Enviar Censo"}
+                {loading ? "Enviando..." : "Enviar Registro"}
               </button>
             )}
           </div>

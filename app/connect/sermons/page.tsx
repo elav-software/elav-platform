@@ -1,6 +1,10 @@
-"use client";
+import type { Metadata } from "next";
 import Sermons from "@connect/pages/Sermons";
 
-export default function SermonsPage() {{
+export const metadata: Metadata = {
+  title: "Sermones",
+};
+
+export default function SermonsPage() {
   return <Sermons />;
-}}
+}

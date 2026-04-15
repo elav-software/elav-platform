@@ -1,6 +1,10 @@
-"use client";
+import type { Metadata } from "next";
 import Home from "@connect/pages/Home";
 
-export default function HomePage() {{
+export const metadata: Metadata = {
+  title: "Inicio",
+};
+
+export default function HomePage() {
   return <Home />;
-}}
+}

@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useState } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Bell, 
@@ -26,7 +27,7 @@ export default function Announcements() {
 
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ['announcements'],
-    queryFn: () => base44.entities.Announcement.filter({ is_published: true }, '-publish_date'),
+    queryFn: () => api.entities.Announcement.filter({ is_published: true }, '-publish_date'),
   });
 
   const formatDate = (dateStr) => {

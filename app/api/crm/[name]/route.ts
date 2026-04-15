@@ -1,14 +1,8 @@
 /**
  * /api/crm/[name]/route.ts
  *
- * Single catch-all handler for CRM admin functions.
- * Requires SUPABASE_SERVICE_ROLE_KEY env var (server-side only, never exposed to client).
- *
- * Supported names:
- *   - listUsers
- *   - updateUser
- *   - deleteUser
- *   - invite-user
+ * Catch-all handler for CRM server-side functions.
+ * Requires SUPABASE_SERVICE_ROLE_KEY (server-side only, never exposed to client).
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -25,12 +19,22 @@ function getAdminClient() {
   });
 }
 
-async function requireAdmin(request: NextRequest): Promise<boolean> {
+async function requireAdmin(request: NextRequest): Promise<{ churchId: string } | null> {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return false;
+  if (!token) return null;
   const supabase = getAdminClient();
   const { data: { user } } = await supabase.auth.getUser(token);
-  return user?.user_metadata?.role === "admin";
+  if (!user || user.app_metadata?.role !== "admin") return null;
+
+  const { data: churchUser } = await supabase
+    .from("church_users")
+    .select("church_id")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  if (!churchUser?.church_id) return null;
+  return { churchId: churchUser.church_id };
 }
 
 export async function POST(
@@ -40,49 +44,12 @@ export async function POST(
   const { name } = await params;
 
   try {
-    const isAdmin = await requireAdmin(request);
-    if (!isAdmin) {
+    const admin = await requireAdmin(request);
+    if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const supabase = getAdminClient();
-    const body = await request.json();
-
     switch (name) {
-      case "listUsers": {
-        const { data: { users }, error } = await supabase.auth.admin.listUsers();
-        if (error) throw error;
-        return NextResponse.json({ data: { users } });
-      }
-
-      case "updateUser": {
-        const { id, role, is_active } = body;
-        const updateData: Record<string, unknown> = {};
-        if (role !== undefined) updateData.role = role;
-        if (is_active !== undefined) updateData.is_active = is_active;
-        const { data, error } = await supabase.auth.admin.updateUserById(id, {
-          user_metadata: updateData,
-        });
-        if (error) throw error;
-        return NextResponse.json({ data });
-      }
-
-      case "deleteUser": {
-        const { id } = body;
-        const { error } = await supabase.auth.admin.deleteUser(id);
-        if (error) throw error;
-        return NextResponse.json({ success: true });
-      }
-
-      case "invite-user": {
-        const { email, role } = body;
-        const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-          data: { role: role ?? "user" },
-        });
-        if (error) throw error;
-        return NextResponse.json({ data });
-      }
-
       default:
         return NextResponse.json({ error: `Unknown function: ${name}` }, { status: 404 });
     }
@@ -91,3 +58,4 @@ export async function POST(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

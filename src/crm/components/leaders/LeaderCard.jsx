@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";

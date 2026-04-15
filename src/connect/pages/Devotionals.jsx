@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useState } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery } from '@tanstack/react-query';
 import { 
   BookOpen, 
@@ -21,7 +22,7 @@ export default function Devotionals() {
 
   const { data: devotionals = [], isLoading } = useQuery({
     queryKey: ['devotionals'],
-    queryFn: () => base44.entities.Devotional.filter({ is_published: true }, '-publish_date'),
+    queryFn: () => api.entities.Devotional.filter({ is_published: true }, '-publish_date'),
   });
 
   const todayDevotional = devotionals.find(d => 

@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   BookOpen, 
@@ -112,7 +113,7 @@ export default function Bible() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -121,12 +122,12 @@ export default function Bible() {
 
   const { data: favorites = [] } = useQuery({
     queryKey: ['bibleFavorites'],
-    queryFn: () => base44.entities.BibleFavorite.list('-created_date'),
+    queryFn: () => api.entities.BibleFavorite.list('-created_date'),
     enabled: !!user,
   });
 
   const saveFavoriteMutation = useMutation({
-    mutationFn: (data) => base44.entities.BibleFavorite.create(data),
+    mutationFn: (data) => api.entities.BibleFavorite.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bibleFavorites'] });
       toast.success('Versículo guardado');
@@ -136,28 +137,14 @@ export default function Bible() {
   const loadChapter = async (book, chapter) => {
     setLoading(true);
     try {
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `Generate the Bible text for ${book} chapter ${chapter} in Spanish (Reina Valera 1960 translation). 
-        Return as a JSON array of verses with verse number and text.
-        Format: [{"verse": 1, "text": "verse text"}, ...]
-        Only return the JSON array, no other text.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            verses: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  verse: { type: "number" },
-                  text: { type: "string" }
-                }
-              }
-            }
-          }
-        }
-      });
-      setChapterContent(response.verses || []);
+      // bible-api.com — libre, sin API key, RVR1960 en español
+      const res = await fetch(
+        `https://bible-api.com/${encodeURIComponent(book)}+${chapter}?translation=rvr1960`
+      );
+      if (!res.ok) throw new Error('Bible API error');
+      const bibleData = await res.json();
+      const verses = (bibleData.verses || []).map(v => ({ verse: v.verse, text: v.text.trim() }));
+      setChapterContent(verses);
       setView('reading');
     } catch (error) {
       toast.error('Error al cargar el capítulo');

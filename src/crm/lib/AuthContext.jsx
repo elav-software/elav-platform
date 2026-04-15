@@ -6,6 +6,7 @@
  */
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@crm/api/supabaseClient';
+import { clearChurchIdCache } from '@crm/api/apiClient';
 
 const AuthContext = createContext();
 
@@ -20,7 +21,7 @@ function normaliseUser(supabaseUser) {
       supabaseUser.user_metadata?.name ||
       supabaseUser.email?.split('@')[0] ||
       '',
-    role: supabaseUser.user_metadata?.role ?? 'user',
+    role: supabaseUser.app_metadata?.role ?? supabaseUser.user_metadata?.role ?? 'user',
   };
 }
 
@@ -49,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = async (shouldRedirect = true) => {
+    clearChurchIdCache();
     await supabase.auth.signOut();
     setUser(null);
     setIsAuthenticated(false);

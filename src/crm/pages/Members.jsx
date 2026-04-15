@@ -1,6 +1,7 @@
+﻿"use client";
 // Módulo de gestión de miembros — CFC CASA CRM
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api, getMyChurchId } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
@@ -49,6 +50,39 @@ const STATUS_LABELS = {
   Leader: "Líder",
 };
 
+const LOCALIDADES = [
+  "Adrogué", "Almirante Brown", "Avellaneda", "Banfield", "Barracas",
+  "Beccar", "Berazategui", "Bernal", "Burzaco", "Caballito",
+  "Castelar", "Cañuelas", "Ciudadela", "Ciudad Autónoma de Buenos Aires", "Ciudad Evita", "Claypole",
+  "Don Bosco", "Don Torcuato", "El Palomar", "El Talar", "Ezeiza",
+  "Ezpeleta", "Florencio Varela", "Florida", "General Rodríguez",
+  "González Catán", "Gregorio de Laferrere", "Guernica", "Haedo",
+  "Hurlingham", "Isidro Casanova", "Ituzaingó", "José C. Paz",
+  "La Matanza", "La Plata", "La Tablada", "Lanús", "Llavallol",
+  "Lomas de Zamora", "Lomas del Mirador", "Longchamps", "Luján",
+  "Luis Guillón", "Malvinas Argentinas", "Martínez", "Merlo",
+  "Monte Grande", "Moreno", "Morón", "Munro", "Olivos",
+  "Palermo", "Pilar", "Quilmes", "Rafael Calzada", "Rafael Castillo",
+  "Ramos Mejía", "Ranelagh", "Remedios de Escalada", "San Fernando",
+  "San Isidro", "San Justo", "San Martín", "San Miguel", "San Nicolás",
+  "Tapiales", "Temperley", "Tigre", "Tres de Febrero", "Tristán Suárez",
+  "Turdera", "Varela", "Vicente López", "Villa Ballester",
+  "Villa del Parque", "Villa Devoto", "Villa Luro", "Villa Luzuriaga",
+  "Villa Madero", "Villa Urquiza", "Virrey del Pino", "Wilde",
+  "Zárate", "20 de Junio", "Otro",
+].sort((a, b) => a.localeCompare(b, "es"));
+
+const AREAS_SERVICIO = [
+  "Consolidación", "Vasos de barro", "Coro Kids", "Alabanza", "Expresión",
+  "Intercesión", "CFC Niños", "Medios", "Social media", "Sonido", "Luces",
+  "Pantalla", "Llamados a la escena", "Servicio Especial", "Seguridad",
+  "Casa en Orden", "Asesoramiento de Imagen", "Primeros Auxilios", "Embajadores de Alegría",
+];
+
+const DISPONIBILIDAD = ["Mañana", "Tarde", "Noche", "Fines de semana", "Flexible"];
+
+const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
 const EMPTY_FORM = {
   full_name: "", gender: "", date_of_birth: "", marital_status: "",
   phone_number: "", whatsapp_number: "", email: "", address: "",
@@ -61,6 +95,7 @@ const EMPTY_FORM = {
   how_did_you_find_us: "", who_invited_you: "",
   technical_skills: "", schedule_availability: "", current_service_area: "",
   church_family_ties: "",
+  dia_reunion: "", hora_reunion: "", lugar_reunion: "",
   supabase_id: ""
 };
 
@@ -75,17 +110,18 @@ export default function Members() {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
+  const [activeTab, setActiveTab] = useState("personal");
 
   const load = async () => {
-    const data = await base44.entities.Member.list("-created_date", 500);
+    const data = await api.entities.Member.list("-created_date", 500);
     setMembers(data);
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setModalOpen(true); };
-  const openEdit = (m) => { setEditing(m); setForm({ ...EMPTY_FORM, ...m }); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setActiveTab("personal"); setModalOpen(true); };
+  const openEdit = (m) => { setEditing(m); setForm({ ...EMPTY_FORM, ...m }); setActiveTab("personal"); setModalOpen(true); };
 
   // --- SYNC: CRM → Supabase (al crear/editar) ---
   const syncToSupabase = async (member, supabaseId) => {
@@ -93,8 +129,14 @@ export default function Members() {
     if (supabaseId) {
       await supabase.from("personas").update(supaData).eq("id", supabaseId);
     } else {
-      const { data } = await supabase.from("personas").insert([supaData]);
-      return data?.[0]?.id;
+      const churchId = await getMyChurchId();
+      const { data, error } = await supabase
+        .from("personas")
+        .insert([{ ...supaData, church_id: churchId }])
+        .select("id")
+        .single();
+      if (error) console.error("Error al insertar en personas:", error);
+      return data?.id ?? null;
     }
     return supabaseId;
   };
@@ -105,13 +147,15 @@ export default function Members() {
       const payload = { ...form, household_size: form.household_size ? Number(form.household_size) : undefined };
 
       if (editing) {
-        await base44.entities.Member.update(editing.id, payload);
+        await api.entities.Member.update(editing.id, payload);
         await syncToSupabase(payload, payload.supabase_id);
       } else {
-        // Crear en Supabase primero para obtener UUID
-        const newSupabaseId = await syncToSupabase(payload, null);
-        if (newSupabaseId) payload.supabase_id = newSupabaseId;
-        await base44.entities.Member.create(payload);
+        // api.entities.Member.create ya inserta en personas con church_id
+        const created = await api.entities.Member.create(payload);
+        // Guardar el supabase_id para futuros updates de sincronización
+        if (created?.id) {
+          await api.entities.Member.update(created.id, { supabase_id: created.id });
+        }
       }
     } catch (err) {
       console.error("Error al guardar/sincronizar:", err);
@@ -126,10 +170,17 @@ export default function Members() {
     setSyncing(true);
     setSyncMsg("");
     try {
-      const { data: personas, error } = await supabase.from("personas").select("*");
+      // Traer solo personas aprobadas:
+      // - Miembros normales: todos
+      // - Líderes: solo los aprobados (excluye pendientes y rechazados)
+      const { data: personas, error } = await supabase
+        .from("personas")
+        .select("*")
+        .or("rol.neq.Líder,and(rol.eq.Líder,estado_aprobacion.eq.aprobado)");
+      
       if (error) throw error;
 
-      const currentMembers = await base44.entities.Member.list("-created_date", 1000);
+      const currentMembers = await api.entities.Member.list("-created_date", 1000);
       const existingSupabaseIds = new Set(currentMembers.map(m => m.supabase_id).filter(Boolean));
       // Clave de deduplicación: nombre completo + fecha de nacimiento
       const existingKeys = new Set(currentMembers.map(m => {
@@ -138,7 +189,7 @@ export default function Members() {
         return `${name}||${dob}`;
       }));
 
-      const currentLeaders = await base44.entities.Leader.list("-created_date", 500);
+      const currentLeaders = await api.entities.Leader.list("-created_date", 500);
       const existingLeaderSupaIds = new Set(currentLeaders.map(l => {
         const m = currentMembers.find(mb => mb.id === l.member_id);
         return m?.supabase_id;
@@ -174,7 +225,7 @@ export default function Members() {
         const isLider = liderSupabaseIds.has(persona.id);
         const memberData = supabaseToCRM(persona);
         if (isLider) memberData.member_status = "Leader";
-        const created = await base44.entities.Member.create(memberData);
+        const created = await api.entities.Member.create(memberData);
         supaIdToMemberId[persona.id] = created.id;
         importedMembers++;
       }
@@ -208,20 +259,20 @@ export default function Members() {
         // Geocodificar dirección
         if (lugar) {
           try {
-            const geoRes = await base44.functions.invoke('geocodeAddress', { address: lugar });
-            if (geoRes?.data?.lat) {
-              leaderPayload.latitude = geoRes.data.lat;
-              leaderPayload.longitude = geoRes.data.lng;
+            const geoRes = await api.functions.invoke('geocodeAddress', { address: lugar });
+            if (geoRes?.lat) {
+              leaderPayload.latitude = geoRes.lat;
+              leaderPayload.longitude = geoRes.lng;
             }
           } catch (e) { console.warn('Geocoding failed for', lugar, e); }
         }
-        const leader = await base44.entities.Leader.create(leaderPayload);
+        const leader = await api.entities.Leader.create(leaderPayload);
         supaIdToLeaderId[supaId] = leader.id;
         importedLeaders++;
       }
 
       // Paso 3: crear CellMembers para personas con lider_id
-      const existingCellMembers = await base44.entities.CellMember.list("-created_date", 1000);
+      const existingCellMembers = await api.entities.CellMember.list("-created_date", 1000);
       const existingCellMemberKeys = new Set(
         existingCellMembers.map(cm => `${cm.leader_id}__${cm.member_name?.toLowerCase().trim()}`)
       );
@@ -233,7 +284,7 @@ export default function Members() {
         const fullName = [persona.nombre, persona.apellido].filter(Boolean).join(" ");
         const key = `${leaderId}__${fullName.toLowerCase().trim()}`;
         if (existingCellMemberKeys.has(key)) continue;
-        await base44.entities.CellMember.create({
+        await api.entities.CellMember.create({
           leader_id: leaderId,
           member_name: fullName,
           phone: persona.telefono || "",
@@ -253,7 +304,7 @@ export default function Members() {
 
   const handleDelete = async (id) => {
     if (!confirm("¿Eliminar este miembro del CRM?\n(El registro en el censo de Supabase se conservará y podrá volver a importarse)")) return;
-    await base44.entities.Member.delete(id);
+    await api.entities.Member.delete(id);
     setMembers(prev => prev.filter(m => m.id !== id));
   };
 
@@ -268,6 +319,14 @@ export default function Members() {
     const matchStatus = filterStatus === "all" || m.member_status === filterStatus;
     return matchSearch && matchStatus;
   });
+
+  const toggleOption = (name, value) => {
+    setForm(prev => {
+      const current = prev[name] ? prev[name].split(", ").filter(Boolean) : [];
+      const next = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+      return { ...prev, [name]: next.join(", ") };
+    });
+  };
 
 
 
@@ -329,9 +388,14 @@ export default function Members() {
                       <p className="text-xs text-slate-400 mt-0.5">{age ? `${age} años` : ""}{age && m.gender ? " · " : ""}{m.gender === "Male" ? "Masculino" : m.gender === "Female" ? "Femenino" : m.gender || ""}</p>
                     </div>
                   </div>
-                  <Badge className={`text-xs border ${STATUS_COLORS[m.member_status] || "bg-slate-100 text-slate-600"}`}>
-                    {STATUS_LABELS[m.member_status] || m.member_status || "—"}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(m)} className="h-7 w-7 p-0 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="Editar">
+                      <Edit className="w-3.5 h-3.5" />
+                    </Button>
+                    <Badge className={`text-xs border ${STATUS_COLORS[m.member_status] || "bg-slate-100 text-slate-600"}`}>
+                      {STATUS_LABELS[m.member_status] || m.member_status || "—"}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="space-y-1.5 mb-4">
                   {m.phone_number && <div className="flex items-center gap-2 text-xs text-slate-500"><Phone className="w-3.5 h-3.5" />{m.phone_number}</div>}
@@ -364,57 +428,138 @@ export default function Members() {
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Miembro" : "Agregar Nuevo Miembro"}</DialogTitle>
           </DialogHeader>
-          <Tabs defaultValue="personal">
+
+          {/* Selector de rol — primer campo visible */}
+          <div className="mb-1">
+            <Label className="text-xs font-medium text-slate-600 mb-2 block">Tipo de persona</Label>
+            <div className="flex gap-2">
+              {[
+                { value: "Member", label: "Miembro" },
+                { value: "Leader", label: "Líder" },
+                { value: "Visitor", label: "Visitante" },
+                { value: "New Believer", label: "Nuevo creyente" },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setForm(f => ({ ...f, member_status: opt.value }));
+                    if (opt.value !== "Leader" && activeTab === "celula") setActiveTab("personal");
+                  }}
+                  className={`flex-1 py-2 px-1 rounded-lg text-xs font-semibold border transition-colors
+                    ${form.member_status === opt.value
+                      ? "bg-[#d4a843] border-[#d4a843] text-[#1e293b]"
+                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full">
               <TabsTrigger value="personal" className="flex-1 text-xs">Personal</TabsTrigger>
-              <TabsTrigger value="church" className="flex-1 text-xs">Iglesia</TabsTrigger>
-              <TabsTrigger value="service" className="flex-1 text-xs">Servicio</TabsTrigger>
-              <TabsTrigger value="family" className="flex-1 text-xs">Familia</TabsTrigger>
+              <TabsTrigger value="iglesia" className="flex-1 text-xs">Iglesia</TabsTrigger>
+              <TabsTrigger value="servicio" className="flex-1 text-xs">Servicio</TabsTrigger>
+              <TabsTrigger value="celula" className="flex-1 text-xs" disabled={form.member_status !== "Leader"}>Célula</TabsTrigger>
+              <TabsTrigger value="familia" className="flex-1 text-xs">Familia</TabsTrigger>
             </TabsList>
+
+            {/* PERSONAL */}
             <TabsContent value="personal" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <F label="Nombre Completo *" name="full_name" form={form} setForm={setForm} />
               <F label="Fecha de Nacimiento" name="date_of_birth" type="date" form={form} setForm={setForm} />
               <F label="Género" name="gender" options={["Male", "Female"]} optionLabels={["Masculino", "Femenino"]} form={form} setForm={setForm} />
-              <F label="Dirección" name="address" form={form} setForm={setForm} />
-              <F label="Barrio / Zona" name="city_neighborhood" form={form} setForm={setForm} />
+              <F label="Estado Civil" name="marital_status"
+                options={["Single", "Married", "Widowed", "Divorced"]}
+                optionLabels={["Soltero/a", "Casado/a", "Viudo/a", "Divorciado/a"]}
+                form={form} setForm={setForm} />
               <F label="Teléfono" name="phone_number" form={form} setForm={setForm} />
-              <F label="Número de WhatsApp" name="whatsapp_number" form={form} setForm={setForm} />
               <F label="Correo Electrónico" name="email" type="email" form={form} setForm={setForm} />
+              <F label="Dirección" name="address" form={form} setForm={setForm} />
+              <F label="Localidad / Barrio" name="city_neighborhood" options={LOCALIDADES} form={form} setForm={setForm} />
               <F label="Ocupación" name="occupation" form={form} setForm={setForm} />
               <F label="Nivel de Educación" name="education_level"
                 options={["Primary", "Secondary", "Diploma", "Bachelor", "Master", "Doctorate", "Other"]}
-                optionLabels={["Primaria", "Secundaria", "Técnico", "Licenciatura", "Maestría", "Doctorado", "Otro"]} form={form} setForm={setForm} />
+                optionLabels={["Primaria", "Secundaria", "Técnico", "Licenciatura", "Maestría", "Doctorado", "Otro"]}
+                form={form} setForm={setForm} />
             </TabsContent>
-            <TabsContent value="church" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-              <F label="Estado en la Iglesia" name="member_status"
-                options={["Visitor", "New Believer", "Member", "Leader"]}
-                optionLabels={["Visitante", "Nuevo Creyente", "Miembro", "Líder"]} form={form} setForm={setForm} />
+
+            {/* IGLESIA */}
+            <TabsContent value="iglesia" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <F label="Año de Conversión" name="conversion_year" form={form} setForm={setForm} />
-              <F label="Fecha de Llegada a CFC" name="date_joined" type="date" form={form} setForm={setForm} />
+              <F label="Fecha de llegada a CFC" name="date_joined" type="date" form={form} setForm={setForm} />
               <F label="Primera Visita" name="date_first_visited" type="date" form={form} setForm={setForm} />
               <F label="¿Está Bautizado?" name="baptism_status"
-                options={["Not Baptized", "Baptized"]}
-                optionLabels={["No", "Sí"]} form={form} setForm={setForm} />
+                options={["Not Baptized", "Baptized"]} optionLabels={["No", "Sí"]}
+                form={form} setForm={setForm} />
               <F label="Año de Bautismo" name="baptism_year" form={form} setForm={setForm} />
               <F label="¿Fue a un Encuentro?" name="attended_encounter"
                 options={["No", "Sí"]} form={form} setForm={setForm} />
               <F label="Nivel de Formación" name="training_level"
-                options={["Ninguno", "EFE", "Liderazgo"]}
-                form={form} setForm={setForm} />
+                options={["Ninguno", "EFE", "Liderazgo"]} form={form} setForm={setForm} />
               <F label="¿Cómo nos conociste?" name="how_did_you_find_us" form={form} setForm={setForm} />
               <F label="¿Quién te invitó?" name="who_invited_you" form={form} setForm={setForm} />
-              <F label="Área de Servicio Actual" name="current_service_area" form={form} setForm={setForm} />
-              <F label="Ministerio" name="ministry_involvement" form={form} setForm={setForm} />
-              <F label="Grupo Pequeño / Célula" name="small_group" form={form} setForm={setForm} />
             </TabsContent>
-            <TabsContent value="family" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-              <F label="Estado Civil" name="marital_status" options={["Single", "Married", "Widowed", "Divorced"]} optionLabels={["Soltero/a", "Casado/a", "Viudo/a", "Divorciado/a"]} form={form} setForm={setForm} />
+
+            {/* SERVICIO */}
+            <TabsContent value="servicio" className="space-y-5 mt-4">
+              <div>
+                <Label className="text-xs font-medium text-slate-600 mb-2 block">Disponibilidad Horaria</Label>
+                <div className="flex flex-wrap gap-2">
+                  {DISPONIBILIDAD.map(d => {
+                    const active = (form.schedule_availability || "").split(", ").filter(Boolean).includes(d);
+                    return (
+                      <button key={d} type="button"
+                        onClick={() => toggleOption("schedule_availability", d)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          ${active ? "bg-[#d4a843] border-[#d4a843] text-[#1e293b]" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+                        {d}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-slate-600 mb-2 block">Área de Servicio</Label>
+                <div className="flex flex-wrap gap-2">
+                  {AREAS_SERVICIO.map(a => {
+                    const active = (form.current_service_area || "").split(", ").filter(Boolean).includes(a);
+                    return (
+                      <button key={a} type="button"
+                        onClick={() => toggleOption("current_service_area", a)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          ${active ? "bg-[#d4a843] border-[#d4a843] text-[#1e293b]" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+                        {a}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <F label="Ministerio" name="ministry_involvement" form={form} setForm={setForm} />
+                <F label="Habilidades Técnicas" name="technical_skills" form={form} setForm={setForm} />
+              </div>
+            </TabsContent>
+
+            {/* CÉLULA — solo líderes */}
+            <TabsContent value="celula" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <F label="Nombre del Grupo / Célula" name="small_group" form={form} setForm={setForm} />
+              <F label="Día de Reunión" name="dia_reunion" options={DIAS_SEMANA} form={form} setForm={setForm} />
+              <F label="Hora de Reunión" name="hora_reunion" form={form} setForm={setForm} />
+              <F label="Lugar de Reunión" name="lugar_reunion" form={form} setForm={setForm} />
+            </TabsContent>
+
+            {/* FAMILIA */}
+            <TabsContent value="familia" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <F label="Cónyuge" name="spouse" form={form} setForm={setForm} />
               <F label="Hijos" name="children" form={form} setForm={setForm} />
               <F label="Tamaño del Hogar" name="household_size" type="number" form={form} setForm={setForm} />
               <F label="Vínculos Familiares en la Iglesia" name="church_family_ties" form={form} setForm={setForm} />
             </TabsContent>
           </Tabs>
+
           <div className="flex gap-3 pt-4 mt-2 border-t">
             <Button variant="outline" onClick={() => setModalOpen(false)} className="flex-1">Cancelar</Button>
             <Button onClick={handleSave} disabled={saving || !form.full_name}

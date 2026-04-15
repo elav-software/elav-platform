@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useEffect, useState } from "react";
-import { base44 } from "@crm/api/base44Client";
+import { api } from "@crm/api/apiClient";
 import { supabase } from "@crm/api/supabaseClient";
 import { Card } from "@crm/components/ui/card";
 import { Button } from "@crm/components/ui/button";
@@ -12,11 +13,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@crm/components/ui/select";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@crm/components/ui/alert-dialog";
-import { UserPlus, Pencil, Trash2, ToggleLeft, ToggleRight, Users, ShieldAlert } from "lucide-react";
+import { UserPlus, Pencil, ToggleLeft, ToggleRight, Users, ShieldAlert } from "lucide-react";
 
 export default function UserManagement() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -24,7 +21,6 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [inviteForm, setInviteForm] = useState({ email: "", role: "user" });
   const [editForm, setEditForm] = useState({ role: "user" });
@@ -47,7 +43,7 @@ export default function UserManagement() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('listUsers', {});
+      const res = await api.functions.invoke('listUsers', {});
       setUsers(res.data.users || []);
     } catch (err) {
       console.error("Error cargando usuarios:", err);
@@ -59,7 +55,7 @@ export default function UserManagement() {
   const handleInvite = async () => {
     if (!inviteForm.email) return;
     setSaving(true);
-    await base44.users.inviteUser(inviteForm.email, inviteForm.role);
+    await api.users.inviteUser(inviteForm.email, inviteForm.role);
     setShowInviteModal(false);
     setInviteForm({ email: "", role: "user" });
     setSaving(false);
@@ -68,7 +64,7 @@ export default function UserManagement() {
 
   const handleEdit = async () => {
     setSaving(true);
-    await base44.functions.invoke('updateUser', { id: editTarget.id, role: editForm.role });
+    await api.functions.invoke('updateUser', { id: editTarget.id, role: editForm.role });
     setShowEditModal(false);
     setEditTarget(null);
     setSaving(false);
@@ -76,13 +72,7 @@ export default function UserManagement() {
   };
 
   const handleToggleActive = async (user) => {
-    await base44.functions.invoke('updateUser', { id: user.id, is_active: !user.is_active });
-    await loadUsers();
-  };
-
-  const handleDelete = async () => {
-    await base44.functions.invoke('deleteUser', { id: deleteTarget.id });
-    setDeleteTarget(null);
+    await api.functions.invoke('updateUser', { id: user.id, is_active: !user.is_active });
     await loadUsers();
   };
 
@@ -189,15 +179,7 @@ export default function UserManagement() {
                             ? <ToggleRight className="w-5 h-5" />
                             : <ToggleLeft className="w-5 h-5" />}
                         </Button>
-                        <Button
-                          variant="ghost" size="icon"
-                          className="h-8 w-8 text-slate-500 hover:text-red-600"
-                          title="Eliminar"
-                          onClick={() => setDeleteTarget(user)}
-                          disabled={user.id === currentUser?.id}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+
                       </div>
                     </td>
                   </tr>
@@ -273,23 +255,7 @@ export default function UserManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará permanentemente a <strong>{deleteTarget?.full_name || deleteTarget?.email}</strong> del sistema. No se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600 text-white">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </div>
   );
 }

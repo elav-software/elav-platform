@@ -1,5 +1,6 @@
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Heart, 
@@ -68,7 +69,7 @@ export default function Counseling() {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
       setFormData(prev => ({
         ...prev,
@@ -82,12 +83,12 @@ export default function Counseling() {
 
   const { data: myRequests = [], isLoading } = useQuery({
     queryKey: ['counselingRequests', user?.email],
-    queryFn: () => base44.entities.CounselingRequest.filter({ requester_email: user?.email }, '-created_date'),
+    queryFn: () => api.entities.CounselingRequest.filter({ requester_email: user?.email }, '-created_date'),
     enabled: !!user,
   });
 
   const createRequestMutation = useMutation({
-    mutationFn: (data) => base44.entities.CounselingRequest.create(data),
+    mutationFn: (data) => api.entities.CounselingRequest.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['counselingRequests'] });
       toast.success('Solicitud enviada. Nos contactaremos contigo pronto.');

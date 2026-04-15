@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "@crm/lib/router-compat";
 import { createPageUrl } from "@crm/utils";
 import { supabase } from "@crm/api/supabaseClient";
+import { clearChurchIdCache, getMyChurchId } from "@crm/api/apiClient";
 import {
   LayoutDashboard, Users, UserPlus, Church, Calendar,
   HandHeart, DollarSign, BarChart3, MessageSquare, ClipboardList,
-  Menu, X, LogOut, User, Crown, ShieldCheck } from
+  Menu, X, LogOut, User, Crown, UserCheck } from
 "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -15,7 +16,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@crm/components/ui/tooltip";
 import { Button } from "@crm/components/ui/button";
 
-const USER_ALLOWED_PAGES = ["Visitors", "Ministries", "Events", "PrayerRequests", "Communication", "Surveys"];
 
 const navItems = [
 { name: "Panel Principal", icon: LayoutDashboard, page: "Dashboard", adminOnly: false },
@@ -28,8 +28,9 @@ const navItems = [
 { name: "Métricas", icon: BarChart3, page: "Demographics", adminOnly: false },
 { name: "Comunicación", icon: MessageSquare, page: "Communication", adminOnly: false },
 { name: "Líderes y Células", icon: Crown, page: "Leaders", adminOnly: false },
+{ name: "Reportes de Células", icon: ClipboardList, page: "CellSubmissions", adminOnly: false },
 { name: "Encuestas", icon: ClipboardList, page: "Surveys", adminOnly: false },
-{ name: "Usuarios", icon: ShieldCheck, page: "UserManagement", adminOnly: true },
+
 ];
 
 
@@ -37,12 +38,23 @@ export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [pendingLeadersCount, setPendingLeadersCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user) return;
+      
+      // Verificar si el usuario está en church_users
+      const { data: churchUser } = await supabase
+        .from('church_users')
+        .select('role, is_active')
+        .eq('user_id', session.user.id)
+        .eq('is_active', true)
+        .single();
+      
       const u = {
         id: session.user.id,
         email: session.user.email,
@@ -50,16 +62,53 @@ export default function Layout({ children, currentPageName }) {
           session.user.user_metadata?.full_name ||
           session.user.user_metadata?.name ||
           session.user.email?.split("@")[0] || "",
-        role: session.user.user_metadata?.role ?? "user",
+        role: churchUser?.role ?? "user",
       };
       setUser(u);
       if (u.role !== "admin") {
         setAccessDenied(true);
       }
+      
+      // Cargar contadores de pendientes
+      if (u.role === "admin") {
+        loadPendingLeaders();
+        loadPendingReports();
+      }
     }).catch(() => {});
-  }, [currentPageName, location.pathname]);
+  }, []);  // run once on mount — session doesn’t change while navigating
+  
+  const loadPendingLeaders = async () => {
+    try {
+      const churchId = await getMyChurchId();
+      const { count } = await supabase
+        .from('personas')
+        .select('*', { count: 'exact', head: true })
+        .eq('church_id', churchId)
+        .eq('rol', 'Líder')
+        .eq('estado_aprobacion', 'pendiente');
+      
+      setPendingLeadersCount(count || 0);
+    } catch (err) {
+      console.error("Error cargando líderes pendientes:", err);
+    }
+  };
+
+  const loadPendingReports = async () => {
+    try {
+      const churchId = await getMyChurchId();
+      const { count } = await supabase
+        .from('leader_cell_submissions')
+        .select('*', { count: 'exact', head: true })
+        .eq('church_id', churchId)
+        .eq('status', 'submitted');
+      setPendingReportsCount(count || 0);
+    } catch (err) {
+      console.error("Error cargando reportes pendientes:", err);
+    }
+  };
 
   const handleLogout = async () => {
+    clearChurchIdCache();
     await supabase.auth.signOut();
     window.location.href = "/crm/login";
   };
@@ -84,7 +133,10 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  const visibleNavItems = navItems;
+  // Only show adminOnly items to admins
+  const visibleNavItems = user?.role === 'admin'
+    ? navItems
+    : navItems.filter(item => !item.adminOnly);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -102,7 +154,7 @@ export default function Layout({ children, currentPageName }) {
           <Menu className="text-slate-50 lucide lucide-menu w-6 h-6" />
         </button>
         <div className="flex items-center gap-2">
-          <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69aee310d84123cf531d4bcb/959fffeb5_IMG_0496.jpeg" alt="CFC Logo" className="w-8 h-8 rounded-full object-cover" />
+          <img src="/logo.png" alt="CFC Logo" className="w-8 h-8 rounded-full object-cover" />
           <span className="text-slate-50 font-bold">CFC CASA CRM</span>
         </div>
         <div className="w-10" />
@@ -125,7 +177,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="bg-slate-800 text-slate-50 p-6 border-b border-white/10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69aee310d84123cf531d4bcb/959fffeb5_IMG_0496.jpeg" alt="CFC Logo" className="w-10 h-10 rounded-full object-cover shadow-lg" />
+                <img src="/logo.png" alt="CFC Logo" className="w-10 h-10 rounded-full object-cover shadow-lg" />
                 <div>
                   <h1 className="font-bold text-lg leading-tight">CFC CASA</h1>
                   <p className="text-xs text-slate-400">Sistema de Gestión</p>
@@ -141,6 +193,7 @@ export default function Layout({ children, currentPageName }) {
           <nav className="bg-slate-700 text-slate-50 px-3 py-4 flex-1 overflow-y-auto space-y-1">
             {visibleNavItems.map((item) => {
               const isActive = currentPageName === item.page;
+              const badge = item.page === "CellSubmissions" && pendingReportsCount > 0 ? pendingReportsCount : null;
               return (
                 <Link
                   key={item.page}
@@ -153,10 +206,36 @@ export default function Layout({ children, currentPageName }) {
                   "text-slate-300 hover:bg-white/10 hover:text-white"}
                   `}>
                   <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {badge && (
+                    <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">
+                      {badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
+            
+            {/* Aprobación de Líderes (con badge) */}
+            {user?.role === "admin" && (
+              <Link
+                to="/crm/leaders/approvals"
+                onClick={() => setSidebarOpen(false)}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
+                  ${currentPageName === "LeaderApprovals" ?
+                "bg-[var(--church-gold)] text-[var(--church-navy)] shadow-lg shadow-amber-900/20" :
+                "text-slate-300 hover:bg-white/10 hover:text-white"}
+                `}>
+                <UserCheck className="w-5 h-5 flex-shrink-0" />
+                <span className="flex-1">Aprobación de Líderes</span>
+                {pendingLeadersCount > 0 && (
+                  <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">
+                    {pendingLeadersCount}
+                  </span>
+                )}
+              </Link>
+            )}
           </nav>
 
           {/* User Section */}

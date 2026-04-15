@@ -1,10 +1,12 @@
+﻿"use client";
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
 import { useQuery } from '@tanstack/react-query';
 import Logo from '@connect/components/ui/Logo';
 import LiveBanner from '@connect/components/home/LiveBanner';
 import DailyVerse from '@connect/components/home/DailyVerse';
 import QuickActions from '@connect/components/home/QuickActions';
+
 import SermonCarousel from '@connect/components/home/SermonCarousel';
 import UpcomingServices from '@connect/components/home/UpcomingServices';
 import GivingCard from '@connect/components/home/GivingCard';
@@ -15,12 +17,20 @@ export default function Home() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    // Si llegamos aquí con tokens OAuth en la URL (Supabase redirect fallback),
+    // redirigir al callback del portal para que procese la sesión
+    const hash = window.location.hash;
+    const search = window.location.search;
+    if (hash.includes('access_token') || hash.includes('refresh_token') || new URLSearchParams(search).get('code')) {
+      window.location.href = '/connect/portal/callback' + search + hash;
+      return;
+    }
     loadUser();
   }, []);
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -29,12 +39,12 @@ export default function Home() {
 
   const { data: services = [], isLoading: loadingServices } = useQuery({
     queryKey: ['services'],
-    queryFn: () => base44.entities.Service.list('-date', 10)
+    queryFn: () => api.entities.Service.list('-date', 10)
   });
 
   const { data: sermons = [], isLoading: loadingSermons } = useQuery({
     queryKey: ['sermons'],
-    queryFn: () => base44.entities.Sermon.list('-date', 6)
+    queryFn: () => api.entities.Sermon.list('-date', 6)
   });
 
   const liveService = services.find((s) => s.is_live);

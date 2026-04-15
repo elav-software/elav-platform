@@ -1,17 +1,17 @@
-"use client";
-// The CRM uses browser-only APIs (window, localStorage, @base44/sdk).
-// ssr: false inside a Client Component prevents any CRM code from running on the server.
-import dynamic from "next/dynamic";
+import type { Metadata } from "next";
+import CrmClientLayout from "./CrmClientLayout";
 
-const CrmClientProviders = dynamic(
-  () => import("./CrmClientProviders"),
-  { ssr: false }
-);
+export const metadata: Metadata = {
+  title: {
+    default: "CRM",
+    template: "%s | CRM CFC",
+  },
+};
 
 export default function CrmShellLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <CrmClientProviders>{children}</CrmClientProviders>;
+  return <CrmClientLayout>{children}</CrmClientLayout>;
 }

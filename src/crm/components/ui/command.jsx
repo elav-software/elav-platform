@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
 import { Search } from "lucide-react"
@@ -9,7 +10,7 @@ const Command = React.forwardRef(({ className, ...props }, ref) => (
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
+      "flex h-full w-full flex-col overflow-hidden rounded-md bg-white text-slate-900",
       className
     )}
     {...props} />

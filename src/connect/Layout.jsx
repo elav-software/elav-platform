@@ -1,7 +1,9 @@
+﻿"use client";
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from '@connect/lib/router-compat';
 import { createPageUrl } from '@connect/utils';
-import { base44 } from '@connect/api/base44Client';
+import { api } from '@connect/api/apiClient';
+import UnderConstructionBanner from '@connect/components/UnderConstructionBanner';
 import { 
   Home, 
   Radio, 
@@ -13,7 +15,8 @@ import {
   User,
   LogOut,
   Shield,
-  Bell
+  Bell,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@connect/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@connect/components/ui/sheet';
@@ -54,7 +57,7 @@ export default function Layout({ children, currentPageName }) {
 
   const loadUser = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
     } catch (e) {
       setUser(null);
@@ -62,7 +65,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const handleLogout = () => {
-    base44.auth.logout();
+    api.auth.logout();
   };
 
   const isAdmin = user?.role === 'admin';
@@ -72,7 +75,7 @@ export default function Layout({ children, currentPageName }) {
   const hideBottomNav = ['AdminDashboard', 'LeadershipMaterials', 'MinistryReports'].includes(currentPageName);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundImage: "url('https://media.base44.com/images/public/69878a2b6ba10a3126753b8e/436fcc4a6_FONDOAPP.jpg')", backgroundSize: "cover", backgroundPosition: "top center", backgroundAttachment: "fixed" }}>
+    <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Top Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 h-14">
@@ -87,7 +90,7 @@ export default function Layout({ children, currentPageName }) {
                 {/* Menu Header */}
                 <div className="p-6 bg-gradient-to-br from-red-600 to-red-700 text-white">
                   <img 
-                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69878a2b6ba10a3126753b8e/6932d40b5_ChatGPTImage9feb202609_56_36pm.png" 
+                    src="/logo.png" 
                     alt="CFC" 
                     className="w-20 h-auto mb-4 bg-white rounded-lg p-2"
                   />
@@ -114,6 +117,20 @@ export default function Layout({ children, currentPageName }) {
                       {item.label}
                     </Link>
                   ))}
+
+                  {/* Portal de Líderes */}
+                  <div className="px-4 mt-6 mb-2">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                      <UserCheck className="w-3 h-3" /> Portal de Líderes
+                    </p>
+                  </div>
+                  <a
+                    href="/connect/portal/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Acceso Líderes
+                  </a>
 
                   {isAdmin && (
                     <>
@@ -165,7 +182,7 @@ export default function Layout({ children, currentPageName }) {
                   ) : (
                     <Button 
                       className="w-full bg-red-600 hover:bg-red-700"
-                      onClick={() => base44.auth.redirectToLogin()}
+                      onClick={() => api.auth.redirectToLogin()}
                     >
                       Iniciar Sesión
                     </Button>
@@ -177,17 +194,29 @@ export default function Layout({ children, currentPageName }) {
 
           <Link to={createPageUrl('Home')} className="flex items-center gap-2">
             <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69878a2b6ba10a3126753b8e/6932d40b5_ChatGPTImage9feb202609_56_36pm.png" 
+              src="/logo.png" 
               alt="CFC" 
               className="h-8 w-auto object-contain"
             />
           </Link>
 
-          <Button variant="ghost" size="icon" className="text-gray-700">
-            <Bell className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <a
+              href="/connect/portal/login"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              Portal Líder
+            </a>
+            <Button variant="ghost" size="icon" className="text-gray-700">
+              <Bell className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </header>
+
+      {/* Under Construction Banner */}
+      <UnderConstructionBanner />
 
       {/* Main Content */}
       <main className={`flex-1 ${!hideBottomNav ? 'pb-20' : ''}`}>

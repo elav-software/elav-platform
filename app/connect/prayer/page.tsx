@@ -1,6 +1,10 @@
-"use client";
+import type { Metadata } from "next";
 import Prayer from "@connect/pages/Prayer";
 
-export default function PrayerPage() {{
+export const metadata: Metadata = {
+  title: "Oración",
+};
+
+export default function PrayerPage() {
   return <Prayer />;
-}}
+}

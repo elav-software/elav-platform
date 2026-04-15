@@ -1,6 +1,10 @@
-"use client";
+import type { Metadata } from "next";
 import Live from "@connect/pages/Live";
 
-export default function LivePage() {{
+export const metadata: Metadata = {
+  title: "En Vivo",
+};
+
+export default function LivePage() {
   return <Live />;
-}}
+}
