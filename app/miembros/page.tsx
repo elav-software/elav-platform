@@ -76,11 +76,13 @@ export default function MiembrosPage() {
 
   useEffect(() => {
     const fetchLideres = async () => {
+      const churchId = await resolveChurchId();
+      if (!churchId) {
+        console.error("No se pudo resolver church_id para cargar líderes");
+        return;
+      }
       const { data, error } = await supabase
-        .from("personas")
-        .select("id, nombre, apellido")
-        .eq("rol", "Líder")
-        .order("apellido", { ascending: true });
+        .rpc("get_lideres_publicos", { p_church_id: churchId });
 
       if (error) {
         console.error("Error cargando líderes:", error);
