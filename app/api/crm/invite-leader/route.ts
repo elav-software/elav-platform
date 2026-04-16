@@ -6,6 +6,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Cliente público para operaciones que requieren anon key (como resetPasswordForEmail)
+const supabasePublic = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 export async function POST(req: NextRequest) {
   try {
     // Verificar auth del CRM
@@ -43,21 +49,11 @@ export async function POST(req: NextRequest) {
     );
 
     if (alreadyExists) {
-      // Ya tiene cuenta → mandar reset de contraseña (mismo efecto: recibe link para ingresar)
-      const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-        options: {
-          redirectTo: `${redirectBase}/connect/portal/set-password`,
-        },
-      });
-      if (resetError) throw resetError;
-
-      // Enviar el email usando la API pública (el generateLink solo genera el link, no envía)
-      await supabaseAdmin.auth.resetPasswordForEmail(email, {
+      // Ya tiene cuenta → mandar reset de contraseña con el cliente público
+      const { error: resetError } = await supabasePublic.auth.resetPasswordForEmail(email, {
         redirectTo: `${redirectBase}/connect/portal/set-password`,
       });
-
+      if (resetError) throw resetError;
       return NextResponse.json({ success: true, resent: true });
     }
 
