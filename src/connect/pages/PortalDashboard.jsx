@@ -10,12 +10,14 @@ import {
   Heart, 
   LogOut,
   BarChart3,
-  ChevronRight 
+  ChevronRight,
+  Bell
 } from "lucide-react";
 
 export default function PortalDashboard() {
   const [leader, setLeader] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [unreadMaterials, setUnreadMaterials] = useState(0);
   const [stats, setStats] = useState({
     recentReports: 0,
     cellMembers: 0,
@@ -69,6 +71,7 @@ export default function PortalDashboard() {
 
       setLeader(leaderData);
       await loadStats(leaderData.id, userEmail);
+      await loadUnreadCount(churchId, session.user.id);
       
     } catch (err) {
       console.error("Error verificando líder:", err);
@@ -76,6 +79,28 @@ export default function PortalDashboard() {
       redirect("/connect/portal/login");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUnreadCount = async (churchId, userId) => {
+    try {
+      const { data: allMaterials } = await supabase
+        .from('leader_materials')
+        .select('id')
+        .eq('church_id', churchId)
+        .eq('is_active', true);
+
+      if (!allMaterials?.length) return;
+
+      const { data: viewed } = await supabase
+        .from('leader_material_views')
+        .select('material_id')
+        .eq('user_id', userId);
+
+      const viewedIds = new Set((viewed || []).map(v => v.material_id));
+      setUnreadMaterials(allMaterials.filter(m => !viewedIds.has(m.id)).length);
+    } catch (err) {
+      console.error("Error cargando no leídos:", err);
     }
   };
 
@@ -133,7 +158,9 @@ export default function PortalDashboard() {
       description: "Accede a recursos y capacitaciones",
       icon: BookOpen,
       href: "/connect/portal/materiales",
-      color: "from-purple-500 to-purple-600"
+      color: "from-purple-500 to-purple-600",
+      badge: unreadMaterials > 0 ? `${unreadMaterials} nuevo${unreadMaterials > 1 ? 's' : ''}` : null,
+      badgeNew: unreadMaterials > 0
     },
     {
       title: "Mis Miembros",
@@ -174,13 +201,27 @@ export default function PortalDashboard() {
               Hola, {leader?.nombre} {leader?.apellido}
             </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Salir</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => redirect("/connect/portal/materiales")}
+              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              title="Notificaciones"
+            >
+              <Bell className="w-5 h-5 text-gray-700" />
+              {unreadMaterials > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  {unreadMaterials}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Salir</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -255,7 +296,11 @@ export default function PortalDashboard() {
               </p>
               
               {item.badge && (
-                <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                  item.badgeNew
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-gray-100 text-gray-700'
+                }`}>
                   {item.badge}
                 </span>
               )}

@@ -59,6 +59,16 @@ export default function PortalMateriales() {
 
       if (!error && materialsData) {
         setMaterials(materialsData);
+        // Marcar todos como vistos
+        if (materialsData.length > 0) {
+          const rows = materialsData.map(m => ({
+            user_id: session.user.id,
+            material_id: m.id
+          }));
+          await supabase
+            .from('leader_material_views')
+            .upsert(rows, { onConflict: 'user_id,material_id', ignoreDuplicates: true });
+        }
       }
       
     } catch (err) {
