@@ -11,7 +11,9 @@ import {
   Phone, 
   Calendar,
   User,
-  AlertCircle
+  AlertCircle,
+  Send,
+  Users
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -22,6 +24,8 @@ export default function LeaderApprovals() {
   const [rejectedLeaders, setRejectedLeaders] = useState([]);
   const [filter, setFilter] = useState("pendiente");
   const [currentUser, setCurrentUser] = useState(null);
+  const [invitingId, setInvitingId] = useState(null);
+  const [invitingAll, setInvitingAll] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -193,6 +197,75 @@ export default function LeaderApprovals() {
     }
   };
 
+  const getToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token;
+  };
+
+  const handleInvite = async (personaId, email, fullName) => {
+    if (!email) {
+      toast.error("Este líder no tiene email registrado");
+      return;
+    }
+    setInvitingId(personaId);
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/crm/invite-leader", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email,
+          fullName,
+          redirectBase: window.location.origin,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      if (data.alreadyExists) {
+        toast.success(`${fullName} ya tiene cuenta — puede ingresar al portal`);
+      } else {
+        toast.success(`✉️ Invitación enviada a ${email}`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al enviar invitación");
+    } finally {
+      setInvitingId(null);
+    }
+  };
+
+  const handleInviteAll = async () => {
+    const eligible = approvedLeaders.filter(l => l.email);
+    if (eligible.length === 0) {
+      toast.error("Ningún líder aprobado tiene email registrado");
+      return;
+    }
+    if (!confirm(`¿Enviar invitación al portal a ${eligible.length} líder(es) aprobado(s)?`)) return;
+    setInvitingAll(true);
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/crm/invite-all-leaders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ redirectBase: window.location.origin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`✉️ Invitaciones enviadas: ${data.invited} nuevas, ${data.skipped} ya registrados`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al enviar invitaciones");
+    } finally {
+      setInvitingAll(false);
+    }
+  };
+
   const handleReject = async (leaderId, leaderName) => {
     if (!confirm(`¿Estás seguro de rechazar a ${leaderName}?`)) return;
 
@@ -239,12 +312,28 @@ export default function LeaderApprovals() {
           <h1 className="text-3xl font-bold text-gray-900">
             Aprobación de Líderes
           </h1>
-          {pendingLeaders.length > 0 && (
-            <span className="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              {pendingLeaders.length} pendiente{pendingLeaders.length !== 1 ? 's' : ''}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {pendingLeaders.length > 0 && (
+              <span className="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {pendingLeaders.length} pendiente{pendingLeaders.length !== 1 ? 's' : ''}
+              </span>
+            )}
+            {filter === 'aprobado' && approvedLeaders.length > 0 && (
+              <button
+                onClick={handleInviteAll}
+                disabled={invitingAll}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium text-sm disabled:opacity-50"
+              >
+                {invitingAll ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Users className="w-4 h-4" />
+                )}
+                Invitar a todos al Portal
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-gray-600">
           Revisa y aprueba líderes para que puedan acceder al Portal de Líderes
@@ -388,8 +477,8 @@ export default function LeaderApprovals() {
                   </div>
                 )}
 
-                {filter !== 'pendiente' && leader.fecha_aprobacion && (
-                  <div className="ml-4 text-right">
+                {filter !== 'pendiente' && (
+                  <div className="ml-4 text-right flex flex-col items-end gap-2">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                       filter === 'aprobado' 
                         ? 'bg-green-100 text-green-700'
@@ -397,9 +486,29 @@ export default function LeaderApprovals() {
                     }`}>
                       {filter === 'aprobado' ? 'Aprobado' : 'Rechazado'}
                     </span>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {new Date(leader.fecha_aprobacion).toLocaleDateString('es-AR')}
-                    </p>
+                    {leader.fecha_aprobacion && (
+                      <p className="text-xs text-gray-500">
+                        {new Date(leader.fecha_aprobacion).toLocaleDateString('es-AR')}
+                      </p>
+                    )}
+                    {filter === 'aprobado' && (
+                      <button
+                        onClick={() => handleInvite(
+                          leader.id,
+                          leader.email,
+                          `${leader.nombre} ${leader.apellido}`
+                        )}
+                        disabled={invitingId === leader.id}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
+                      >
+                        {invitingId === leader.id ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Send className="w-3 h-3" />
+                        )}
+                        Invitar al Portal
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
