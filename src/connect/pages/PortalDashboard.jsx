@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId } from "@connect/api/apiClient";
 import { 
@@ -18,6 +18,9 @@ export default function PortalDashboard() {
   const [leader, setLeader] = useState(null);
   const [loading, setLoading] = useState(true);
   const [unreadMaterials, setUnreadMaterials] = useState(0);
+  const [unreadList, setUnreadList] = useState([]);
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef(null);
   const [stats, setStats] = useState({
     recentReports: 0,
     cellMembers: 0,
@@ -86,9 +89,10 @@ export default function PortalDashboard() {
     try {
       const { data: allMaterials } = await supabase
         .from('leader_materials')
-        .select('id')
+        .select('id, title, category, created_at')
         .eq('church_id', churchId)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
       if (!allMaterials?.length) return;
 
@@ -98,11 +102,24 @@ export default function PortalDashboard() {
         .eq('user_id', userId);
 
       const viewedIds = new Set((viewed || []).map(v => v.material_id));
-      setUnreadMaterials(allMaterials.filter(m => !viewedIds.has(m.id)).length);
+      const unread = allMaterials.filter(m => !viewedIds.has(m.id));
+      setUnreadList(unread);
+      setUnreadMaterials(unread.length);
     } catch (err) {
       console.error("Error cargando no leídos:", err);
     }
   };
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handler = (e) => {
+      if (bellRef.current && !bellRef.current.contains(e.target)) {
+        setBellOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const loadStats = async (leaderId, leaderEmail) => {
     try {
@@ -202,18 +219,71 @@ export default function PortalDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => redirect("/connect/portal/materiales")}
-              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Notificaciones"
-            >
-              <Bell className="w-5 h-5 text-gray-700" />
-              {unreadMaterials > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                  {unreadMaterials}
-                </span>
+            {/* Campanita con dropdown */}
+            <div className="relative" ref={bellRef}>
+              <button
+                onClick={() => setBellOpen(o => !o)}
+                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Notificaciones"
+              >
+                <Bell className="w-5 h-5 text-gray-700" />
+                {unreadMaterials > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                    {unreadMaterials}
+                  </span>
+                )}
+              </button>
+
+              {bellOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <span className="font-semibold text-gray-900 text-sm">Notificaciones</span>
+                    {unreadMaterials > 0 && (
+                      <span className="text-xs text-red-600 font-medium">{unreadMaterials} sin leer</span>
+                    )}
+                  </div>
+
+                  {unreadList.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-gray-500">
+                      Todo al día, no hay materiales nuevos.
+                    </div>
+                  ) : (
+                    <ul>
+                      {unreadList.map(m => (
+                        <li key={m.id}>
+                          <button
+                            onClick={() => redirect("/connect/portal/materiales")}
+                            className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors flex items-start gap-3 border-b border-gray-50 last:border-0"
+                          >
+                            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <BookOpen className="w-4 h-4 text-purple-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{m.title}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {m.category && <span className="text-purple-600">{m.category} · </span>}
+                                Nuevo material disponible
+                              </p>
+                            </div>
+                            <span className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-2" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                    <button
+                      onClick={() => redirect("/connect/portal/materiales")}
+                      className="text-xs text-purple-600 font-medium hover:text-purple-700 w-full text-center py-1"
+                    >
+                      Ver todos los materiales →
+                    </button>
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
+
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
