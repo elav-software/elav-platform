@@ -245,7 +245,7 @@ export default function Members() {
         if (!persona) continue;
         const memberId = supaIdToMemberId[supaId];
         if (!memberId) continue;
-        const lugar = persona.lugar_reunion || persona.direccion || "";
+        const lugar = [persona.lugar_reunion, persona.lugar_reunion_localidad].filter(Boolean).join(', ') || persona.direccion || "";
         const leaderPayload = {
           full_name: [persona.nombre, persona.apellido].filter(Boolean).join(" "),
           phone: persona.telefono || "",
