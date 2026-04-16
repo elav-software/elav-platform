@@ -29,7 +29,6 @@ const navItems = [
 { name: "Comunicación", icon: MessageSquare, page: "Communication", adminOnly: false },
 { name: "Líderes y Células", icon: Crown, page: "Leaders", adminOnly: false },
 { name: "Reportes de Células", icon: ClipboardList, page: "CellSubmissions", adminOnly: false },
-{ name: "Encuestas", icon: ClipboardList, page: "Surveys", adminOnly: false },
 { name: "Materiales Líderes", icon: FolderOpen, page: "Materials", adminOnly: true },
 
 ];
