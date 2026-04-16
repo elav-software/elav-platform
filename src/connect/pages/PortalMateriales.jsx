@@ -191,24 +191,29 @@ export default function PortalMateriales() {
                   )}
                   
                   <div className="flex gap-2">
-                    <a
-                      href={material.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Ver
-                    </a>
-                    {material.type !== 'link' && (
-                      <a
-                        href={material.url}
-                        download
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                        title="Descargar"
+                    {material.file_path ? (
+                      <button
+                        onClick={async () => {
+                          const { data } = await supabase.storage
+                            .from('materiales')
+                            .createSignedUrl(material.file_path, 60 * 60); // 1h
+                          if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
                       >
                         <Download className="w-4 h-4" />
-                      </a>
+                        Descargar
+                      </button>
+                    ) : (
+                      <a
+                        href={material.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                      Ver
+                    </a>
                     )}
                   </div>
                 </div>

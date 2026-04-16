@@ -17,6 +17,7 @@ const PATH_TO_PAGE: Record<string, string> = {
   "/crm/communication":   "Communication",
   "/crm/surveys":         "Surveys",
   "/crm/login":           "Welcome",
+  "/crm/materials":        "Materials",
 };
 
 export default function CrmShell({ children }: { children: React.ReactNode }) {
