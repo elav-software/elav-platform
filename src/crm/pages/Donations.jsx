@@ -1,6 +1,7 @@
 ﻿"use client";
 import React, { useEffect, useState } from "react";
-import { api } from "@crm/api/apiClient";
+import { api, getMyChurchId } from "@crm/api/apiClient";
+import { supabase } from "@crm/api/supabaseClient";
 import { Card } from "@crm/components/ui/card";
 import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
@@ -12,7 +13,7 @@ import { Textarea } from "@crm/components/ui/textarea";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import StatCard from "../components/shared/StatCard";
-import { DollarSign, TrendingUp, Search, Edit, Trash2 } from "lucide-react";
+import { DollarSign, TrendingUp, Search, Edit, Trash2, Users } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
@@ -68,6 +69,7 @@ const F = ({ label, name, type = "text", options, optionLabels, textarea, form, 
 
 export default function Donations() {
   const [donations, setDonations] = useState([]);
+  const [cellSubs, setCellSubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -79,6 +81,16 @@ export default function Donations() {
   const load = async () => {
     const data = await api.entities.Donation.list("-date", 500);
     setDonations(data);
+    const churchId = await getMyChurchId();
+    if (churchId) {
+      const { data: subs } = await supabase
+        .from('leader_cell_submissions')
+        .select('id, report_date, offering_amount, personas!leader_id(nombre, apellido, grupo_celula)')
+        .eq('church_id', churchId)
+        .gt('offering_amount', 0)
+        .order('report_date', { ascending: false });
+      setCellSubs(subs || []);
+    }
     setLoading(false);
   };
 
@@ -106,10 +118,13 @@ export default function Donations() {
   const monthEnd = endOfMonth(now);
   const inThisMonth = (d) => d.date && isWithinInterval(parseISO(d.date), { start: monthStart, end: monthEnd });
 
-  const totalMonth = donations.filter(inThisMonth).reduce((s, d) => s + (d.amount || 0), 0);
+  const totalMonth = donations.filter(inThisMonth).reduce((s, d) => s + (d.amount || 0), 0)
+    + cellSubs.filter(s => s.report_date && isWithinInterval(parseISO(s.report_date), { start: monthStart, end: monthEnd })).reduce((s, r) => s + (r.offering_amount || 0), 0);
   const tithesMonth = donations.filter(d => inThisMonth(d) && d.donation_type === "Tithe").reduce((s, d) => s + (d.amount || 0), 0);
-  const offeringsMonth = donations.filter(d => inThisMonth(d) && d.donation_type === "Offering").reduce((s, d) => s + (d.amount || 0), 0);
-  const totalAll = donations.reduce((s, d) => s + (d.amount || 0), 0);
+  const offeringsMonth = donations.filter(d => inThisMonth(d) && d.donation_type === "Offering").reduce((s, d) => s + (d.amount || 0), 0)
+    + cellSubs.filter(s => s.report_date && isWithinInterval(parseISO(s.report_date), { start: monthStart, end: monthEnd })).reduce((s, r) => s + (r.offering_amount || 0), 0);
+  const totalAll = donations.reduce((s, d) => s + (d.amount || 0), 0)
+    + cellSubs.reduce((s, r) => s + (r.offering_amount || 0), 0);
 
   const giverMap = {};
   donations.forEach(d => {
@@ -118,10 +133,13 @@ export default function Donations() {
   const topGivers = Object.entries(giverMap).sort(([, a], [, b]) => b - a).slice(0, 5);
 
   const monthlyData = MONTHS_ES.map((month, idx) => {
-    const total = donations
+    const manualTotal = donations
       .filter(d => d.date && new Date(d.date).getMonth() === idx && new Date(d.date).getFullYear() === now.getFullYear())
       .reduce((s, d) => s + (d.amount || 0), 0);
-    return { month, amount: total };
+    const cellTotal = cellSubs
+      .filter(s => s.report_date && new Date(s.report_date).getMonth() === idx && new Date(s.report_date).getFullYear() === now.getFullYear())
+      .reduce((s, r) => s + (r.offering_amount || 0), 0);
+    return { month, amount: manualTotal + cellTotal };
   });
 
   const filtered = donations.filter(d => {
@@ -192,12 +210,38 @@ export default function Donations() {
 
       {loading ? (
         <div className="space-y-3">{Array(5).fill(0).map((_, i) => <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />)}</div>
-      ) : filtered.length === 0 ? (
+      ) : filtered.length === 0 && cellSubs.length === 0 ? (
         <Card className="border-0 shadow-sm">
           <EmptyState icon={DollarSign} title="Sin ingresos registrados" description="Comenzá a registrar los ingresos." />
         </Card>
       ) : (
         <div className="space-y-3">
+          {/* Ofrendas de células — solo lectura */}
+          {cellSubs.map(s => {
+            const lider = s.personas;
+            const nombre = lider ? `${lider.nombre} ${lider.apellido}` : "Líder";
+            const celula = lider?.grupo_celula ? ` · ${lider.grupo_celula}` : "";
+            return (
+              <Card key={`cell-${s.id}`} className="p-4 border-0 shadow-sm flex items-center justify-between bg-emerald-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-900">{nombre}</p>
+                      <Badge className="text-xs bg-emerald-100 text-emerald-700">Ofrenda Célula{celula}</Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {s.report_date ? format(parseISO(s.report_date), "d MMM yyyy") : ""}
+                    </p>
+                  </div>
+                </div>
+                <span className="font-bold text-lg text-slate-900">${(s.offering_amount || 0).toLocaleString()}</span>
+              </Card>
+            );
+          })}
+          {/* Ingresos manuales */}
           {filtered.map(d => (
             <Card key={d.id} className="p-4 border-0 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
