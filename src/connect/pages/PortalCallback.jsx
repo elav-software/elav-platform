@@ -17,9 +17,10 @@ export default function PortalCallback() {
 
   const handleCallback = async () => {
     try {
-      // Detectar si es un flujo de invitación (type=invite en el hash)
+      // Detectar si es un flujo de invitación o reset (type en hash o query params)
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const flowType = hashParams.get('type');
+      const queryParams = new URLSearchParams(window.location.search);
+      const flowType = hashParams.get('type') || queryParams.get('type');
 
       // Esperar a que Supabase procese el token del hash de la URL
       const session = await new Promise((resolve) => {
@@ -47,8 +48,8 @@ export default function PortalCallback() {
         return;
       }
 
-      // Si es invitación, redirigir a crear contraseña
-      if (flowType === 'invite') {
+      // Si es invitación o reset de contraseña → redirigir a crear contraseña
+      if (flowType === 'invite' || flowType === 'recovery') {
         redirect("/connect/portal/set-password");
         return;
       }
