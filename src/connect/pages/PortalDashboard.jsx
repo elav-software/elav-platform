@@ -28,11 +28,21 @@ export default function PortalDashboard() {
     verifyAndLoadLeader();
   }, []);
 
+  const SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 horas
+
   const verifyAndLoadLeader = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
+        redirect("/connect/portal/login");
+        return;
+      }
+
+      // Verificar expiración de 4hs por código
+      const loginAt = new Date(session.user.last_sign_in_at).getTime();
+      if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
+        await supabase.auth.signOut();
         redirect("/connect/portal/login");
         return;
       }

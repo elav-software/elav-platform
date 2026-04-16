@@ -44,9 +44,19 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 horas
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user) return;
+
+      // Verificar expiración de 4hs por código
+      const loginAt = new Date(session.user.last_sign_in_at).getTime();
+      if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
+        await supabase.auth.signOut();
+        window.location.href = '/crm/login';
+        return;
+      }
       
       // Verificar si el usuario está en church_users
       const { data: churchUser } = await supabase
