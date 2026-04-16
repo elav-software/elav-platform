@@ -148,7 +148,7 @@ export default function LeaderApprovals() {
         let longitude = null;
         const addressParts = [
           persona.lugar_reunion,
-          persona.barrio_zona,
+          persona.lugar_reunion_localidad || persona.barrio_zona,
           church?.city,
           church?.country || 'Argentina',
         ].filter(Boolean);
@@ -178,7 +178,7 @@ export default function LeaderApprovals() {
           cell_name: persona.grupo_celula || null,
           meeting_day: persona.dia_reunion || null,
           meeting_time: persona.hora_reunion || null,
-          meeting_location: persona.lugar_reunion || null,
+          meeting_location: [persona.lugar_reunion, persona.lugar_reunion_localidad].filter(Boolean).join(', ') || null,
           latitude,
           longitude,
           member_id: leaderId,
