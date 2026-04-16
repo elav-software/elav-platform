@@ -26,6 +26,7 @@ export default function LeaderApprovals() {
   const [currentUser, setCurrentUser] = useState(null);
   const [invitingId, setInvitingId] = useState(null);
   const [invitingAll, setInvitingAll] = useState(false);
+  const [invitedIds, setInvitedIds] = useState(new Set());
 
   useEffect(() => {
     checkAuth();
@@ -224,6 +225,7 @@ export default function LeaderApprovals() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      setInvitedIds(prev => new Set([...prev, personaId]));
       if (data.alreadyExists) {
         toast.success(`${fullName} ya tiene cuenta — puede ingresar al portal`);
       } else {
@@ -257,6 +259,8 @@ export default function LeaderApprovals() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      const newIds = new Set(eligible.map(l => l.id));
+      setInvitedIds(prev => new Set([...prev, ...newIds]));
       toast.success(`✉️ Invitaciones enviadas: ${data.invited} nuevas, ${data.skipped} ya registrados`);
     } catch (err) {
       console.error(err);
@@ -492,22 +496,42 @@ export default function LeaderApprovals() {
                       </p>
                     )}
                     {filter === 'aprobado' && (
-                      <button
-                        onClick={() => handleInvite(
-                          leader.id,
-                          leader.email,
-                          `${leader.nombre} ${leader.apellido}`
-                        )}
-                        disabled={invitingId === leader.id}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
-                      >
-                        {invitingId === leader.id ? (
-                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Send className="w-3 h-3" />
-                        )}
-                        Invitar al Portal
-                      </button>
+                      invitedIds.has(leader.id) ? (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                            <CheckCircle className="w-3 h-3" />
+                            Invitación enviada
+                          </span>
+                          <button
+                            onClick={() => handleInvite(
+                              leader.id,
+                              leader.email,
+                              `${leader.nombre} ${leader.apellido}`
+                            )}
+                            disabled={invitingId === leader.id}
+                            className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                          >
+                            Reenviar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleInvite(
+                            leader.id,
+                            leader.email,
+                            `${leader.nombre} ${leader.apellido}`
+                          )}
+                          disabled={invitingId === leader.id}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
+                        >
+                          {invitingId === leader.id ? (
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Send className="w-3 h-3" />
+                          )}
+                          Invitar al Portal
+                        </button>
+                      )
                     )}
                   </div>
                 )}
