@@ -244,7 +244,7 @@ export default function Dashboard() {
               {[
                 { label: "Agregar Miembro", page: "Members", color: "bg-indigo-50 text-indigo-700 hover:bg-indigo-100" },
                 { label: "Registrar Visitante", page: "Visitors", color: "bg-sky-50 text-sky-700 hover:bg-sky-100" },
-                { label: "Registrar Donación", page: "Donations", color: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
+                { label: "Registrar ingreso", page: "Donations", color: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
                 { label: "Nuevo Evento", page: "Events", color: "bg-purple-50 text-purple-700 hover:bg-purple-100" },
               ].map(link => (
                 <Link key={link.page} to={createPageUrl(link.page)}
