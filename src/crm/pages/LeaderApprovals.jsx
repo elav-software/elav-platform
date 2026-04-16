@@ -226,8 +226,8 @@ export default function LeaderApprovals() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setInvitedIds(prev => new Set([...prev, personaId]));
-      if (data.alreadyExists) {
-        toast.success(`${fullName} ya tiene cuenta — puede ingresar al portal`);
+      if (data.resent) {
+        toast.success(`✉️ Email de acceso reenviado a ${email}`);
       } else {
         toast.success(`✉️ Invitación enviada a ${email}`);
       }
