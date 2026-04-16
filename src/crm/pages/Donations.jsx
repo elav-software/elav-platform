@@ -133,7 +133,7 @@ export default function Donations() {
 
   return (
     <div>
-      <PageHeader title="Donaciones y Diezmos" subtitle="Registra todas las contribuciones financieras" onAdd={openAdd} addLabel="Registrar Donación" />
+      <PageHeader title="Tesorería" subtitle="Registra todos los ingresos financieros" onAdd={openAdd} addLabel="Registrar ingreso" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard title="Total Este Mes" value={`$${totalMonth.toLocaleString()}`} icon={DollarSign} color="amber" />
@@ -194,7 +194,7 @@ export default function Donations() {
         <div className="space-y-3">{Array(5).fill(0).map((_, i) => <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
         <Card className="border-0 shadow-sm">
-          <EmptyState icon={DollarSign} title="Sin Donaciones" description="Comienza a registrar diezmos y ofrendas." onAction={openAdd} actionLabel="Registrar Donación" />
+          <EmptyState icon={DollarSign} title="Sin ingresos registrados" description="Comenzá a registrar los ingresos." />
         </Card>
       ) : (
         <div className="space-y-3">
@@ -226,7 +226,7 @@ export default function Donations() {
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editing ? "Editar Donación" : "Registrar Donación"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "Editar ingreso" : "Registrar ingreso"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
             <F label="Nombre del Miembro" name="member_name" form={form} setForm={setForm} />
             <F label="Tipo de Donación" name="donation_type"
@@ -243,7 +243,7 @@ export default function Donations() {
             <Button variant="outline" onClick={() => setModalOpen(false)} className="flex-1">Cancelar</Button>
             <Button onClick={handleSave} disabled={saving || !form.amount}
               className="flex-1 bg-[#d4a843] hover:bg-[#c49a3a] text-[#1e293b] font-semibold">
-              {saving ? "Guardando..." : editing ? "Guardar Cambios" : "Registrar Donación"}
+              {saving ? "Guardando..." : editing ? "Guardar cambios" : "Registrar ingreso"}
             </Button>
           </div>
         </DialogContent>

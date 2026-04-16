@@ -24,12 +24,11 @@ const navItems = [
 { name: "Ministerios", icon: Church, page: "Ministries", adminOnly: false },
 { name: "Eventos", icon: Calendar, page: "Events", adminOnly: false },
 { name: "Peticiones de Oración", icon: HandHeart, page: "PrayerRequests", adminOnly: false },
-{ name: "Donaciones", icon: DollarSign, page: "Donations", adminOnly: false },
+{ name: "Tesorería", icon: DollarSign, page: "Donations", adminOnly: false },
 { name: "Métricas", icon: BarChart3, page: "Demographics", adminOnly: false },
 { name: "Comunicación", icon: MessageSquare, page: "Communication", adminOnly: false },
 { name: "Líderes y Células", icon: Crown, page: "Leaders", adminOnly: false },
 { name: "Reportes de Células", icon: ClipboardList, page: "CellSubmissions", adminOnly: false },
-{ name: "Encuestas", icon: ClipboardList, page: "Surveys", adminOnly: false },
 { name: "Materiales Líderes", icon: FolderOpen, page: "Materials", adminOnly: true },
 
 ];

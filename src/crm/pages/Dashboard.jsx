@@ -1,6 +1,7 @@
 ﻿"use client";
 import React, { useEffect, useState } from "react";
-import { api } from "@crm/api/apiClient";
+import { api, getMyChurchId } from "@crm/api/apiClient";
+import { supabase } from "@crm/api/supabaseClient";
 import { Link } from "@crm/lib/router-compat";
 import { createPageUrl } from "@crm/utils";
 import { Card } from "@crm/components/ui/card";
@@ -21,21 +22,39 @@ export default function Dashboard() {
   const [members, setMembers] = useState([]);
   const [visitors, setVisitors] = useState([]);
   const [donations, setDonations] = useState([]);
+  const [cellOfferings, setCellOfferings] = useState(0);
   const [events, setEvents] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const now = new Date();
+    const monthStart = startOfMonth(now).toISOString().split('T')[0];
+    const monthEnd = endOfMonth(now).toISOString().split('T')[0];
+
     Promise.all([
       api.entities.Member.list("-created_date", 200),
       api.entities.Visitor.list("-created_date", 100),
       api.entities.Donation.list("-created_date", 200),
       api.entities.Event.list("-date", 5),
-    ]).then(([m, v, d, e]) => {
+      getMyChurchId().then(churchId => {
+        if (!churchId) return 0;
+        return supabase
+          .from('leader_cell_submissions')
+          .select('offering_amount')
+          .eq('church_id', churchId)
+          .gte('report_date', monthStart)
+          .lte('report_date', monthEnd)
+          .then(({ data }) =>
+            (data || []).reduce((s, r) => s + (r.offering_amount || 0), 0)
+          );
+      }),
+    ]).then(([m, v, d, e, cellOff]) => {
       setMembers(m);
       setVisitors(v);
       setDonations(d);
       setEvents(e);
+      setCellOfferings(cellOff || 0);
       setLoading(false);
     });
   }, []);
@@ -119,7 +138,7 @@ export default function Dashboard() {
         <StatCard title="Oraciones Activas" value={loading ? "—" : activePrayers} icon={HandHeart} color="rose" />
         <StatCard title="Próximos Eventos" value={loading ? "—" : events.length} icon={Calendar} color="purple" />
         <StatCard title="Líderes" value={loading ? "—" : members.filter(m => m.member_status === "Leader").length} icon={Star} color="orange" />
-        <StatCard title="Total Ofrendas" value={loading ? "—" : `$${donations.reduce((s, d) => s + (d.amount || 0), 0).toLocaleString()}`} icon={TrendingUp} color="green" />
+        <StatCard title="Ofrenda este mes" value={loading ? "—" : `$${cellOfferings.toLocaleString()}`} icon={TrendingUp} color="green" />
       </div>
 
       {/* Charts */}
@@ -225,7 +244,7 @@ export default function Dashboard() {
               {[
                 { label: "Agregar Miembro", page: "Members", color: "bg-indigo-50 text-indigo-700 hover:bg-indigo-100" },
                 { label: "Registrar Visitante", page: "Visitors", color: "bg-sky-50 text-sky-700 hover:bg-sky-100" },
-                { label: "Registrar Donación", page: "Donations", color: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
+                { label: "Registrar ingreso", page: "Donations", color: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
                 { label: "Nuevo Evento", page: "Events", color: "bg-purple-50 text-purple-700 hover:bg-purple-100" },
               ].map(link => (
                 <Link key={link.page} to={createPageUrl(link.page)}
