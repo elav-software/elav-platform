@@ -43,7 +43,22 @@ export async function POST(req: NextRequest) {
     );
 
     if (alreadyExists) {
-      return NextResponse.json({ alreadyExists: true });
+      // Ya tiene cuenta → mandar reset de contraseña (mismo efecto: recibe link para ingresar)
+      const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: {
+          redirectTo: `${redirectBase}/connect/portal/set-password`,
+        },
+      });
+      if (resetError) throw resetError;
+
+      // Enviar el email usando la API pública (el generateLink solo genera el link, no envía)
+      await supabaseAdmin.auth.resetPasswordForEmail(email, {
+        redirectTo: `${redirectBase}/connect/portal/set-password`,
+      });
+
+      return NextResponse.json({ success: true, resent: true });
     }
 
     // Invitar al usuario (manda email con link para setear contraseña)
