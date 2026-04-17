@@ -47,7 +47,7 @@ export default function PortalDashboard() {
       // Verificar expiración de 4hs por código
       const loginAt = new Date(session.user.last_sign_in_at).getTime();
       if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
-        await supabase.auth.signOut();
+        supabase.auth.signOut(); // fire-and-forget
         redirect("/connect/portal/login");
         return;
       }
@@ -76,7 +76,7 @@ export default function PortalDashboard() {
 
       if (error || !leaderData) {
         console.error("Líder no encontrado o no aprobado. Email:", userEmail, "Error:", error);
-        await supabase.auth.signOut();
+        supabase.auth.signOut(); // fire-and-forget
         redirect("/connect/portal/login");
         return;
       }
@@ -87,7 +87,7 @@ export default function PortalDashboard() {
       
     } catch (err) {
       console.error("Error verificando líder:", err);
-      await supabase.auth.signOut();
+      supabase.auth.signOut(); // fire-and-forget
       redirect("/connect/portal/login");
     } finally {
       setLoading(false);

@@ -35,7 +35,7 @@ export default function Welcome() {
           window.location.href = "/crm/dashboard";
         } else {
           // Sesión activa pero sin permisos — cerrar sesión
-          await supabase.auth.signOut();
+          supabase.auth.signOut(); // fire-and-forget
         }
       } catch {
         // Si falla la verificación, simplemente mostrar el form
@@ -75,14 +75,14 @@ export default function Welcome() {
       .maybeSingle();
     
     if (churchError || !churchUser) {
-      await supabase.auth.signOut();
+      supabase.auth.signOut(); // fire-and-forget
       setError("Acceso denegado. Contactá al administrador.");
       setLoading(false);
       return;
     }
     
     if (churchUser?.role !== 'admin' && churchUser?.role !== 'superadmin') {
-      await supabase.auth.signOut();
+      supabase.auth.signOut(); // fire-and-forget
       setError("Tu cuenta no tiene permisos para acceder al CRM.");
       setLoading(false);
       return;

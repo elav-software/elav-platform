@@ -116,7 +116,7 @@ export default function Layout({ children, currentPageName }) {
         setLoaded(true);
       } catch (err) {
         console.error('Layout init error:', err);
-        await supabase.auth.signOut();
+        supabase.auth.signOut(); // fire-and-forget — no await para que no cuele
         window.location.href = '/crm/login';
       }
     };
