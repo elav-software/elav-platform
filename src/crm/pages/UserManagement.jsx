@@ -35,7 +35,14 @@ export default function UserManagement() {
         role: session.user.user_metadata?.role ?? "user",
       };
       setCurrentUser(u);
-      if (u.role === "admin") loadUsers();
+      // Cargar usuarios si es admin o superadmin
+      const { data: churchUser } = await supabase
+        .from('church_users')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('is_active', true)
+        .single();
+      if (churchUser?.role === 'admin' || churchUser?.role === 'superadmin') loadUsers();
       else setLoading(false);
     }).catch(() => setLoading(false));
   }, []);

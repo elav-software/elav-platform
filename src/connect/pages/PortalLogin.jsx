@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 
 export default function PortalLogin() {
   const [loading, setLoading] = useState(false);
@@ -22,6 +22,13 @@ export default function PortalLogin() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
+        // Superadmin: acceso directo sin verificar líder
+        const superadmin = await checkIsSuperadmin();
+        if (superadmin) {
+          redirect("/connect/portal/dashboard");
+          return;
+        }
+
         const userEmail = session.user.email?.toLowerCase().trim();
         const approved = await verifyApprovedLeader(userEmail);
         
@@ -29,7 +36,6 @@ export default function PortalLogin() {
           redirect("/connect/portal/dashboard");
         } else {
           await supabase.auth.signOut();
-          // signOut ya hecho, quedarse en login
         }
       }
     } catch (err) {
