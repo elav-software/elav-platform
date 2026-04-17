@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 import { 
   ArrowLeft, 
   Send, 
@@ -46,6 +46,14 @@ export default function PortalReportes() {
       }
 
       const churchId = await getCurrentChurchId();
+      
+      // Superadmin bypass
+      const superadmin = await checkIsSuperadmin();
+      if (superadmin) {
+        setLeader({ id: null, nombre: 'Superadmin', apellido: '', email: session.user.email });
+        setLoading(false);
+        return;
+      }
       
       const { data: leaderData, error } = await supabase
         .from('personas')

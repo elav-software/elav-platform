@@ -12,17 +12,35 @@ import { supabase, supabaseToCRM, crmToSupabase } from "./supabaseClient";
 
 // ---------------------------------------------------------------------------
 // Resolución de church_id — se obtiene de la tabla church_users una sola vez
+// El superadmin puede cambiar de iglesia en tiempo de ejecución
 // ---------------------------------------------------------------------------
 
 let _churchId = null;
+let _role = null;
+
+// Superadmin: iglesia actualmente seleccionada (se guarda en sessionStorage)
+const SUPERADMIN_CHURCH_KEY = 'superadmin_selected_church';
+
+export function getSuperadminSelectedChurch() {
+  return sessionStorage.getItem(SUPERADMIN_CHURCH_KEY);
+}
+
+export function setSuperadminSelectedChurch(churchId) {
+  sessionStorage.setItem(SUPERADMIN_CHURCH_KEY, churchId);
+  _churchId = churchId; // actualizar caché
+}
 
 async function getMyChurchId() {
+  // Superadmin: usa la iglesia seleccionada en el selector
+  const selected = getSuperadminSelectedChurch();
+  if (selected) return selected;
+
   if (_churchId) return _churchId;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const { data, error } = await supabase
     .from('church_users')
-    .select('church_id')
+    .select('church_id, role')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .single();
@@ -30,8 +48,23 @@ async function getMyChurchId() {
     console.warn('[apiClient/crm] No se encontró church_id para este usuario.');
     return null;
   }
+  _role = data.role;
   _churchId = data.church_id;
   return _churchId;
+}
+
+export async function getMyRole() {
+  if (_role) return _role;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from('church_users')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single();
+  _role = data?.role ?? null;
+  return _role;
 }
 
 // Limpia la caché al hacer logout (llamar desde AuthContext)
@@ -39,6 +72,8 @@ export { getMyChurchId };
 
 export function clearChurchIdCache() {
   _churchId = null;
+  _role = null;
+  sessionStorage.removeItem(SUPERADMIN_CHURCH_KEY);
 }
 
 // ---------------------------------------------------------------------------
