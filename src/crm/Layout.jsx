@@ -60,12 +60,17 @@ export default function Layout({ children, currentPageName }) {
       }
       
       // Verificar si el usuario está en church_users
-      const { data: churchUser } = await supabase
+      // Usamos maybeSingle y priorizamos superadmin si hay múltiples filas
+      const { data: churchUsers } = await supabase
         .from('church_users')
         .select('role, is_active')
         .eq('user_id', session.user.id)
-        .eq('is_active', true)
-        .single();
+        .eq('is_active', true);
+      
+      const roleOrder = { superadmin: 0, admin: 1, user: 2 };
+      const bestChurchUser = (churchUsers || []).sort(
+        (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
+      )[0] ?? null;
       
       const u = {
         id: session.user.id,
@@ -74,7 +79,7 @@ export default function Layout({ children, currentPageName }) {
           session.user.user_metadata?.full_name ||
           session.user.user_metadata?.name ||
           session.user.email?.split("@")[0] || "",
-        role: churchUser?.role ?? "user",
+        role: bestChurchUser?.role ?? "user",
       };
       setUser(u);
 
