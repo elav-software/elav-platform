@@ -84,6 +84,13 @@ export default function PortalLogin() {
       if (error) throw error;
 
       if (data.user) {
+        // Superadmin: acceso directo sin verificar líder
+        const superadmin = await checkIsSuperadmin();
+        if (superadmin) {
+          redirect("/connect/portal/dashboard");
+          return;
+        }
+
         // Verificar si es líder aprobado
         const approved = await verifyApprovedLeader(data.user.email);
         
