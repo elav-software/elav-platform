@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 import { 
   ArrowLeft, 
   Users,
@@ -34,6 +34,14 @@ export default function PortalMiembros() {
       }
 
       const churchId = await getCurrentChurchId();
+      
+      // Superadmin bypass
+      const superadmin = await checkIsSuperadmin();
+      if (superadmin) {
+        setLeader({ id: null, nombre: 'Superadmin', apellido: '', email: session.user.email });
+        setLoading(false);
+        return;
+      }
       
       // Verificar líder aprobado — personas no tiene celula_id, se busca por email
       const { data: leaderData, error: leaderError } = await supabase

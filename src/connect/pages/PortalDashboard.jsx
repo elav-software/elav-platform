@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 import { 
   FileText, 
   BookOpen, 
@@ -54,6 +54,15 @@ export default function PortalDashboard() {
 
       const churchId = await getCurrentChurchId();
       const userEmail = session.user.email?.toLowerCase().trim();
+
+      // Superadmin bypass — acceso directo sin verificar persona
+      const superadmin = await checkIsSuperadmin();
+      if (superadmin) {
+        setLeader({ id: null, nombre: 'Superadmin', apellido: '', email: userEmail, grupo_celula: null });
+        await loadUnreadCount(churchId, session.user.id);
+        setLoading(false);
+        return;
+      }
       
       // Verificar líder aprobado (case-insensitive)
       const { data: leaderData, error } = await supabase

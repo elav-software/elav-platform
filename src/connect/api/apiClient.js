@@ -65,6 +65,20 @@ export async function getCurrentChurchId() {
   return getChurchId();
 }
 
+// Verifica si el usuario logueado es superadmin (para bypass en portal líderes)
+export async function checkIsSuperadmin() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from('church_users')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('role', 'superadmin')
+    .eq('is_active', true)
+    .maybeSingle();
+  return !!data;
+}
+
 // ---------------------------------------------------------------------------
 // Helper: parse sort string ('-field' = DESC)
 // ---------------------------------------------------------------------------

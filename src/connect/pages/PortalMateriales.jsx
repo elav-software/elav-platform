@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 import { 
   ArrowLeft, 
   FileText,
@@ -34,19 +34,23 @@ export default function PortalMateriales() {
 
       const churchId = await getCurrentChurchId();
       
-      // Verificar líder aprobado
-      const { data: leader } = await supabase
-        .from('personas')
-        .select('id')
-        .eq('church_id', churchId)
-        .ilike('email', session.user.email)
-        .eq('rol', 'Líder')
-        .eq('estado_aprobacion', 'aprobado')
-        .single();
+      // Superadmin bypass
+      const superadmin = await checkIsSuperadmin();
+      if (!superadmin) {
+        // Verificar líder aprobado
+        const { data: leader } = await supabase
+          .from('personas')
+          .select('id')
+          .eq('church_id', churchId)
+          .ilike('email', session.user.email)
+          .eq('rol', 'Líder')
+          .eq('estado_aprobacion', 'aprobado')
+          .single();
 
-      if (!leader) {
-        redirect("/connect/portal/login");
-        return;
+        if (!leader) {
+          redirect("/connect/portal/login");
+          return;
+        }
       }
 
       // Cargar materiales activos
