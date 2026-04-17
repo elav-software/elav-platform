@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 import { 
   ArrowLeft, 
   FileText,
@@ -34,19 +34,23 @@ export default function PortalMateriales() {
 
       const churchId = await getCurrentChurchId();
       
-      // Verificar líder aprobado
-      const { data: leader } = await supabase
-        .from('personas')
-        .select('id')
-        .eq('church_id', churchId)
-        .ilike('email', session.user.email)
-        .eq('rol', 'Líder')
-        .eq('estado_aprobacion', 'aprobado')
-        .single();
+      // Superadmin bypass
+      const superadmin = await checkIsSuperadmin();
+      if (!superadmin) {
+        // Verificar líder aprobado
+        const { data: leader } = await supabase
+          .from('personas')
+          .select('id')
+          .eq('church_id', churchId)
+          .ilike('email', session.user.email)
+          .eq('rol', 'Líder')
+          .eq('estado_aprobacion', 'aprobado')
+          .single();
 
-      if (!leader) {
-        redirect("/connect/portal/login");
-        return;
+        if (!leader) {
+          redirect("/connect/portal/login");
+          return;
+        }
       }
 
       // Cargar materiales activos
@@ -59,6 +63,16 @@ export default function PortalMateriales() {
 
       if (!error && materialsData) {
         setMaterials(materialsData);
+        // Marcar todos como vistos
+        if (materialsData.length > 0) {
+          const rows = materialsData.map(m => ({
+            user_id: session.user.id,
+            material_id: m.id
+          }));
+          await supabase
+            .from('leader_material_views')
+            .upsert(rows, { onConflict: 'user_id,material_id', ignoreDuplicates: true });
+        }
       }
       
     } catch (err) {
@@ -191,24 +205,29 @@ export default function PortalMateriales() {
                   )}
                   
                   <div className="flex gap-2">
-                    <a
-                      href={material.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Ver
-                    </a>
-                    {material.type !== 'link' && (
-                      <a
-                        href={material.url}
-                        download
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                        title="Descargar"
+                    {material.file_path ? (
+                      <button
+                        onClick={async () => {
+                          const { data } = await supabase.storage
+                            .from('materiales')
+                            .createSignedUrl(material.file_path, 60 * 60); // 1h
+                          if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
                       >
                         <Download className="w-4 h-4" />
-                      </a>
+                        Descargar
+                      </button>
+                    ) : (
+                      <a
+                        href={material.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                      Ver
+                    </a>
                     )}
                   </div>
                 </div>

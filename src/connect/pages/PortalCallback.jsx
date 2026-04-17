@@ -2,48 +2,64 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 
 export default function PortalCallback() {
   const [status, setStatus] = useState("Verificando credenciales...");
 
+  const redirect = (path) => { window.location.href = path; };
+
   useEffect(() => {
-    handleCallback();
-  }, []);
+    // Leer la URL ANTES de que Supabase la procese
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlType = hashParams.get('type') || queryParams.get('type');
 
-  const redirect = (path) => {
-    window.location.href = path;
-  };
-
-  const handleCallback = async () => {
-    try {
-      // Esperar a que Supabase procese el token del hash de la URL
-      const session = await new Promise((resolve) => {
-        supabase.auth.getSession().then(({ data }) => {
-          if (data.session) {
-            resolve(data.session);
-          } else {
-            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-              if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                subscription.unsubscribe();
-                resolve(session);
-              }
-            });
-            setTimeout(() => {
-              subscription.unsubscribe();
-              resolve(null);
-            }, 6000);
-          }
-        });
-      });
-
-      if (!session?.user) {
-        setStatus("No se pudo obtener la sesión. Redirigiendo...");
-        setTimeout(() => redirect("/connect/portal/login"), 2000);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // PASSWORD_RECOVERY = link de "Crear mi contraseña" en el email
+      if (event === 'PASSWORD_RECOVERY' || urlType === 'recovery' || urlType === 'invite') {
+        subscription.unsubscribe();
+        redirect("/connect/portal/set-password");
         return;
       }
 
+      if (event === 'SIGNED_IN' && session) {
+        subscription.unsubscribe();
+        verifyLeader(session);
+      }
+    });
+
+    // Disparar verificación de sesión existente (para login normal con Google)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && !urlType) {
+        subscription.unsubscribe();
+        verifyLeader(session);
+      }
+    });
+
+    // Timeout de seguridad
+    const timeout = setTimeout(() => {
+      subscription.unsubscribe();
+      setStatus("Tiempo de espera agotado. Redirigiendo...");
+      setTimeout(() => redirect("/connect/portal/login"), 2000);
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  const verifyLeader = async (session) => {
+    try {
       setStatus("Verificando permisos...");
+
+      // Superadmin bypass
+      const superadmin = await checkIsSuperadmin();
+      if (superadmin) {
+        redirect("/connect/portal/dashboard");
+        return;
+      }
 
       const churchId = await getCurrentChurchId();
 
@@ -73,9 +89,8 @@ export default function PortalCallback() {
 
       setStatus("¡Bienvenido/a! Redirigiendo...");
       redirect("/connect/portal/dashboard");
-
     } catch (err) {
-      console.error("Error en callback:", err);
+      console.error("Error verificando líder:", err);
       setStatus("Error en la autenticación. Redirigiendo...");
       setTimeout(() => redirect("/connect/portal/login"), 2000);
     }

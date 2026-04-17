@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "@crm/lib/router-compat";
 import { createPageUrl } from "@crm/utils";
 import { supabase } from "@crm/api/supabaseClient";
-import { clearChurchIdCache, getMyChurchId } from "@crm/api/apiClient";
+import { clearChurchIdCache, getMyChurchId, getMyRole, setSuperadminSelectedChurch, getSuperadminSelectedChurch } from "@crm/api/apiClient";
 import {
   LayoutDashboard, Users, UserPlus, Church, Calendar,
   HandHeart, DollarSign, BarChart3, MessageSquare, ClipboardList,
-  Menu, X, LogOut, User, Crown, UserCheck } from
+  Menu, X, LogOut, User, Crown, UserCheck, FolderOpen } from
 "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -24,12 +24,12 @@ const navItems = [
 { name: "Ministerios", icon: Church, page: "Ministries", adminOnly: false },
 { name: "Eventos", icon: Calendar, page: "Events", adminOnly: false },
 { name: "Peticiones de Oración", icon: HandHeart, page: "PrayerRequests", adminOnly: false },
-{ name: "Donaciones", icon: DollarSign, page: "Donations", adminOnly: false },
+{ name: "Tesorería", icon: DollarSign, page: "Donations", adminOnly: false },
 { name: "Métricas", icon: BarChart3, page: "Demographics", adminOnly: false },
 { name: "Comunicación", icon: MessageSquare, page: "Communication", adminOnly: false },
 { name: "Líderes y Células", icon: Crown, page: "Leaders", adminOnly: false },
 { name: "Reportes de Células", icon: ClipboardList, page: "CellSubmissions", adminOnly: false },
-{ name: "Encuestas", icon: ClipboardList, page: "Surveys", adminOnly: false },
+{ name: "Materiales Líderes", icon: FolderOpen, page: "Materials", adminOnly: true },
 
 ];
 
@@ -37,45 +37,91 @@ const navItems = [
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [loaded, setLoaded] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [pendingLeadersCount, setPendingLeadersCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [churches, setChurches] = useState([]);
+  const [selectedChurch, setSelectedChurch] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
+  const SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 horas
+
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) return;
-      
-      // Verificar si el usuario está en church_users
-      const { data: churchUser } = await supabase
-        .from('church_users')
-        .select('role, is_active')
-        .eq('user_id', session.user.id)
-        .eq('is_active', true)
-        .single();
-      
-      const u = {
-        id: session.user.id,
-        email: session.user.email,
-        full_name:
-          session.user.user_metadata?.full_name ||
-          session.user.user_metadata?.name ||
-          session.user.email?.split("@")[0] || "",
-        role: churchUser?.role ?? "user",
-      };
-      setUser(u);
-      if (u.role !== "admin") {
-        setAccessDenied(true);
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          window.location.href = '/crm/login';
+          return;
+        }
+
+        // Usar session.user directamente — ya tiene la metadata del JWT
+        // getUser() hace una llamada de red extra innecesaria que puede colgar
+        const activeUser = session.user;
+
+        // Verificar church_users
+        const { data: churchUsers } = await supabase
+          .from('church_users')
+          .select('role, is_active')
+          .eq('user_id', activeUser.id)
+          .eq('is_active', true);
+
+        const roleOrder = { superadmin: 0, admin: 1, user: 2 };
+        const bestChurchUser = (churchUsers || []).sort(
+          (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
+        )[0] ?? null;
+
+        // JWT user_metadata tiene prioridad
+        const metaRole = activeUser.user_metadata?.role;
+        const resolvedRole = metaRole === 'superadmin'
+          ? 'superadmin'
+          : (bestChurchUser?.role ?? 'user');
+
+        const u = {
+          id: activeUser.id,
+          email: activeUser.email,
+          full_name:
+            activeUser.user_metadata?.full_name ||
+            activeUser.user_metadata?.name ||
+            activeUser.email?.split('@')[0] || '',
+          role: resolvedRole,
+        };
+        setUser(u);
+
+        if (u.role === 'superadmin') {
+          const { data: allChurches } = await supabase
+            .from('churches')
+            .select('id, name')
+            .eq('is_active', true)
+            .order('name');
+          setChurches(allChurches || []);
+          const saved = getSuperadminSelectedChurch();
+          if (saved && allChurches?.find(c => c.id === saved)) {
+            setSelectedChurch(saved);
+          } else if (allChurches?.length) {
+            const first = allChurches[0].id;
+            setSuperadminSelectedChurch(first);
+            setSelectedChurch(first);
+          }
+          loadPendingLeaders();
+          loadPendingReports();
+        } else if (u.role !== 'admin') {
+          setAccessDenied(true);
+        } else {
+          loadPendingLeaders();
+          loadPendingReports();
+        }
+        setLoaded(true);
+      } catch (err) {
+        console.error('Layout init error:', err);
+        supabase.auth.signOut(); // fire-and-forget — no await para que no cuele
+        window.location.href = '/crm/login';
       }
-      
-      // Cargar contadores de pendientes
-      if (u.role === "admin") {
-        loadPendingLeaders();
-        loadPendingReports();
-      }
-    }).catch(() => {});
-  }, []);  // run once on mount — session doesn’t change while navigating
+    };
+    init();
+  }, []);
   
   const loadPendingLeaders = async () => {
     try {
@@ -107,11 +153,26 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
+  const handleChurchChange = (churchId) => {
+    setSuperadminSelectedChurch(churchId);
+    setSelectedChurch(churchId);
+    // Recargar la página para que todos los componentes tomen el nuevo church_id
+    window.location.reload();
+  };
+
   const handleLogout = async () => {
     clearChurchIdCache();
     await supabase.auth.signOut();
     window.location.href = "/crm/login";
   };
+
+  if (!loaded && !accessDenied) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (accessDenied) {
     return (
@@ -133,8 +194,8 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // Only show adminOnly items to admins
-  const visibleNavItems = user?.role === 'admin'
+  // Only show adminOnly items to admins/superadmin
+  const visibleNavItems = (user?.role === 'admin' || user?.role === 'superadmin')
     ? navItems
     : navItems.filter(item => !item.adminOnly);
 
@@ -187,6 +248,22 @@ export default function Layout({ children, currentPageName }) {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Selector de iglesia para superadmin */}
+            {user?.role === 'superadmin' && churches.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-slate-400 mb-1.5">Viendo iglesia:</p>
+                <select
+                  value={selectedChurch || ''}
+                  onChange={e => handleChurchChange(e.target.value)}
+                  className="w-full text-xs bg-slate-700 text-white border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-400"
+                >
+                  {churches.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
@@ -217,7 +294,7 @@ export default function Layout({ children, currentPageName }) {
             })}
             
             {/* Aprobación de Líderes (con badge) */}
-            {user?.role === "admin" && (
+            {(user?.role === "admin" || user?.role === 'superadmin') && (
               <Link
                 to="/crm/leaders/approvals"
                 onClick={() => setSidebarOpen(false)}
@@ -248,11 +325,13 @@ export default function Layout({ children, currentPageName }) {
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-white truncate">{user?.full_name || "Usuario"}</p>
                   <span className={`text-xs px-1.5 py-0.5 rounded font-semibold flex-shrink-0 ${
-                    user?.role === "admin"
+                    user?.role === "superadmin"
+                      ? "bg-purple-500/30 text-purple-300"
+                      : user?.role === "admin"
                       ? "bg-amber-500/20 text-amber-300"
                       : "bg-slate-500/30 text-slate-300"
                   }`}>
-                    {user?.role === "admin" ? "Admin" : "User"}
+                    {user?.role === "superadmin" ? "Superadmin" : user?.role === "admin" ? "Admin" : "User"}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 truncate">{user?.email || ""}</p>

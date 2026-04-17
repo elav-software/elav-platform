@@ -10,24 +10,40 @@ export default function Welcome() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        // Usar session.user directamente — ya tiene metadata del JWT
+        const u = session.user;
+
+        // Superadmin: acceso directo desde JWT
+        if (u.user_metadata?.role === 'superadmin') {
+          window.location.href = "/crm/dashboard";
+          return;
+        }
         // Verificar si el usuario está en church_users con rol admin
         const { data: churchUser } = await supabase
           .from('church_users')
           .select('role, is_active')
-          .eq('user_id', session.user.id)
+          .eq('user_id', u.id)
           .eq('is_active', true)
-          .single();
-        
-        if (churchUser?.role === 'admin') {
+          .maybeSingle();
+
+        if (churchUser?.role === 'admin' || churchUser?.role === 'superadmin') {
           window.location.href = "/crm/dashboard";
         } else {
           // Sesión activa pero sin permisos — cerrar sesión
-          supabase.auth.signOut();
+          supabase.auth.signOut(); // fire-and-forget
         }
+      } catch {
+        // Si falla la verificación, simplemente mostrar el form
+      } finally {
+        setChecking(false);
       }
-    }).finally(() => setChecking(false));
+    };
+    checkSession();
   }, []);
 
   const handleLogin = async (e) => {
@@ -44,23 +60,29 @@ export default function Welcome() {
       return;
     }
     
+    // Superadmin: acceso directo desde JWT (no requiere DB)
+    if (data.user.user_metadata?.role === 'superadmin') {
+      window.location.href = "/crm/dashboard";
+      return;
+    }
+
     // Verificar si el usuario está en church_users con rol admin
     const { data: churchUser, error: churchError } = await supabase
       .from('church_users')
       .select('role, is_active')
       .eq('user_id', data.user.id)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
     
-    if (churchError) {
-      await supabase.auth.signOut();
+    if (churchError || !churchUser) {
+      supabase.auth.signOut(); // fire-and-forget
       setError("Acceso denegado. Contactá al administrador.");
       setLoading(false);
       return;
     }
     
-    if (churchUser?.role !== 'admin') {
-      await supabase.auth.signOut();
+    if (churchUser?.role !== 'admin' && churchUser?.role !== 'superadmin') {
+      supabase.auth.signOut(); // fire-and-forget
       setError("Tu cuenta no tiene permisos para acceder al CRM.");
       setLoading(false);
       return;
