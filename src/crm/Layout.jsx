@@ -51,8 +51,12 @@ export default function Layout({ children, currentPageName }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user) return;
 
+      // Forzar refresh del JWT para obtener user_metadata actualizado
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      const activeSession = refreshed?.session ?? session;
+
       // Verificar expiración de 4hs por código
-      const loginAt = new Date(session.user.last_sign_in_at).getTime();
+      const loginAt = new Date(activeSession.user.last_sign_in_at).getTime();
       if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
         await supabase.auth.signOut();
         window.location.href = '/crm/login';
@@ -64,7 +68,7 @@ export default function Layout({ children, currentPageName }) {
       const { data: churchUsers } = await supabase
         .from('church_users')
         .select('role, is_active')
-        .eq('user_id', session.user.id)
+        .eq('user_id', activeSession.user.id)
         .eq('is_active', true);
       
       const roleOrder = { superadmin: 0, admin: 1, user: 2 };
@@ -73,18 +77,18 @@ export default function Layout({ children, currentPageName }) {
       )[0] ?? null;
 
       // JWT user_metadata tiene prioridad (no depende de RLS)
-      const metaRole = session.user.user_metadata?.role;
+      const metaRole = activeSession.user.user_metadata?.role;
       const resolvedRole = metaRole === 'superadmin'
         ? 'superadmin'
         : (bestChurchUser?.role ?? 'user');
       
       const u = {
-        id: session.user.id,
-        email: session.user.email,
+        id: activeSession.user.id,
+        email: activeSession.user.email,
         full_name:
-          session.user.user_metadata?.full_name ||
-          session.user.user_metadata?.name ||
-          session.user.email?.split("@")[0] || "",
+          activeSession.user.user_metadata?.full_name ||
+          activeSession.user.user_metadata?.name ||
+          activeSession.user.email?.split("@")[0] || "",
         role: resolvedRole,
       };
       setUser(u);
