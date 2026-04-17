@@ -35,7 +35,7 @@ export default function PortalLogin() {
         if (approved) {
           redirect("/connect/portal/dashboard");
         } else {
-          await supabase.auth.signOut();
+          supabase.auth.signOut(); // fire-and-forget
         }
       }
     } catch (err) {
@@ -98,7 +98,7 @@ export default function PortalLogin() {
           redirect("/connect/portal/dashboard");
         } else {
           setError("Tu cuenta aún no está aprobada como líder. Contactá al pastor.");
-          await supabase.auth.signOut();
+          supabase.auth.signOut(); // fire-and-forget
         }
       }
     } catch (err) {
