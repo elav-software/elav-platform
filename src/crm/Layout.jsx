@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "@crm/lib/router-compat";
 import { createPageUrl } from "@crm/utils";
 import { supabase } from "@crm/api/supabaseClient";
-import { clearChurchIdCache, getMyChurchId } from "@crm/api/apiClient";
+import { clearChurchIdCache, getMyChurchId, getMyRole, setSuperadminSelectedChurch, getSuperadminSelectedChurch } from "@crm/api/apiClient";
 import {
   LayoutDashboard, Users, UserPlus, Church, Calendar,
   HandHeart, DollarSign, BarChart3, MessageSquare, ClipboardList,
@@ -40,6 +40,8 @@ export default function Layout({ children, currentPageName }) {
   const [accessDenied, setAccessDenied] = useState(false);
   const [pendingLeadersCount, setPendingLeadersCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [churches, setChurches] = useState([]);
+  const [selectedChurch, setSelectedChurch] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -75,12 +77,29 @@ export default function Layout({ children, currentPageName }) {
         role: churchUser?.role ?? "user",
       };
       setUser(u);
-      if (u.role !== "admin") {
+
+      if (u.role === 'superadmin') {
+        // Cargar todas las iglesias disponibles
+        const { data: allChurches } = await supabase
+          .from('churches')
+          .select('id, name')
+          .eq('is_active', true)
+          .order('name');
+        setChurches(allChurches || []);
+        // Restaurar iglesia seleccionada de sesión anterior
+        const saved = getSuperadminSelectedChurch();
+        if (saved && allChurches?.find(c => c.id === saved)) {
+          setSelectedChurch(saved);
+        } else if (allChurches?.length) {
+          const first = allChurches[0].id;
+          setSuperadminSelectedChurch(first);
+          setSelectedChurch(first);
+        }
+        loadPendingLeaders();
+        loadPendingReports();
+      } else if (u.role !== 'admin') {
         setAccessDenied(true);
-      }
-      
-      // Cargar contadores de pendientes
-      if (u.role === "admin") {
+      } else {
         loadPendingLeaders();
         loadPendingReports();
       }
@@ -117,6 +136,13 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
+  const handleChurchChange = (churchId) => {
+    setSuperadminSelectedChurch(churchId);
+    setSelectedChurch(churchId);
+    // Recargar la página para que todos los componentes tomen el nuevo church_id
+    window.location.reload();
+  };
+
   const handleLogout = async () => {
     clearChurchIdCache();
     await supabase.auth.signOut();
@@ -143,8 +169,8 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // Only show adminOnly items to admins
-  const visibleNavItems = user?.role === 'admin'
+  // Only show adminOnly items to admins/superadmin
+  const visibleNavItems = (user?.role === 'admin' || user?.role === 'superadmin')
     ? navItems
     : navItems.filter(item => !item.adminOnly);
 
@@ -197,6 +223,22 @@ export default function Layout({ children, currentPageName }) {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Selector de iglesia para superadmin */}
+            {user?.role === 'superadmin' && churches.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-slate-400 mb-1.5">Viendo iglesia:</p>
+                <select
+                  value={selectedChurch || ''}
+                  onChange={e => handleChurchChange(e.target.value)}
+                  className="w-full text-xs bg-slate-700 text-white border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-400"
+                >
+                  {churches.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
@@ -227,7 +269,7 @@ export default function Layout({ children, currentPageName }) {
             })}
             
             {/* Aprobación de Líderes (con badge) */}
-            {user?.role === "admin" && (
+            {(user?.role === "admin" || user?.role === 'superadmin') && (
               <Link
                 to="/crm/leaders/approvals"
                 onClick={() => setSidebarOpen(false)}
@@ -258,11 +300,13 @@ export default function Layout({ children, currentPageName }) {
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-white truncate">{user?.full_name || "Usuario"}</p>
                   <span className={`text-xs px-1.5 py-0.5 rounded font-semibold flex-shrink-0 ${
-                    user?.role === "admin"
+                    user?.role === "superadmin"
+                      ? "bg-purple-500/30 text-purple-300"
+                      : user?.role === "admin"
                       ? "bg-amber-500/20 text-amber-300"
                       : "bg-slate-500/30 text-slate-300"
                   }`}>
-                    {user?.role === "admin" ? "Admin" : "User"}
+                    {user?.role === "superadmin" ? "Superadmin" : user?.role === "admin" ? "Admin" : "User"}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 truncate">{user?.email || ""}</p>
