@@ -71,6 +71,12 @@ export default function Layout({ children, currentPageName }) {
       const bestChurchUser = (churchUsers || []).sort(
         (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
       )[0] ?? null;
+
+      // JWT user_metadata tiene prioridad (no depende de RLS)
+      const metaRole = session.user.user_metadata?.role;
+      const resolvedRole = metaRole === 'superadmin'
+        ? 'superadmin'
+        : (bestChurchUser?.role ?? 'user');
       
       const u = {
         id: session.user.id,
@@ -79,7 +85,7 @@ export default function Layout({ children, currentPageName }) {
           session.user.user_metadata?.full_name ||
           session.user.user_metadata?.name ||
           session.user.email?.split("@")[0] || "",
-        role: bestChurchUser?.role ?? "user",
+        role: resolvedRole,
       };
       setUser(u);
 

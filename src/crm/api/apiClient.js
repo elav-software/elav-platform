@@ -55,14 +55,20 @@ async function getMyChurchId() {
 
 export async function getMyRole() {
   if (_role) return _role;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Primero intenta leer desde el JWT (no requiere DB ni RLS)
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return null;
+  if (session.user.user_metadata?.role === 'superadmin') {
+    _role = 'superadmin';
+    return _role;
+  }
+  // Fallback: consultar church_users
   const { data } = await supabase
     .from('church_users')
     .select('role')
-    .eq('user_id', user.id)
+    .eq('user_id', session.user.id)
     .eq('is_active', true)
-    .single();
+    .maybeSingle();
   _role = data?.role ?? null;
   return _role;
 }
