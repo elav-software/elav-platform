@@ -48,78 +48,84 @@ export default function Layout({ children, currentPageName }) {
   const SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 horas
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) return;
-
-      // Forzar refresh del JWT para obtener user_metadata actualizado
-      const { data: refreshed } = await supabase.auth.refreshSession();
-      const activeSession = refreshed?.session ?? session;
-
-      // Verificar expiración de 4hs por código
-      const loginAt = new Date(activeSession.user.last_sign_in_at).getTime();
-      if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
-        await supabase.auth.signOut();
-        window.location.href = '/crm/login';
-        return;
-      }
-      
-      // Verificar si el usuario está en church_users
-      // Usamos maybeSingle y priorizamos superadmin si hay múltiples filas
-      const { data: churchUsers } = await supabase
-        .from('church_users')
-        .select('role, is_active')
-        .eq('user_id', activeSession.user.id)
-        .eq('is_active', true);
-      
-      const roleOrder = { superadmin: 0, admin: 1, user: 2 };
-      const bestChurchUser = (churchUsers || []).sort(
-        (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
-      )[0] ?? null;
-
-      // JWT user_metadata tiene prioridad (no depende de RLS)
-      const metaRole = activeSession.user.user_metadata?.role;
-      const resolvedRole = metaRole === 'superadmin'
-        ? 'superadmin'
-        : (bestChurchUser?.role ?? 'user');
-      
-      const u = {
-        id: activeSession.user.id,
-        email: activeSession.user.email,
-        full_name:
-          activeSession.user.user_metadata?.full_name ||
-          activeSession.user.user_metadata?.name ||
-          activeSession.user.email?.split("@")[0] || "",
-        role: resolvedRole,
-      };
-      setUser(u);
-
-      if (u.role === 'superadmin') {
-        // Cargar todas las iglesias disponibles
-        const { data: allChurches } = await supabase
-          .from('churches')
-          .select('id, name')
-          .eq('is_active', true)
-          .order('name');
-        setChurches(allChurches || []);
-        // Restaurar iglesia seleccionada de sesión anterior
-        const saved = getSuperadminSelectedChurch();
-        if (saved && allChurches?.find(c => c.id === saved)) {
-          setSelectedChurch(saved);
-        } else if (allChurches?.length) {
-          const first = allChurches[0].id;
-          setSuperadminSelectedChurch(first);
-          setSelectedChurch(first);
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          window.location.href = '/crm/login';
+          return;
         }
-        loadPendingLeaders();
-        loadPendingReports();
-      } else if (u.role !== 'admin') {
-        setAccessDenied(true);
-      } else {
-        loadPendingLeaders();
-        loadPendingReports();
+
+        // Verificar expiracion de 4hs
+        const loginAt = new Date(session.user.last_sign_in_at).getTime();
+        if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
+          await supabase.auth.signOut();
+          window.location.href = '/crm/login';
+          return;
+        }
+
+        // getUser() siempre trae user_metadata fresco desde Supabase
+        const { data: { user: freshUser } } = await supabase.auth.getUser();
+        const activeUser = freshUser ?? session.user;
+
+        // Verificar church_users
+        const { data: churchUsers } = await supabase
+          .from('church_users')
+          .select('role, is_active')
+          .eq('user_id', activeUser.id)
+          .eq('is_active', true);
+
+        const roleOrder = { superadmin: 0, admin: 1, user: 2 };
+        const bestChurchUser = (churchUsers || []).sort(
+          (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
+        )[0] ?? null;
+
+        // JWT user_metadata tiene prioridad
+        const metaRole = activeUser.user_metadata?.role;
+        const resolvedRole = metaRole === 'superadmin'
+          ? 'superadmin'
+          : (bestChurchUser?.role ?? 'user');
+
+        const u = {
+          id: activeUser.id,
+          email: activeUser.email,
+          full_name:
+            activeUser.user_metadata?.full_name ||
+            activeUser.user_metadata?.name ||
+            activeUser.email?.split('@')[0] || '',
+          role: resolvedRole,
+        };
+        setUser(u);
+
+        if (u.role === 'superadmin') {
+          const { data: allChurches } = await supabase
+            .from('churches')
+            .select('id, name')
+            .eq('is_active', true)
+            .order('name');
+          setChurches(allChurches || []);
+          const saved = getSuperadminSelectedChurch();
+          if (saved && allChurches?.find(c => c.id === saved)) {
+            setSelectedChurch(saved);
+          } else if (allChurches?.length) {
+            const first = allChurches[0].id;
+            setSuperadminSelectedChurch(first);
+            setSelectedChurch(first);
+          }
+          loadPendingLeaders();
+          loadPendingReports();
+        } else if (u.role !== 'admin') {
+          setAccessDenied(true);
+        } else {
+          loadPendingLeaders();
+          loadPendingReports();
+        }
+      } catch {
+        window.location.href = '/crm/login';
       }
-    }).catch(() => {});
-  }, []);  // run once on mount — session doesn’t change while navigating
+    };
+    init();
+  }, []);
   
   const loadPendingLeaders = async () => {
     try {
