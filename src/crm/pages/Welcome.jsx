@@ -12,15 +12,20 @@ export default function Welcome() {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        // Superadmin: acceso directo desde JWT (no requiere DB)
+        if (session.user.user_metadata?.role === 'superadmin') {
+          window.location.href = "/crm/dashboard";
+          return;
+        }
         // Verificar si el usuario está en church_users con rol admin
         const { data: churchUser } = await supabase
           .from('church_users')
           .select('role, is_active')
           .eq('user_id', session.user.id)
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
         
-        if (churchUser?.role === 'admin') {
+        if (churchUser?.role === 'admin' || churchUser?.role === 'superadmin') {
           window.location.href = "/crm/dashboard";
         } else {
           // Sesión activa pero sin permisos — cerrar sesión
@@ -44,22 +49,28 @@ export default function Welcome() {
       return;
     }
     
+    // Superadmin: acceso directo desde JWT (no requiere DB)
+    if (data.user.user_metadata?.role === 'superadmin') {
+      window.location.href = "/crm/dashboard";
+      return;
+    }
+
     // Verificar si el usuario está en church_users con rol admin
     const { data: churchUser, error: churchError } = await supabase
       .from('church_users')
       .select('role, is_active')
       .eq('user_id', data.user.id)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
     
-    if (churchError) {
+    if (churchError || !churchUser) {
       await supabase.auth.signOut();
       setError("Acceso denegado. Contactá al administrador.");
       setLoading(false);
       return;
     }
     
-    if (churchUser?.role !== 'admin') {
+    if (churchUser?.role !== 'admin' && churchUser?.role !== 'superadmin') {
       await supabase.auth.signOut();
       setError("Tu cuenta no tiene permisos para acceder al CRM.");
       setLoading(false);
