@@ -41,14 +41,21 @@ export default function LeaderApprovals() {
         return;
       }
 
+      // Superadmin: acceso directo desde JWT (no requiere DB)
+      if (session.user.user_metadata?.role === 'superadmin') {
+        setCurrentUser(session.user);
+        loadLeaders();
+        return;
+      }
+
       const { data: churchUser } = await supabase
         .from('church_users')
         .select('role, is_active, user_id')
         .eq('user_id', session.user.id)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
-      if (!churchUser || churchUser.role !== 'admin') {
+      if (!churchUser || (churchUser.role !== 'admin' && churchUser.role !== 'superadmin')) {
         toast.error("No tenés permisos de administrador");
         window.location.href = "/crm/dashboard";
         return;
