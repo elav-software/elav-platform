@@ -15,9 +15,8 @@ export default function Welcome() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
-        // getUser() trae metadata fresca (no usa cache)
-        const { data: { user: freshUser } } = await supabase.auth.getUser();
-        const u = freshUser ?? session.user;
+        // Usar session.user directamente — ya tiene metadata del JWT
+        const u = session.user;
 
         // Superadmin: acceso directo desde JWT
         if (u.user_metadata?.role === 'superadmin') {
