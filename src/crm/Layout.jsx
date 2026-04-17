@@ -37,6 +37,7 @@ const navItems = [
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [loaded, setLoaded] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [pendingLeadersCount, setPendingLeadersCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
@@ -56,9 +57,9 @@ export default function Layout({ children, currentPageName }) {
           return;
         }
 
-        // getUser() siempre trae user_metadata fresco desde Supabase
-        const { data: { user: freshUser } } = await supabase.auth.getUser();
-        const activeUser = freshUser ?? session.user;
+        // Usar session.user directamente — ya tiene la metadata del JWT
+        // getUser() hace una llamada de red extra innecesaria que puede colgar
+        const activeUser = session.user;
 
         // Verificar church_users
         const { data: churchUsers } = await supabase
@@ -112,6 +113,7 @@ export default function Layout({ children, currentPageName }) {
           loadPendingLeaders();
           loadPendingReports();
         }
+        setLoaded(true);
       } catch (err) {
         console.error('Layout init error:', err);
         await supabase.auth.signOut();
@@ -163,6 +165,14 @@ export default function Layout({ children, currentPageName }) {
     await supabase.auth.signOut();
     window.location.href = "/crm/login";
   };
+
+  if (!loaded && !accessDenied) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (accessDenied) {
     return (

@@ -67,12 +67,14 @@ export async function getCurrentChurchId() {
 
 // Verifica si el usuario logueado es superadmin (para bypass en portal líderes)
 export async function checkIsSuperadmin() {
-  // Primero intenta leer desde el JWT (no requiere DB ni RLS)
+  // Usar getSession() — no hace llamada de red extra, usa el JWT local
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return false;
+
+  // Primero: metadata del JWT (sin DB ni RLS)
   if (session.user.user_metadata?.role === 'superadmin') return true;
 
-  // Fallback: consultar church_users (requiere RLS configurada)
+  // Fallback: consultar church_users
   const { data } = await supabase
     .from('church_users')
     .select('role')

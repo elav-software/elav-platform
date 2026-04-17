@@ -55,7 +55,7 @@ async function getMyChurchId() {
 
 export async function getMyRole() {
   if (_role) return _role;
-  // Primero intenta leer desde el JWT (no requiere DB ni RLS)
+  // Usar getSession() — no hace llamada de red extra
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return null;
   if (session.user.user_metadata?.role === 'superadmin') {
