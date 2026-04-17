@@ -56,14 +56,6 @@ export default function Layout({ children, currentPageName }) {
           return;
         }
 
-        // Verificar expiracion de 4hs
-        const loginAt = new Date(session.user.last_sign_in_at).getTime();
-        if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
-          await supabase.auth.signOut();
-          window.location.href = '/crm/login';
-          return;
-        }
-
         // getUser() siempre trae user_metadata fresco desde Supabase
         const { data: { user: freshUser } } = await supabase.auth.getUser();
         const activeUser = freshUser ?? session.user;
@@ -120,7 +112,9 @@ export default function Layout({ children, currentPageName }) {
           loadPendingLeaders();
           loadPendingReports();
         }
-      } catch {
+      } catch (err) {
+        console.error('Layout init error:', err);
+        await supabase.auth.signOut();
         window.location.href = '/crm/login';
       }
     };

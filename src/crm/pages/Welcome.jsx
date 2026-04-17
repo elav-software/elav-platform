@@ -10,10 +10,17 @@ export default function Welcome() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        // Superadmin: acceso directo desde JWT (no requiere DB)
-        if (session.user.user_metadata?.role === 'superadmin') {
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        // getUser() trae metadata fresca (no usa cache)
+        const { data: { user: freshUser } } = await supabase.auth.getUser();
+        const u = freshUser ?? session.user;
+
+        // Superadmin: acceso directo desde JWT
+        if (u.user_metadata?.role === 'superadmin') {
           window.location.href = "/crm/dashboard";
           return;
         }
@@ -21,18 +28,23 @@ export default function Welcome() {
         const { data: churchUser } = await supabase
           .from('church_users')
           .select('role, is_active')
-          .eq('user_id', session.user.id)
+          .eq('user_id', u.id)
           .eq('is_active', true)
           .maybeSingle();
-        
+
         if (churchUser?.role === 'admin' || churchUser?.role === 'superadmin') {
           window.location.href = "/crm/dashboard";
         } else {
           // Sesión activa pero sin permisos — cerrar sesión
-          supabase.auth.signOut();
+          await supabase.auth.signOut();
         }
+      } catch {
+        // Si falla la verificación, simplemente mostrar el form
+      } finally {
+        setChecking(false);
       }
-    }).finally(() => setChecking(false));
+    };
+    checkSession();
   }, []);
 
   const handleLogin = async (e) => {
