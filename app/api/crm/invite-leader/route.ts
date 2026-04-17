@@ -42,22 +42,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
     }
 
-    // Verificar si el usuario ya existe en Supabase Auth
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const alreadyExists = existingUsers?.users?.some(
-      (u) => u.email?.toLowerCase() === email.toLowerCase()
-    );
-
-    if (alreadyExists) {
-      // Ya tiene cuenta → mandar reset de contraseña con el cliente público
-      const { error: resetError } = await supabasePublic.auth.resetPasswordForEmail(email, {
-        redirectTo: `${redirectBase}/connect/portal/set-password`,
-      });
-      if (resetError) throw resetError;
-      return NextResponse.json({ success: true, resent: true });
-    }
-
-    // Invitar al usuario (manda email con link para setear contraseña)
+    // Intentar invitar directamente. Si ya existe, caer en reset de contraseña.
     const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: `${redirectBase}/connect/portal/callback`,
       data: {
@@ -65,7 +50,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (inviteError) throw inviteError;
+    if (inviteError) {
+      // "User already registered" → mandar reset de contraseña en su lugar
+      const alreadyExists =
+        inviteError.message?.toLowerCase().includes("already") ||
+        inviteError.message?.toLowerCase().includes("registered") ||
+        (inviteError as { status?: number }).status === 422;
+
+      if (!alreadyExists) throw inviteError;
+
+      const { error: resetError } = await supabasePublic.auth.resetPasswordForEmail(email, {
+        redirectTo: `${redirectBase}/connect/portal/set-password`,
+      });
+      if (resetError) throw resetError;
+      return NextResponse.json({ success: true, resent: true });
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
