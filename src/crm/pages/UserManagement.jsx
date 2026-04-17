@@ -27,24 +27,30 @@ export default function UserManagement() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) { setLoading(false); return; }
-      const u = {
-        id: session.user.id,
-        email: session.user.email,
-        role: session.user.user_metadata?.role ?? "user",
-      };
-      setCurrentUser(u);
-      // Cargar usuarios si es admin o superadmin
-      const { data: churchUser } = await supabase
-        .from('church_users')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('is_active', true)
-        .single();
-      if (churchUser?.role === 'admin' || churchUser?.role === 'superadmin') loadUsers();
-      else setLoading(false);
-    }).catch(() => setLoading(false));
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) { setLoading(false); return; }
+        const u = {
+          id: session.user.id,
+          email: session.user.email,
+          role: session.user.user_metadata?.role ?? "user",
+        };
+        setCurrentUser(u);
+        // Cargar usuarios si es admin o superadmin
+        const { data: churchUser } = await supabase
+          .from('church_users')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('is_active', true)
+          .single();
+        if (churchUser?.role === 'admin' || churchUser?.role === 'superadmin') loadUsers();
+        else setLoading(false);
+      } catch {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
   const loadUsers = async () => {
