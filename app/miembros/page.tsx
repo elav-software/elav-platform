@@ -59,12 +59,21 @@ type FormData = {
   barrio_zona: string; ocupacion: string; lider_id: string;
   bautizado: string; fue_encuentro: string; conyuge: string; hijos: string;
   foto_url: string;
+  area_servicio_actual: string[];
 };
+
+const AREAS_SERVICIO = [
+  "Consolidación", "Vasos de barro", "Coro Kids", "Alabanza", "Expresión",
+  "Intercesión", "CFC Niños", "Medios", "Social media", "Sonido", "Luces",
+  "Pantalla", "Llamados a la escena", "Servicio Especial", "Seguridad",
+  "Casa en Orden", "Asesoramiento de Imagen", "Primeros Auxilios", "Embajadores de Alegría"
+];
 
 const INITIAL_FORM: FormData = {
   nombre: "", apellido: "", telefono: "", direccion: "", fecha_nacimiento: "",
   genero: "", estado_civil: "", barrio_zona: "", ocupacion: "", lider_id: "",
   bautizado: "", fue_encuentro: "", conyuge: "", hijos: "", foto_url: "",
+  area_servicio_actual: [],
 };
 
 const STEPS = ["Datos Personales", "Iglesia y Líder", "Familia"];
@@ -86,6 +95,15 @@ export default function MiembrosPage() {
     }
     setFotoFile(file);
     setFotoPreview(URL.createObjectURL(file));
+  };
+
+  const handleCheckboxArea = (value: string) => {
+    setForm(prev => ({
+      ...prev,
+      area_servicio_actual: prev.area_servicio_actual.includes(value)
+        ? prev.area_servicio_actual.filter(v => v !== value)
+        : [...prev.area_servicio_actual, value]
+    }));
   };
 
   useEffect(() => {
@@ -177,6 +195,7 @@ export default function MiembrosPage() {
       rol: "Miembro",
       lider_id: form.lider_id,
       foto_url: fotoUrl || null,
+      area_servicio_actual: form.area_servicio_actual.length > 0 ? form.area_servicio_actual.join(", ") : null,
       ...(churchId ? { church_id: churchId } : {}),
     };
 
@@ -381,6 +400,28 @@ export default function MiembrosPage() {
               {lideres.length === 0 && (
                 <p className="text-sm text-slate-500 mt-2 italic">Cargando líderes disponibles...</p>
               )}
+            </div>
+
+            {sectionTitle("¿Servís en algún área?")}
+            <p className="text-sm text-slate-500 mb-3">Opcional. Podés seleccionar una o más áreas.</p>
+            <div className="flex flex-wrap gap-2">
+              {AREAS_SERVICIO.map(area => {
+                const isSelected = form.area_servicio_actual.includes(area);
+                return (
+                  <button
+                    key={area}
+                    type="button"
+                    onClick={() => handleCheckboxArea(area)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                      isSelected
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600"
+                    }`}
+                  >
+                    {isSelected && <span className="mr-1">✓</span>}{area}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
