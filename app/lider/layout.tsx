@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Censo Lideres | CFC",
+  title: "Registro de Líderes CFC",
 };
 
 export default function LiderLayout({ children }: { children: React.ReactNode }) {

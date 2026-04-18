@@ -14,7 +14,8 @@ import {
   Bell,
   UserPlus,
   CheckCircle,
-  ArrowLeft
+  ArrowLeft,
+  ShieldCheck
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -163,6 +164,142 @@ function ConsolidacionView({ leader, churchId, onBack }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Gestión de accesos de la célula (vista del líder)
+// ─────────────────────────────────────────────────────────────────────────────
+function CelularAccessView({ leader, onBack }) {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [invitingId, setInvitingId] = useState(null);
+  const [invitedIds, setInvitedIds] = useState(new Set());
+  const [errors, setErrors] = useState({});
+
+  const PORTAL_AREAS_LIST = Object.keys(AREA_PORTAL_SECTIONS);
+
+  useEffect(() => { loadMembers(); }, []);
+
+  const loadMembers = async () => {
+    try {
+      const { data } = await supabase
+        .from('personas')
+        .select('id, nombre, apellido, email, area_servicio_actual')
+        .eq('lider_id', leader.id)
+        .not('area_servicio_actual', 'is', null);
+
+      const filtered = (data || []).filter(p => {
+        const areas = (p.area_servicio_actual || '').split(',').map(a => a.trim());
+        return areas.some(a => PORTAL_AREAS_LIST.includes(a));
+      });
+      setMembers(filtered);
+    } catch (err) {
+      console.error('Error cargando miembros:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPortalAreas = (area_str) =>
+    (area_str || '').split(',').map(a => a.trim()).filter(a => PORTAL_AREAS_LIST.includes(a));
+
+  const handleInvite = async (persona) => {
+    if (!persona.email) {
+      setErrors(prev => ({ ...prev, [persona.id]: 'Sin email — actualizá sus datos primero' }));
+      return;
+    }
+    setInvitingId(persona.id);
+    setErrors(prev => { const n = { ...prev }; delete n[persona.id]; return n; });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/connect/invite-member', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          personaId: persona.id,
+          email: persona.email,
+          fullName: `${persona.nombre} ${persona.apellido}`.trim(),
+          redirectBase: window.location.origin,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      setInvitedIds(prev => new Set([...prev, persona.id]));
+    } catch (err) {
+      setErrors(prev => ({ ...prev, [persona.id]: err.message }));
+    } finally {
+      setInvitingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <div className="w-6 h-6 border-4 border-teal-600/30 border-t-teal-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6">
+        <ArrowLeft className="w-4 h-4" /> Volver al portal
+      </button>
+      <h2 className="text-xl font-bold text-gray-900 mb-1">Accesos de mi célula</h2>
+      <p className="text-sm text-gray-500 mb-6">
+        Miembros de tu célula que sirven en áreas con acceso al portal. Presioná "Dar acceso" para enviarles el email de invitación.
+      </p>
+
+      {members.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+          <ShieldCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Ningún miembro de tu célula tiene áreas con acceso al portal todavía.</p>
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {members.map(m => {
+            const portalAreas = getPortalAreas(m.area_servicio_actual);
+            const invited = invitedIds.has(m.id);
+            const errMsg = errors[m.id];
+            return (
+              <li key={m.id} className="bg-white border border-gray-200 rounded-xl px-4 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 text-sm">{m.nombre} {m.apellido}</p>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                      {m.email || <span className="text-red-500">Sin email</span>}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {portalAreas.map(a => (
+                        <span key={a} className="px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full text-[10px] font-semibold border border-teal-100">{a}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {invited ? (
+                    <span className="flex items-center gap-1 text-xs font-medium text-green-600 whitespace-nowrap flex-shrink-0">
+                      <CheckCircle className="w-4 h-4" /> Enviado
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleInvite(m)}
+                      disabled={invitingId === m.id || !m.email}
+                      className="flex-shrink-0 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      {invitingId === m.id ? 'Enviando...' : 'Dar acceso'}
+                    </button>
+                  )}
+                </div>
+                {errMsg && <p className="text-xs text-red-500 mt-2">{errMsg}</p>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Dashboard principal
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PortalDashboard() {
@@ -176,6 +313,7 @@ export default function PortalDashboard() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [activeView, setActiveView] = useState('home');
   const [stats, setStats] = useState({ recentReports: 0, cellMembers: 0, prayerRequests: 0 });
+  const [cellPortalMembers, setCellPortalMembers] = useState([]);
 
   const redirect = (path) => { window.location.href = path; };
 
@@ -237,7 +375,10 @@ export default function PortalDashboard() {
       }
 
       setUser(persona);
-      if (persona.rol === 'Líder') await loadStats(persona.id, userEmail);
+      if (persona.rol === 'Líder') {
+        await loadStats(persona.id, userEmail);
+        await loadCellPortalMembers(persona.id, cid);
+      }
       await loadUnreadCount(cid, session.user.id);
 
     } catch (err) {
@@ -269,8 +410,24 @@ export default function PortalDashboard() {
     } catch (err) { console.error("Error cargando no leídos:", err); }
   };
 
-  const loadStats = async (leaderId, leaderEmail) => {
+  const loadCellPortalMembers = async (leaderId, cid) => {
     try {
+      const portalAreasList = Object.keys(AREA_PORTAL_SECTIONS);
+      const { data } = await supabase
+        .from('personas')
+        .select('id, nombre, apellido, email, area_servicio_actual')
+        .eq('lider_id', leaderId)
+        .eq('church_id', cid)
+        .not('area_servicio_actual', 'is', null);
+      const filtered = (data || []).filter(p => {
+        const areas = (p.area_servicio_actual || '').split(',').map(a => a.trim());
+        return areas.some(a => portalAreasList.includes(a));
+      });
+      setCellPortalMembers(filtered);
+    } catch (err) { console.error('Error cargando miembros con áreas portal:', err); }
+  };
+
+  const loadStats = async (leaderId, leaderEmail) => {    try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const { count: reportsCount } = await supabase
@@ -327,6 +484,7 @@ export default function PortalDashboard() {
     { title: "Materiales", description: "Accede a recursos y capacitaciones", icon: BookOpen, href: "/connect/portal/materiales", color: "from-purple-500 to-purple-600", badge: unreadMaterials > 0 ? `${unreadMaterials} nuevo${unreadMaterials > 1 ? 's' : ''}` : null, badgeNew: unreadMaterials > 0 },
     { title: "Mis Miembros", description: "Lista de miembros de tu célula", icon: Users, href: "/connect/portal/miembros", color: "from-green-500 to-green-600", badge: stats.cellMembers > 0 ? `${stats.cellMembers} personas` : null },
     { title: "Pedidos de Oración", description: "Ver y agregar pedidos de oración", icon: Heart, href: "/connect/portal/oracion", color: "from-red-500 to-red-600", badge: stats.prayerRequests > 0 ? `${stats.prayerRequests} activos` : null },
+    { title: "Accesos de Célula", description: "Dar acceso al portal a tus miembros de servicio", icon: ShieldCheck, href: null, action: () => setActiveView('accesos-celula'), color: "from-teal-500 to-teal-600", badge: cellPortalMembers.length > 0 ? `${cellPortalMembers.length} miembro${cellPortalMembers.length > 1 ? 's' : ''}` : null },
     ...userPortalAreas.map(area => {
       const section = AREA_PORTAL_SECTIONS[area];
       return { title: section.title, description: section.description, icon: section.icon, href: null, action: () => setActiveView(section.key), color: section.color, badge: null };
@@ -433,11 +591,19 @@ export default function PortalDashboard() {
       <main className="max-w-7xl mx-auto px-4 py-8">
 
         {/* ── VISTA ÁREA ACTIVA ── */}
-        {activeView !== 'home' && activeView === 'consolidacion' && (
+        {activeView === 'consolidacion' && (
           <ConsolidacionView
             leader={user}
             churchId={churchId}
             onBack={isLider ? () => setActiveView('home') : null}
+          />
+        )}
+
+        {/* ── VISTA ACCESOS DE CÉLULA ── */}
+        {activeView === 'accesos-celula' && (
+          <CelularAccessView
+            leader={user}
+            onBack={() => setActiveView('home')}
           />
         )}
 
