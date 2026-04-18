@@ -72,6 +72,7 @@ const INITIAL_FORM: FormData = {
   disponibilidad_horaria: [], area_servicio_actual: [], 
   ministerio: "", grupo_celula: "", dia_reunion: "", hora_reunion: "", lugar_reunion: "", lugar_reunion_localidad: "",
   conyuge: "", hijos: "", tamano_hogar: "", vinculos_familiares_iglesia: "",
+  foto_url: "",
 };
 
 const STEPS = ["Personales", "Iglesia", "Servicio", "Célula", "Familia"];
@@ -89,6 +90,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -105,6 +108,17 @@ export default function Home() {
     });
   };
 
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La foto no puede superar 5MB");
+      return;
+    }
+    setFotoFile(file);
+    setFotoPreview(URL.createObjectURL(file));
+  };
+
   const validate = () => {
     if (!form.nombre || !form.apellido) {
       toast.error("Nombre y apellido son obligatorios");
@@ -112,6 +126,11 @@ export default function Home() {
     }
     if (!form.telefono) {
       toast.error("Ingresá un teléfono");
+      return false;
+    }
+    if (!fotoFile) {
+      toast.error("La foto de perfil es obligatoria");
+      setStep(0);
       return false;
     }
     return true;
@@ -124,10 +143,28 @@ export default function Home() {
 
     const churchId = await resolveChurchId();
 
+    // Subir foto a Supabase Storage
+    let fotoUrl = "";
+    if (fotoFile) {
+      const ext = fotoFile.name.split(".").pop();
+      const path = `${churchId ?? "sin-iglesia"}/${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("leader-photos")
+        .upload(path, fotoFile, { upsert: true });
+      if (uploadError) {
+        toast.error("Error al subir la foto");
+        setLoading(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("leader-photos").getPublicUrl(uploadData.path);
+      fotoUrl = urlData.publicUrl;
+    }
+
     const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
 
     const payload = {
       ...form,
+      foto_url: fotoUrl || null,
       nombre: cap(form.nombre),
       apellido: cap(form.apellido),
       rol: "Líder",
@@ -151,6 +188,8 @@ export default function Home() {
     } else {
       toast.success("Datos enviados 🙌");
       setForm(INITIAL_FORM);
+      setFotoFile(null);
+      setFotoPreview(null);
       setStep(0);
     }
   };
@@ -225,6 +264,46 @@ export default function Home() {
               {step === 0 && (
                 <div>
                   {sectionTitle("Información Personal")}
+
+                  {/* Foto de perfil */}
+                  <div className="flex flex-col items-center mb-8">
+                    <div
+                      className="w-28 h-28 rounded-full border-4 border-blue-100 bg-slate-100 overflow-hidden flex items-center justify-center mb-3 shadow-md cursor-pointer relative group"
+                      onClick={() => document.getElementById('foto-input')?.click()}
+                    >
+                      {fotoPreview ? (
+                        <img src={fotoPreview} alt="Foto" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-slate-400">
+                          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span className="text-xs font-bold">Foto</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-full transition-opacity">
+                        <span className="text-white text-xs font-bold">Cambiar</span>
+                      </div>
+                    </div>
+                    <input
+                      id="foto-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFotoChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('foto-input')?.click()}
+                      className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      {fotoPreview ? "Cambiar foto" : "Subir foto *"}
+                    </button>
+                    {!fotoPreview && (
+                      <p className="text-xs text-slate-400 mt-1">JPG, PNG o WEBP · Máx 5MB</p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-2">
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Nombre *</label>

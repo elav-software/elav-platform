@@ -21,6 +21,7 @@ export default function PortalDashboard() {
   const [unreadList, setUnreadList] = useState([]);
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [stats, setStats] = useState({
     recentReports: 0,
     cellMembers: 0,
@@ -28,6 +29,40 @@ export default function PortalDashboard() {
   });
 
   const redirect = (path) => { window.location.href = path; };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("La foto no puede superar 5MB");
+      return;
+    }
+    if (!leader?.id) return;
+    setPhotoUploading(true);
+    try {
+      const churchId = await getCurrentChurchId();
+      const ext = file.name.split('.').pop();
+      const path = `${churchId}/${leader.id}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('leader-photos')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('leader-photos')
+        .getPublicUrl(path);
+      const { error: updateError } = await supabase
+        .from('personas')
+        .update({ foto_url: publicUrl })
+        .eq('id', leader.id);
+      if (updateError) throw updateError;
+      setLeader(prev => ({ ...prev, foto_url: publicUrl }));
+    } catch (err) {
+      console.error('Error al subir foto:', err);
+      alert('No se pudo actualizar la foto. Intentá de nuevo.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   useEffect(() => {
     verifyAndLoadLeader();
@@ -67,7 +102,7 @@ export default function PortalDashboard() {
       // Verificar líder aprobado (case-insensitive)
       const { data: leaderData, error } = await supabase
         .from('personas')
-        .select('id, nombre, apellido, email, grupo_celula')
+        .select('id, nombre, apellido, email, grupo_celula, foto_url')
         .eq('church_id', churchId)
         .ilike('email', userEmail)
         .eq('rol', 'Líder')
@@ -219,13 +254,35 @@ export default function PortalDashboard() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Portal de Líderes
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Hola, {leader?.nombre} {leader?.apellido}
-            </p>
+          <div className="flex items-center gap-4">
+            {/* Avatar con opción de cambiar foto */}
+            {leader?.id && (
+              <label className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 cursor-pointer flex-shrink-0 group" title="Cambiar foto">
+                {leader.foto_url ? (
+                  <img src={leader.foto_url} alt="Foto" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-lg">
+                    {leader.nombre?.[0]}{leader.apellido?.[0]}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+                  {photoUploading ? (
+                    <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span className="text-white text-[9px] font-bold text-center leading-tight px-1">Cambiar</span>
+                  )}
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} disabled={photoUploading} />
+              </label>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Portal de Líderes
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Hola, {leader?.nombre} {leader?.apellido}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Campanita con dropdown */}
