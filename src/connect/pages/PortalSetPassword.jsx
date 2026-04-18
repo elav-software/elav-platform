@@ -13,14 +13,42 @@ export default function PortalSetPassword() {
   const redirect = (path) => { window.location.href = path; };
 
   useEffect(() => {
-    // Verificar que hay una sesión activa (viene del link de invitación)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        redirect("/connect/portal/login");
-      } else {
+    let done = false;
+    let timeoutId;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (done) return;
+      if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && session) {
+        done = true;
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
         setChecking(false);
       }
     });
+
+    // Cubrir el caso de sesión ya establecida (invite vía callback)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (done) return;
+      if (session) {
+        done = true;
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
+        setChecking(false);
+      }
+    });
+
+    // Timeout de seguridad — si en 8s no hay sesión, ir al login
+    timeoutId = setTimeout(() => {
+      if (done) return;
+      done = true;
+      subscription.unsubscribe();
+      redirect("/connect/portal/login");
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const handleSubmit = async (e) => {
@@ -43,7 +71,7 @@ export default function PortalSetPassword() {
       redirect("/connect/portal/dashboard");
     } catch (err) {
       console.error(err);
-      setError("Error al guardar la contraseña. Intentá de nuevo.");
+      setError(err?.message || "Error al guardar la contraseña. Intentá de nuevo.");
     } finally {
       setLoading(false);
     }
