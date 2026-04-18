@@ -380,8 +380,12 @@ export default function Members() {
               <Card key={m.id} className="p-5 border-0 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                      {m.full_name?.charAt(0)?.toUpperCase()}
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 overflow-hidden">
+                      {m.foto_url ? (
+                        <img src={m.foto_url} alt={m.full_name} className="w-full h-full object-cover" />
+                      ) : (
+                        m.full_name?.charAt(0)?.toUpperCase()
+                      )}
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 text-sm leading-tight">{m.full_name}</h3>
