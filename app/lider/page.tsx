@@ -61,6 +61,7 @@ type FormData = {
   area_servicio_actual: string[]; ministerio: string; grupo_celula: string;
   dia_reunion: string; hora_reunion: string; lugar_reunion: string; lugar_reunion_localidad: string;
   conyuge: string; hijos: string; tamano_hogar: string; vinculos_familiares_iglesia: string;
+  foto_url: string;
 };
 
 const INITIAL_FORM: FormData = {
