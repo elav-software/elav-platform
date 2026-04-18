@@ -55,6 +55,11 @@ export default function PortalDashboard() {
         .update({ foto_url: publicUrl })
         .eq('id', leader.id);
       if (updateError) throw updateError;
+      // Sincronizar también con la tabla leaders
+      await supabase
+        .from('leaders')
+        .update({ photo: publicUrl })
+        .ilike('email', leader.email);
       setLeader(prev => ({ ...prev, foto_url: publicUrl }));
     } catch (err) {
       console.error('Error al subir foto:', err);

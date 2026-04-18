@@ -195,6 +195,7 @@ export default function LeaderApprovals() {
           latitude,
           longitude,
           member_id: leaderId,
+          photo: persona.foto_url || null,
         });
       }
 

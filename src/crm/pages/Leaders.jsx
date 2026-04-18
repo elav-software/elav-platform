@@ -177,8 +177,14 @@ export default function Leaders() {
                     {/* Leader header */}
                     <Card className="p-5 border-0 shadow-sm bg-gradient-to-r from-slate-800 to-slate-900 text-white">
                       <div className="flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-2xl font-bold text-white">{selectedLeader.full_name[0]}</span>
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20">
+                          {selectedLeader.photo ? (
+                            <img src={selectedLeader.photo} alt={selectedLeader.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                              <span className="text-2xl font-bold text-white">{selectedLeader.full_name[0]}</span>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <h2 className="text-xl font-bold">{selectedLeader.full_name}</h2>
