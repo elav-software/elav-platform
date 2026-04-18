@@ -51,22 +51,22 @@ export default function PortalLogin() {
       
       const { data, error } = await supabase
         .from('personas')
-        .select('id, rol, estado_aprobacion')
+        .select('id, rol, estado_aprobacion, area_servicio_actual')
         .eq('church_id', churchId)
         .ilike('email', email)
-        .in('rol', ['Líder', 'Consolidación'])
         .single();
 
-      if (error || !data) {
-        return null;
-      }
+      if (error || !data) return null;
 
-      // Líder necesita aprobación; Consolidación no
-      if (data.rol === 'Líder' && data.estado_aprobacion !== 'aprobado') {
-        return null;
-      }
+      // Líder aprobado → acceso completo
+      if (data.rol === 'Líder' && data.estado_aprobacion === 'aprobado') return 'Líder';
 
-      return data.rol;
+      // Persona con área que tiene sección portal → acceso
+      const PORTAL_AREAS = ['Consolidación']; // sincronizado con AREA_PORTAL_SECTIONS en PortalDashboard
+      const areas = (data.area_servicio_actual || '').split(',').map(a => a.trim());
+      if (areas.some(a => PORTAL_AREAS.includes(a))) return 'servicio';
+
+      return null;
     } catch (err) {
       console.error("Error verificando usuario:", err);
       return null;
@@ -95,10 +95,10 @@ export default function PortalLogin() {
           return;
         }
 
-        // Verificar si es líder aprobado o consolidación
+        // Verificar si tiene acceso al portal
         const rol = await verifyApprovedLeader(data.user.email);
         
-        if (rol === 'Consolidación' || rol === 'Líder') {
+        if (rol) {
           redirect("/connect/portal/dashboard");
         } else {
           setError("Tu cuenta no está habilitada para acceder al portal. Contactá al pastor.");

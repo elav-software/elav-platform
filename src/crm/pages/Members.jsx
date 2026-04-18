@@ -95,7 +95,7 @@ const EMPTY_FORM = {
   how_did_you_find_us: "", who_invited_you: "",
   technical_skills: "", schedule_availability: "", current_service_area: "",
   church_family_ties: "",
-  acceso_consolidacion: false,
+
   dia_reunion: "", hora_reunion: "", lugar_reunion: "", lugar_reunion_localidad: "",
   supabase_id: ""
 };
@@ -504,18 +504,6 @@ export default function Members() {
                         {area}
                       </span>
                     ))}
-                    {m.acceso_consolidacion && (
-                      <span className="px-2 py-0.5 bg-orange-50 text-orange-700 rounded-full text-[10px] font-semibold border border-orange-100">
-                        Acceso Consolidación
-                      </span>
-                    )}
-                  </div>
-                )}
-                {!m.current_service_area && m.acceso_consolidacion && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    <span className="px-2 py-0.5 bg-orange-50 text-orange-700 rounded-full text-[10px] font-semibold border border-orange-100">
-                      Acceso Consolidación
-                    </span>
                   </div>
                 )}
                 <div className="flex gap-2 pt-3 border-t border-slate-100">
@@ -657,20 +645,7 @@ export default function Members() {
                 <F label="Ministerio" name="ministry_involvement" form={form} setForm={setForm} />
                 <F label="Habilidades Técnicas" name="technical_skills" form={form} setForm={setForm} />
               </div>
-              {form.member_status === "Leader" && (
-                <div className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
-                  <input
-                    type="checkbox"
-                    id="acceso_consolidacion"
-                    checked={!!form.acceso_consolidacion}
-                    onChange={e => setForm(f => ({ ...f, acceso_consolidacion: e.target.checked }))}
-                    className="w-4 h-4 accent-orange-500"
-                  />
-                  <label htmlFor="acceso_consolidacion" className="text-sm font-medium text-orange-800 cursor-pointer">
-                    Acceso a Consolidación (puede registrar visitantes desde el portal)
-                  </label>
-                </div>
-              )}
+
             </TabsContent>
 
             {/* CÉLULA — solo líderes */}
