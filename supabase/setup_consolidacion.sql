@@ -28,7 +28,10 @@ CREATE POLICY "consolidacion_insert_visitors"
     EXISTS (
       SELECT 1 FROM public.personas
       WHERE email ILIKE auth.jwt() ->> 'email'
-        AND rol = 'Consolidación'
+        AND (
+          rol = 'Consolidación'
+          OR (rol = 'Líder' AND acceso_consolidacion = true)
+        )
         AND church_id = visitors.church_id
     )
     OR
@@ -56,10 +59,17 @@ CREATE POLICY "consolidacion_select_own_visitors"
       )
     )
     OR
-    -- Consolidación ve solo los que registró (por email en invited_by)
+    -- Consolidación y Líderes con acceso ven los que registraron
     (
-      invited_by ILIKE '%' || (auth.jwt() ->> 'email') || '%'
-      AND church_id = public.my_leader_church_id()
+      church_id = public.my_leader_church_id()
+      AND EXISTS (
+        SELECT 1 FROM public.personas
+        WHERE email ILIKE auth.jwt() ->> 'email'
+          AND (
+            rol = 'Consolidación'
+            OR (rol = 'Líder' AND acceso_consolidacion = true)
+          )
+      )
     )
   );
 
