@@ -6,6 +6,11 @@
 -- Ejecutar UNA SOLA VEZ en Supabase SQL Editor.
 -- =============================================================================
 
+-- Agregar columna photo si no existe
+ALTER TABLE public.leaders
+  ADD COLUMN IF NOT EXISTS photo text;
+
+-- Backfill desde personas.foto_url
 UPDATE public.leaders l
 SET photo = p.foto_url
 FROM public.personas p
