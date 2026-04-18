@@ -41,6 +41,7 @@ export default function Layout({ children, currentPageName }) {
   const [accessDenied, setAccessDenied] = useState(false);
   const [pendingLeadersCount, setPendingLeadersCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [newVisitorsCount, setNewVisitorsCount] = useState(0);
   const [churches, setChurches] = useState([]);
   const [selectedChurch, setSelectedChurch] = useState(null);
   const navigate = useNavigate();
@@ -107,11 +108,13 @@ export default function Layout({ children, currentPageName }) {
           }
           loadPendingLeaders();
           loadPendingReports();
+          loadNewVisitors();
         } else if (u.role !== 'admin') {
           setAccessDenied(true);
         } else {
           loadPendingLeaders();
           loadPendingReports();
+          loadNewVisitors();
         }
         setLoaded(true);
       } catch (err) {
@@ -152,6 +155,28 @@ export default function Layout({ children, currentPageName }) {
       console.error("Error cargando reportes pendientes:", err);
     }
   };
+
+  const loadNewVisitors = async () => {
+    try {
+      const churchId = await getMyChurchId();
+      const lastSeen = localStorage.getItem('crm_visitors_last_seen');
+      const since = lastSeen ? new Date(lastSeen) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const { count } = await supabase
+        .from('visitors')
+        .select('*', { count: 'exact', head: true })
+        .eq('church_id', churchId)
+        .gte('created_at', since.toISOString());
+      setNewVisitorsCount(count || 0);
+    } catch (err) {
+      console.error("Error cargando visitantes nuevos:", err);
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => setNewVisitorsCount(0);
+    window.addEventListener('visitors-seen', handler);
+    return () => window.removeEventListener('visitors-seen', handler);
+  }, []);
 
   const handleChurchChange = (churchId) => {
     setSuperadminSelectedChurch(churchId);
@@ -270,7 +295,10 @@ export default function Layout({ children, currentPageName }) {
           <nav className="bg-slate-700 text-slate-50 px-3 py-4 flex-1 overflow-y-auto space-y-1">
             {visibleNavItems.map((item) => {
               const isActive = currentPageName === item.page;
-              const badge = item.page === "CellSubmissions" && pendingReportsCount > 0 ? pendingReportsCount : null;
+              const badge = 
+                (item.page === "CellSubmissions" && pendingReportsCount > 0) ? pendingReportsCount :
+                (item.page === "Visitors" && newVisitorsCount > 0) ? newVisitorsCount :
+                null;
               return (
                 <Link
                   key={item.page}

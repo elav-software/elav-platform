@@ -25,7 +25,7 @@ export default function PortalDashboard() {
   const bellRef = useRef(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   // Consolidación
-  const [visitForm, setVisitForm] = useState({ name: '', phone: '', whatsapp: '', email: '', visit_date: new Date().toISOString().slice(0, 10), invited_by: '', notes: '' });
+  const [visitForm, setVisitForm] = useState({ name: '', phone: '', email: '', visit_date: new Date().toISOString().slice(0, 10), invited_by: '', notes: '' });
   const [visitSaving, setVisitSaving] = useState(false);
   const [visitSubmitted, setVisitSubmitted] = useState(false);
   const [recentVisitors, setRecentVisitors] = useState([]);
@@ -203,7 +203,7 @@ export default function PortalDashboard() {
       const { error } = await supabase.from('visitors').insert([{
         name: visitForm.name.trim(),
         phone: visitForm.phone || null,
-        whatsapp: visitForm.whatsapp || null,
+        whatsapp: null,
         email: visitForm.email || null,
         visit_date: visitForm.visit_date || null,
         invited_by: visitForm.invited_by || `${leader.nombre} ${leader.apellido}`.trim(),
@@ -212,7 +212,7 @@ export default function PortalDashboard() {
         church_id: churchId,
       }]);
       if (error) throw error;
-      setVisitForm({ name: '', phone: '', whatsapp: '', email: '', visit_date: new Date().toISOString().slice(0, 10), invited_by: '', notes: '' });
+      setVisitForm({ name: '', phone: '', email: '', visit_date: new Date().toISOString().slice(0, 10), invited_by: '', notes: '' });
       setVisitSubmitted(true);
       setTimeout(() => setVisitSubmitted(false), 3000);
       await loadRecentVisitors(churchId, leader.email);
@@ -464,10 +464,6 @@ export default function PortalDashboard() {
                   <input value={visitForm.phone} onChange={setVisit('phone')} placeholder="Ej: 11 1234-5678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-                  <input value={visitForm.whatsapp} onChange={setVisit('whatsapp')} placeholder="Ej: 11 1234-5678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input type="email" value={visitForm.email} onChange={setVisit('email')} placeholder="correo@ejemplo.com" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
@@ -600,10 +596,6 @@ export default function PortalDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                   <input value={visitForm.phone} onChange={setVisit('phone')} placeholder="Ej: 11 1234-5678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-                  <input value={visitForm.whatsapp} onChange={setVisit('whatsapp')} placeholder="Ej: 11 1234-5678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>

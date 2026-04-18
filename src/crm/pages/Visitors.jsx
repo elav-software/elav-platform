@@ -69,7 +69,13 @@ export default function Visitors() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Marcar visitantes como vistos al abrir la página
+    localStorage.setItem('crm_visitors_last_seen', new Date().toISOString());
+    // Disparar evento para que el Layout actualice el badge
+    window.dispatchEvent(new Event('visitors-seen'));
+  }, []);
 
   const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setModalOpen(true); };
   const openEdit = (v) => { setEditing(v); setForm({ ...EMPTY_FORM, ...v }); setModalOpen(true); };
