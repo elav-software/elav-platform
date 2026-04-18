@@ -27,6 +27,7 @@ export default function LeaderApprovals() {
   const [invitingId, setInvitingId] = useState(null);
   const [invitingAll, setInvitingAll] = useState(false);
   const [invitedIds, setInvitedIds] = useState(new Set());
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   useEffect(() => {
     checkAuth();
@@ -317,6 +318,26 @@ export default function LeaderApprovals() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <img
+            src={lightboxUrl}
+            alt="Foto líder"
+            className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 text-white bg-black/40 hover:bg-black/70 rounded-full w-9 h-9 flex items-center justify-center text-xl font-bold transition-colors"
+            onClick={() => setLightboxUrl(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -419,7 +440,9 @@ export default function LeaderApprovals() {
                         <img 
                           src={leader.foto_url} 
                           alt={`${leader.nombre} ${leader.apellido}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover cursor-zoom-in"
+                          onClick={() => setLightboxUrl(leader.foto_url)}
+                          title="Ver foto"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl">
