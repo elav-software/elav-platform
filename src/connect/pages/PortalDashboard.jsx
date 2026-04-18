@@ -28,6 +28,7 @@ export default function PortalDashboard() {
   const [visitSaving, setVisitSaving] = useState(false);
   const [visitSubmitted, setVisitSubmitted] = useState(false);
   const [recentVisitors, setRecentVisitors] = useState([]);
+  const [view, setView] = useState('home'); // 'home' | 'consolidacion'
   const [stats, setStats] = useState({
     recentReports: 0,
     cellMembers: 0,
@@ -310,7 +311,8 @@ export default function PortalDashboard() {
       title: "Registrar Visitante",
       description: "Anotar datos de nuevos visitantes",
       icon: UserPlus,
-      href: "/connect/portal/consolidacion",
+      href: null,
+      action: () => setView('consolidacion'),
       color: "from-orange-500 to-orange-600",
       badge: null
     }] : [])
@@ -506,7 +508,7 @@ export default function PortalDashboard() {
         )}
 
         {/* ── VISTA LÍDER ── stats + tarjetas de menú */}
-        {leader?.rol === 'Líder' && (
+        {leader?.rol === 'Líder' && view === 'home' && (
           <>
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -549,8 +551,8 @@ export default function PortalDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {menuItems.map((item) => (
                 <button
-                  key={item.href}
-                  onClick={() => redirect(item.href)}
+                  key={item.title}
+                  onClick={() => item.action ? item.action() : redirect(item.href)}
                   className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-200 text-left group"
                 >
                   <div className="flex items-start justify-between mb-4">
@@ -570,6 +572,77 @@ export default function PortalDashboard() {
               ))}
             </div>
           </>
+        )}
+
+        {/* ── VISTA CONSOLIDACIÓN INLINE para LÍDER con acceso_consolidacion ── */}
+        {leader?.rol === 'Líder' && view === 'consolidacion' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <button onClick={() => setView('home')} className="text-sm text-gray-500 hover:text-gray-800 flex items-center gap-1">
+                ← Volver al portal
+              </button>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Registrar Visitante</h2>
+
+            {visitSubmitted && (
+              <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+                <CheckCircle className="w-4 h-4" /> Visitante registrado con éxito
+              </div>
+            )}
+
+            <form onSubmit={handleVisitSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
+                  <input required value={visitForm.name} onChange={setVisit('name')} placeholder="Nombre y apellido" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                  <input value={visitForm.phone} onChange={setVisit('phone')} placeholder="Ej: 11 1234-5678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                  <input value={visitForm.whatsapp} onChange={setVisit('whatsapp')} placeholder="Ej: 11 1234-5678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={visitForm.email} onChange={setVisit('email')} placeholder="correo@ejemplo.com" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de visita</label>
+                  <input type="date" value={visitForm.visit_date} onChange={setVisit('visit_date')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Invitado por</label>
+                  <input value={visitForm.invited_by} onChange={setVisit('invited_by')} placeholder={`${leader.nombre} ${leader.apellido}`} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                  <textarea value={visitForm.notes} onChange={setVisit('notes')} rows={2} placeholder="Observaciones, necesidades, etc." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none" />
+                </div>
+              </div>
+              <button type="submit" disabled={visitSaving} className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors">
+                {visitSaving ? 'Guardando...' : 'Guardar visitante'}
+              </button>
+            </form>
+
+            {recentVisitors.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-base font-semibold text-gray-700 mb-3">Últimos visitantes registrados</h3>
+                <ul className="space-y-2">
+                  {recentVisitors.map(v => (
+                    <li key={v.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{v.name}</p>
+                        <p className="text-xs text-gray-500">{v.phone || 'Sin teléfono'}</p>
+                      </div>
+                      <span className="text-xs text-gray-400">{v.visit_date}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
 
       </main>
