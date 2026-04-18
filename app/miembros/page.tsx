@@ -58,12 +58,13 @@ type FormData = {
   fecha_nacimiento: string; genero: string; estado_civil: string;
   barrio_zona: string; ocupacion: string; lider_id: string;
   bautizado: string; fue_encuentro: string; conyuge: string; hijos: string;
+  foto_url: string;
 };
 
 const INITIAL_FORM: FormData = {
   nombre: "", apellido: "", telefono: "", direccion: "", fecha_nacimiento: "",
   genero: "", estado_civil: "", barrio_zona: "", ocupacion: "", lider_id: "",
-  bautizado: "", fue_encuentro: "", conyuge: "", hijos: "",
+  bautizado: "", fue_encuentro: "", conyuge: "", hijos: "", foto_url: "",
 };
 
 const STEPS = ["Datos Personales", "Iglesia y Líder", "Familia"];
@@ -73,6 +74,19 @@ export default function MiembrosPage() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [lideres, setLideres] = useState<Lider[]>([]);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La foto no puede superar 5MB");
+      return;
+    }
+    setFotoFile(file);
+    setFotoPreview(URL.createObjectURL(file));
+  };
 
   useEffect(() => {
     const fetchLideres = async () => {
@@ -107,6 +121,11 @@ export default function MiembrosPage() {
       toast.error("Ingresá un teléfono");
       return false;
     }
+    if (!fotoFile) {
+      toast.error("La foto de perfil es obligatoria");
+      setStep(0);
+      return false;
+    }
     if (!form.lider_id) {
       toast.error("Seleccioná tu líder");
       return false;
@@ -121,6 +140,23 @@ export default function MiembrosPage() {
     setLoading(true);
 
     const churchId = await resolveChurchId();
+
+    // Subir foto
+    let fotoUrl = "";
+    if (fotoFile) {
+      const ext = fotoFile.name.split(".").pop();
+      const path = `${churchId ?? "public"}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("leader-photos")
+        .upload(path, fotoFile, { upsert: true });
+      if (uploadError) {
+        toast.error("Error al subir la foto");
+        setLoading(false);
+        return;
+      }
+      const { data: { publicUrl } } = supabase.storage.from("leader-photos").getPublicUrl(path);
+      fotoUrl = publicUrl;
+    }
 
     const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
 
@@ -140,6 +176,7 @@ export default function MiembrosPage() {
       hijos: form.hijos || null,
       rol: "Miembro",
       lider_id: form.lider_id,
+      foto_url: fotoUrl || null,
       ...(churchId ? { church_id: churchId } : {}),
     };
 
@@ -153,6 +190,8 @@ export default function MiembrosPage() {
     } else {
       toast.success("Datos enviados 🙌");
       setForm(INITIAL_FORM);
+      setFotoFile(null);
+      setFotoPreview(null);
       setStep(0);
     }
   };
@@ -218,6 +257,40 @@ export default function MiembrosPage() {
         {/* STEP 0: DATOS PERSONALES */}
         {step === 0 && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Foto de perfil */}
+            <div className="flex flex-col items-center mb-8">
+              <div
+                className="w-28 h-28 rounded-full border-4 border-blue-100 bg-slate-100 overflow-hidden flex items-center justify-center mb-3 shadow-md cursor-pointer relative group"
+                onClick={() => document.getElementById('foto-input-miembro')?.click()}
+              >
+                {fotoPreview ? (
+                  <img src={fotoPreview} alt="Foto" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                    <span className="text-xs font-bold">Foto</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-full transition-opacity">
+                  <span className="text-white text-xs font-bold">Cambiar</span>
+                </div>
+              </div>
+              <input
+                id="foto-input-miembro"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFotoChange}
+              />
+              <button
+                type="button"
+                onClick={() => document.getElementById('foto-input-miembro')?.click()}
+                className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                {fotoPreview ? "Cambiar foto" : "Subir foto *"}
+              </button>
+              {!fotoPreview && <p className="text-xs text-slate-400 mt-1">JPG, PNG o WEBP · Máx 5MB</p>}
+            </div>
             {sectionTitle("Información Personal")}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className={fieldGroupClasses}>
