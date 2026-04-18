@@ -448,23 +448,6 @@ export default function PortalDashboard() {
             </button>
           ))}
         </div>
-
-        {/* Help Section */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            ¿Necesitás ayuda?
-          </h3>
-          <p className="text-sm text-blue-700 mb-4">
-            Si tenés dudas sobre cómo usar el portal, contactá a tu pastor o al equipo de soporte.
-          </p>
-          <a 
-            href="/connect/counseling"
-            className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
-            Ir a consejería
-            <ChevronRight className="w-4 h-4" />
-          </a>
-        </div>
       </main>
     </div>
   );
