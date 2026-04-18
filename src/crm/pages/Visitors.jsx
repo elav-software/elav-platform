@@ -64,7 +64,7 @@ export default function Visitors() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const data = await api.entities.Visitor.list("-created_date", 200);
+    const data = await api.entities.Visitor.list("-created_at", 200);
     setVisitors(data);
     setLoading(false);
   };
