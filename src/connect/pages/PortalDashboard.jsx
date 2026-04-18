@@ -12,7 +12,8 @@ import {
   BarChart3,
   ChevronRight,
   Bell,
-  UserPlus
+  UserPlus,
+  CheckCircle
 } from "lucide-react";
 
 export default function PortalDashboard() {
