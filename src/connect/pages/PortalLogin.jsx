@@ -201,8 +201,8 @@ export default function PortalLogin() {
           {/* Instrucciones */}
           <div className="pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-500 text-center leading-relaxed">
-              Usá el mismo email que usaste cuando completaste el formulario de censo.
-              Tu cuenta debe estar aprobada por el pastor para acceder.
+              Usá el mismo email que usaste cuando completaste el formulario Lider o miembro.
+              Tu cuenta debe estar aprobada por el pastor o lider designado para acceder.
             </p>
           </div>
         </div>
