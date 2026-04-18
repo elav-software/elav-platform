@@ -134,10 +134,10 @@ export default function PortalLogin() {
             className="h-24 w-auto mx-auto mb-6"
           />
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Portal de Líderes
+            Portal CFC
           </h2>
           <p className="text-gray-600">
-            Acceso exclusivo para líderes aprobados
+            Acceso exclusivo para servidores de la iglesia
           </p>
         </div>
 
@@ -207,18 +207,7 @@ export default function PortalLogin() {
           </div>
         </div>
 
-        {/* Link de ayuda */}
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            ¿No tenés cuenta o problemas para acceder?{" "}
-            <a 
-              href="/connect/counseling" 
-              className="text-red-600 hover:text-red-700 font-medium"
-            >
-              Contactanos
-            </a>
-          </p>
-        </div>
+
       </div>
     </div>
   );
