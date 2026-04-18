@@ -98,9 +98,7 @@ export default function PortalLogin() {
         // Verificar si es líder aprobado o consolidación
         const rol = await verifyApprovedLeader(data.user.email);
         
-        if (rol === 'Consolidación') {
-          redirect("/connect/portal/consolidacion");
-        } else if (rol === 'Líder') {
+        if (rol === 'Consolidación' || rol === 'Líder') {
           redirect("/connect/portal/dashboard");
         } else {
           setError("Tu cuenta no está habilitada para acceder al portal. Contactá al pastor.");

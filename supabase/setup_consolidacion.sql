@@ -10,6 +10,12 @@
 -- =============================================================================
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- 0. Agregar columna acceso_consolidacion a personas (si no existe)
+--    Permite que un Líder también pueda registrar visitantes
+-- ─────────────────────────────────────────────────────────────────────────────
+ALTER TABLE public.personas ADD COLUMN IF NOT EXISTS acceso_consolidacion boolean DEFAULT false;
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Política RLS: el usuario de consolidación puede INSERT en visitors
 -- ─────────────────────────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "consolidacion_insert_visitors" ON public.visitors;

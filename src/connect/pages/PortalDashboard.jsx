@@ -11,7 +11,8 @@ import {
   LogOut,
   BarChart3,
   ChevronRight,
-  Bell
+  Bell,
+  UserPlus
 } from "lucide-react";
 
 export default function PortalDashboard() {
@@ -22,6 +23,11 @@ export default function PortalDashboard() {
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  // Consolidación
+  const [visitForm, setVisitForm] = useState({ name: '', phone: '', whatsapp: '', email: '', visit_date: new Date().toISOString().slice(0, 10), invited_by: '', notes: '' });
+  const [visitSaving, setVisitSaving] = useState(false);
+  const [visitSubmitted, setVisitSubmitted] = useState(false);
+  const [recentVisitors, setRecentVisitors] = useState([]);
   const [stats, setStats] = useState({
     recentReports: 0,
     cellMembers: 0,
@@ -104,25 +110,40 @@ export default function PortalDashboard() {
         return;
       }
       
-      // Verificar líder aprobado (case-insensitive)
+      // Verificar líder aprobado O usuario de Consolidación
       const { data: leaderData, error } = await supabase
         .from('personas')
-        .select('id, nombre, apellido, email, grupo_celula, foto_url')
+        .select('id, nombre, apellido, email, grupo_celula, foto_url, acceso_consolidacion, rol')
         .eq('church_id', churchId)
         .ilike('email', userEmail)
-        .eq('rol', 'Líder')
-        .eq('estado_aprobacion', 'aprobado')
+        .in('rol', ['Líder', 'Consolidación'])
         .single();
 
       if (error || !leaderData) {
-        console.error("Líder no encontrado o no aprobado. Email:", userEmail, "Error:", error);
-        supabase.auth.signOut(); // fire-and-forget
+        console.error("Usuario no encontrado o sin acceso. Email:", userEmail, "Error:", error);
+        supabase.auth.signOut();
         redirect("/connect/portal/login");
         return;
       }
 
+      // Líder requiere aprobación; Consolidación entra directo
+      if (leaderData.rol === 'Líder' && leaderData.estado_aprobacion !== undefined) {
+        const { data: check } = await supabase
+          .from('personas').select('estado_aprobacion').eq('id', leaderData.id).single();
+        if (check?.estado_aprobacion !== 'aprobado') {
+          supabase.auth.signOut();
+          redirect("/connect/portal/login");
+          return;
+        }
+      }
+
       setLeader(leaderData);
-      await loadStats(leaderData.id, userEmail);
+      if (leaderData.rol === 'Líder') {
+        await loadStats(leaderData.id, userEmail);
+      }
+      if (leaderData.rol === 'Consolidación' || leaderData.acceso_consolidacion) {
+        await loadRecentVisitors(churchId, userEmail);
+      }
       await loadUnreadCount(churchId, session.user.id);
       
     } catch (err) {
@@ -159,7 +180,48 @@ export default function PortalDashboard() {
     }
   };
 
-  // Cerrar dropdown al hacer click fuera
+  const loadRecentVisitors = async (churchId, email) => {
+    try {
+      const { data } = await supabase
+        .from('visitors')
+        .select('id, name, phone, visit_date, follow_up_status')
+        .eq('church_id', churchId)
+        .order('created_at', { ascending: false })
+        .limit(8);
+      setRecentVisitors(data || []);
+    } catch (err) { console.error('Error visitantes recientes:', err); }
+  };
+
+  const handleVisitSubmit = async (e) => {
+    e.preventDefault();
+    if (!visitForm.name.trim()) return;
+    setVisitSaving(true);
+    try {
+      const churchId = await getCurrentChurchId();
+      const { error } = await supabase.from('visitors').insert([{
+        name: visitForm.name.trim(),
+        phone: visitForm.phone || null,
+        whatsapp: visitForm.whatsapp || null,
+        email: visitForm.email || null,
+        visit_date: visitForm.visit_date || null,
+        invited_by: visitForm.invited_by || `${leader.nombre} ${leader.apellido}`.trim(),
+        notes: visitForm.notes || null,
+        follow_up_status: 'Pending',
+        church_id: churchId,
+      }]);
+      if (error) throw error;
+      setVisitForm({ name: '', phone: '', whatsapp: '', email: '', visit_date: new Date().toISOString().slice(0, 10), invited_by: '', notes: '' });
+      setVisitSubmitted(true);
+      setTimeout(() => setVisitSubmitted(false), 3000);
+      await loadRecentVisitors(churchId, leader.email);
+    } catch (err) {
+      console.error('Error guardando visitante:', err);
+    } finally {
+      setVisitSaving(false);
+    }
+  };
+
+  const setVisit = (field) => (e) => setVisitForm(prev => ({ ...prev, [field]: e.target.value }));
   useEffect(() => {
     const handler = (e) => {
       if (bellRef.current && !bellRef.current.contains(e.target)) {
@@ -243,7 +305,15 @@ export default function PortalDashboard() {
       href: "/connect/portal/oracion",
       color: "from-red-500 to-red-600",
       badge: stats.prayerRequests > 0 ? `${stats.prayerRequests} activos` : null
-    }
+    },
+    ...(leader?.acceso_consolidacion ? [{
+      title: "Registrar Visitante",
+      description: "Anotar datos de nuevos visitantes",
+      icon: UserPlus,
+      href: "/connect/portal/consolidacion",
+      color: "from-orange-500 to-orange-600",
+      badge: null
+    }] : [])
   ];
 
   if (loading) {
@@ -282,7 +352,7 @@ export default function PortalDashboard() {
             )}
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Portal de Líderes
+                Portal CFC
               </h1>
               <p className="text-sm text-gray-600 mt-1">
                 Hola, {leader?.nombre} {leader?.apellido}
@@ -368,86 +438,140 @@ export default function PortalDashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Reportes (30 días)</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {stats.recentReports}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Miembros de célula</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {stats.cellMembers}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
+        {/* ── VISTA CONSOLIDACIÓN ── solo para rol Consolidación puro */}
+        {leader?.rol === 'Consolidación' && (
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Registrar Visitante</h2>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pedidos activos</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {stats.prayerRequests}
-                </p>
+            {visitSubmitted && (
+              <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+                <CheckCircle className="w-4 h-4" /> Visitante registrado con éxito
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <Heart className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-        </div>
+            )}
 
-        {/* Menu Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {menuItems.map((item) => (
-            <button
-              key={item.href}
-              onClick={() => redirect(item.href)}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-200 text-left group"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-14 h-14 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                  <item.icon className="w-7 h-7 text-white" />
+            <form onSubmit={handleVisitSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
+                  <input required value={visitForm.name} onChange={setVisit('name')} placeholder="Nombre y apellido" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
-                <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                  <input value={visitForm.phone} onChange={setVisit('phone')} placeholder="Ej: 11 1234-5678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                  <input value={visitForm.whatsapp} onChange={setVisit('whatsapp')} placeholder="Ej: 11 1234-5678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={visitForm.email} onChange={setVisit('email')} placeholder="correo@ejemplo.com" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de visita</label>
+                  <input type="date" value={visitForm.visit_date} onChange={setVisit('visit_date')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Invitado por</label>
+                  <input value={visitForm.invited_by} onChange={setVisit('invited_by')} placeholder={`${leader.nombre} ${leader.apellido}`} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                  <textarea value={visitForm.notes} onChange={setVisit('notes')} rows={2} placeholder="Observaciones, necesidades, etc." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none" />
+                </div>
               </div>
-              
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                {item.title}
-              </h3>
-              <p className="text-sm text-gray-600 mb-3">
-                {item.description}
-              </p>
-              
-              {item.badge && (
-                <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                  item.badgeNew
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+              <button type="submit" disabled={visitSaving} className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors">
+                {visitSaving ? 'Guardando...' : 'Guardar visitante'}
+              </button>
+            </form>
+
+            {recentVisitors.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-base font-semibold text-gray-700 mb-3">Últimos visitantes registrados</h3>
+                <ul className="space-y-2">
+                  {recentVisitors.map(v => (
+                    <li key={v.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{v.name}</p>
+                        <p className="text-xs text-gray-500">{v.phone || 'Sin teléfono'}</p>
+                      </div>
+                      <span className="text-xs text-gray-400">{v.visit_date}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── VISTA LÍDER ── stats + tarjetas de menú */}
+        {leader?.rol === 'Líder' && (
+          <>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Reportes (30 días)</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.recentReports}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Miembros de célula</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.cellMembers}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Pedidos activos</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.prayerRequests}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <Heart className="w-6 h-6 text-red-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Menu Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {menuItems.map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => redirect(item.href)}
+                  className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-200 text-left group"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`w-14 h-14 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-lg`}>
+                      <item.icon className="w-7 h-7 text-white" />
+                    </div>
+                    <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{item.title}</h3>
+                  <p className="text-sm text-gray-600 mb-3">{item.description}</p>
+                  {item.badge && (
+                    <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                      item.badgeNew ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                    }`}>{item.badge}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
       </main>
     </div>
   );
