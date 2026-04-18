@@ -54,18 +54,22 @@ export default function PortalLogin() {
         .select('id, rol, estado_aprobacion')
         .eq('church_id', churchId)
         .ilike('email', email)
-        .eq('rol', 'Líder')
-        .eq('estado_aprobacion', 'aprobado')
+        .in('rol', ['Líder', 'Consolidación'])
         .single();
 
       if (error || !data) {
-        return false;
+        return null;
       }
 
-      return true;
+      // Líder necesita aprobación; Consolidación no
+      if (data.rol === 'Líder' && data.estado_aprobacion !== 'aprobado') {
+        return null;
+      }
+
+      return data.rol;
     } catch (err) {
-      console.error("Error verificando líder:", err);
-      return false;
+      console.error("Error verificando usuario:", err);
+      return null;
     }
   };
 
@@ -91,13 +95,15 @@ export default function PortalLogin() {
           return;
         }
 
-        // Verificar si es líder aprobado
-        const approved = await verifyApprovedLeader(data.user.email);
+        // Verificar si es líder aprobado o consolidación
+        const rol = await verifyApprovedLeader(data.user.email);
         
-        if (approved) {
+        if (rol === 'Consolidación') {
+          redirect("/connect/portal/consolidacion");
+        } else if (rol === 'Líder') {
           redirect("/connect/portal/dashboard");
         } else {
-          setError("Tu cuenta aún no está aprobada como líder. Contactá al pastor.");
+          setError("Tu cuenta no está habilitada para acceder al portal. Contactá al pastor.");
           supabase.auth.signOut(); // fire-and-forget
         }
       }
