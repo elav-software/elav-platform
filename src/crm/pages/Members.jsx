@@ -368,7 +368,7 @@ export default function Members() {
         <Button variant="outline" size="sm" onClick={handleImportFromSupabase} disabled={syncing}
           className="h-9 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50">
           {syncing ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
-          {syncing ? "Importando..." : "Importar desde Censo (Supabase)"}
+          {syncing ? "Recargando..." : "Recargar miembros"}
         </Button>
         {syncMsg && <span className="text-xs text-slate-500">{syncMsg}</span>}
       </div>
