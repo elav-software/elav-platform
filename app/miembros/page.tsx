@@ -54,7 +54,7 @@ type Lider = {
 };
 
 type FormData = {
-  nombre: string; apellido: string; telefono: string; direccion: string;
+  nombre: string; apellido: string; email: string; telefono: string; direccion: string;
   fecha_nacimiento: string; genero: string; estado_civil: string;
   barrio_zona: string; ocupacion: string; lider_id: string;
   bautizado: string; fue_encuentro: string; conyuge: string; hijos: string;
@@ -70,7 +70,7 @@ const AREAS_SERVICIO = [
 ];
 
 const INITIAL_FORM: FormData = {
-  nombre: "", apellido: "", telefono: "", direccion: "", fecha_nacimiento: "",
+  nombre: "", apellido: "", email: "", telefono: "", direccion: "", fecha_nacimiento: "",
   genero: "", estado_civil: "", barrio_zona: "", ocupacion: "", lider_id: "",
   bautizado: "", fue_encuentro: "", conyuge: "", hijos: "", foto_url: "",
   area_servicio_actual: [],
@@ -181,6 +181,7 @@ export default function MiembrosPage() {
     const payload = {
       nombre: cap(form.nombre),
       apellido: cap(form.apellido),
+      email: form.email || null,
       telefono: form.telefono,
       direccion: form.direccion || null,
       fecha_nacimiento: form.fecha_nacimiento || null,
@@ -335,9 +336,16 @@ export default function MiembrosPage() {
             </div>
 
             {sectionTitle("Contacto")}
-            <div className={fieldGroupClasses}>
-              <label className={labelClasses}>Teléfono *</label>
-              <input type="tel" className={inputClasses} value={form.telefono} onChange={set("telefono")} placeholder="Ej: 1123456789" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Teléfono *</label>
+                <input type="tel" className={inputClasses} value={form.telefono} onChange={set("telefono")} placeholder="Ej: 1123456789" />
+              </div>
+              <div className={fieldGroupClasses}>
+                <label className={labelClasses}>Email</label>
+                <input type="email" className={inputClasses} value={form.email} onChange={set("email")} placeholder="tu-email@ejemplo.com" />
+                <p className="text-xs text-slate-400 mt-1">Necesario para acceder al portal si servís en algún área</p>
+              </div>
             </div>
 
             {sectionTitle("Ubicación y Perfil")}
