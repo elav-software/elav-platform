@@ -334,7 +334,7 @@ export default function PortalDashboard() {
 
       const loginAt = new Date(session.user.last_sign_in_at).getTime();
       if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
-        supabase.auth.signOut();
+        await supabase.auth.signOut();
         redirect("/connect/portal/login");
         return;
       }
@@ -359,7 +359,7 @@ export default function PortalDashboard() {
         .single();
 
       if (error || !persona) {
-        supabase.auth.signOut();
+        await supabase.auth.signOut();
         redirect("/connect/portal/login");
         return;
       }
@@ -369,7 +369,7 @@ export default function PortalDashboard() {
       const isApprovedLider = persona.rol === 'Líder' && persona.estado_aprobacion === 'aprobado';
 
       if (!isApprovedLider && !hasPortalArea) {
-        supabase.auth.signOut();
+        await supabase.auth.signOut();
         redirect("/connect/portal/login");
         return;
       }
@@ -383,7 +383,7 @@ export default function PortalDashboard() {
 
     } catch (err) {
       console.error("Error verificando usuario:", err);
-      supabase.auth.signOut();
+      await supabase.auth.signOut();
       redirect("/connect/portal/login");
     } finally {
       setLoading(false);

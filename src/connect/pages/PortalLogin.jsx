@@ -35,7 +35,7 @@ export default function PortalLogin() {
         if (approved) {
           redirect("/connect/portal/dashboard");
         } else {
-          supabase.auth.signOut(); // fire-and-forget
+          await supabase.auth.signOut();
         }
       }
     } catch (err) {

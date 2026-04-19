@@ -114,27 +114,29 @@ export default function PortalReportes() {
 
       if (error) throw error;
 
-      // Sincronizar con cell_reports para que aparezca en CRM > Líderes
+      // Sincronizar con cell_reports via API con service role (bypassea RLS)
       try {
-        const { data: crmLeader } = await supabase
-          .from('leaders')
-          .select('id')
-          .ilike('email', leader.email)
-          .maybeSingle();
-        if (crmLeader) {
-          await supabase.from('cell_reports').insert([{
-            leader_id: crmLeader.id,
-            date: formData.report_date,
-            topic: formData.testimonies,
-            attendance: formData.attendance_count ? parseInt(formData.attendance_count) : 0,
-            visits: formData.new_visitors ? parseInt(formData.new_visitors) : 0,
-            new_converts: formData.prayer_requests ? parseInt(formData.prayer_requests) : 0,
-            offering: formData.offering_amount ? parseFloat(formData.offering_amount) : 0,
-            notes: formData.observations,
-          }]);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          await fetch('/api/connect/sync-cell-report', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              reportDate: formData.report_date,
+              topic: formData.testimonies,
+              attendance: formData.attendance_count,
+              visits: formData.new_visitors,
+              newConverts: formData.prayer_requests,
+              offering: formData.offering_amount,
+              notes: formData.observations,
+            }),
+          });
         }
       } catch (syncErr) {
-        console.warn('No se pudo sincronizar con cell_reports:', syncErr);
+        console.warn('No se pudo sincronizar con CRM:', syncErr);
       }
 
       setSuccess(true);
@@ -203,7 +205,7 @@ export default function PortalReportes() {
           </div>
         )}
 
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100 mb-8">
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-8">
           <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2 text-lg">
             <Send className="w-4 h-4 text-amber-500" /> Enviar Reporte de Célula
           </h3>

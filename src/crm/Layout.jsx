@@ -496,27 +496,37 @@ export default function Layout({ children, currentPageName }) {
                 <p className="text-center text-slate-400 text-sm py-8">Sin resultados para "{searchQuery}"</p>
               ) : (
                 <ul>
-                  {searchResults.map(p => (
-                    <li key={p.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-semibold text-slate-600">{(p.nombre || "?")[0].toUpperCase()}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{p.nombre} {p.apellido}</p>
-                        <p className="text-xs text-slate-500 truncate">{p.telefono || p.email || "Sin contacto"}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          p.rol === 'Líder' ? 'bg-amber-100 text-amber-700' :
-                          p.rol === 'Miembro' ? 'bg-blue-100 text-blue-700' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>{p.rol || "—"}</span>
-                        {p.estado_aprobacion === 'pendiente' && (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">Pendiente</span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
+                  {searchResults.map(p => {
+                    const targetPage = p.rol === 'Líder' ? 'Leaders' : 'Members';
+                    const targetUrl = createPageUrl(targetPage);
+                    return (
+                      <li key={p.id}>
+                        <a
+                          href={targetUrl}
+                          onClick={() => setSearchOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 cursor-pointer w-full text-left"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-semibold text-slate-600">{(p.nombre || "?")[0].toUpperCase()}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 truncate">{p.nombre} {p.apellido}</p>
+                            <p className="text-xs text-slate-500 truncate">{p.telefono || p.email || "Sin contacto"}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              p.rol === 'Líder' ? 'bg-amber-100 text-amber-700' :
+                              p.rol === 'Miembro' ? 'bg-blue-100 text-blue-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>{p.rol || "—"}</span>
+                            {p.estado_aprobacion === 'pendiente' && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">Pendiente</span>
+                            )}
+                          </div>
+                        </a>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

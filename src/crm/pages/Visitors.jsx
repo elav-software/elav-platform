@@ -109,7 +109,7 @@ export default function Visitors() {
 
   return (
     <div>
-      <PageHeader title="Visitantes" subtitle={`${visitors.length} visitantes en total`} onAdd={() => window.open('https://www.cfccasanova.com/connect/portal/dashboard', '_blank')} addLabel="Registrar Visitante" />
+      <PageHeader title="Visitantes" subtitle={`${visitors.length} visitantes en total`} onAdd={() => window.open('https://www.cfccasanova.com/connect/portal/login', '_blank')} addLabel="Registrar Visitante" />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
