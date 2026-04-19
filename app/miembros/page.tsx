@@ -159,6 +159,31 @@ export default function MiembrosPage() {
 
     const churchId = await resolveChurchId();
 
+    // Verificar duplicados antes de registrar
+    if (churchId) {
+      try {
+        const { data: existing } = await supabase
+          .from("personas")
+          .select("id, fecha_nacimiento")
+          .eq("church_id", churchId)
+          .ilike("nombre", form.nombre.trim())
+          .ilike("apellido", form.apellido.trim())
+          .limit(5);
+        if (existing && existing.length > 0) {
+          const dobMatch = form.fecha_nacimiento
+            ? existing.some(e => e.fecha_nacimiento === form.fecha_nacimiento)
+            : false;
+          if (!form.fecha_nacimiento || dobMatch || existing.length >= 1) {
+            toast.error("Ya existe un registro con ese nombre y apellido. Si necesitás actualizar tus datos, contactate con tu líder.");
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Si RLS bloquea la consulta, continuar con el registro
+      }
+    }
+
     // Subir foto
     let fotoUrl = "";
     if (fotoFile) {
