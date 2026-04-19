@@ -122,6 +122,12 @@ export default function Members() {
 
   useEffect(() => { load(); }, []);
 
+  // Leer ?buscar= de la URL (desde búsqueda global Ctrl+K)
+  useEffect(() => {
+    const buscar = new URLSearchParams(window.location.search).get('buscar');
+    if (buscar) setSearch(buscar);
+  }, []);
+
   const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setActiveTab("personal"); setModalOpen(true); };
   const openEdit = (m) => { setEditing(m); setForm({ ...EMPTY_FORM, ...m }); setActiveTab("personal"); setModalOpen(true); };
 

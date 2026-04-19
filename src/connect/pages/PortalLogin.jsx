@@ -30,9 +30,11 @@ export default function PortalLogin() {
         }
 
         const userEmail = session.user.email?.toLowerCase().trim();
-        const approved = await verifyApprovedLeader(userEmail);
+        const rol = await verifyApprovedLeader(userEmail);
         
-        if (approved) {
+        if (rol === 'servicio') {
+          redirect("/connect/portal/dashboard?view=consolidacion");
+        } else if (rol) {
           redirect("/connect/portal/dashboard");
         } else {
           await supabase.auth.signOut();
@@ -98,7 +100,9 @@ export default function PortalLogin() {
         // Verificar si tiene acceso al portal
         const rol = await verifyApprovedLeader(data.user.email);
         
-        if (rol) {
+        if (rol === 'servicio') {
+          redirect("/connect/portal/dashboard?view=consolidacion");
+        } else if (rol) {
           redirect("/connect/portal/dashboard");
         } else {
           setError("Tu cuenta no está habilitada para acceder al portal. Contactá al pastor.");

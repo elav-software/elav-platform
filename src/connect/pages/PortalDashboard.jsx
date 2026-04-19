@@ -311,7 +311,14 @@ export default function PortalDashboard() {
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
   const [photoUploading, setPhotoUploading] = useState(false);
-  const [activeView, setActiveView] = useState('home');
+  const [activeView, setActiveView] = useState(() => {
+    // Si viene con ?view=consolidacion (desde login de miembro de servicio), abrir directo
+    if (typeof window !== 'undefined') {
+      const v = new URLSearchParams(window.location.search).get('view');
+      if (v) return v;
+    }
+    return 'home';
+  });
   const [stats, setStats] = useState({ recentReports: 0, cellMembers: 0, prayerRequests: 0 });
   const [cellPortalMembers, setCellPortalMembers] = useState([]);
 

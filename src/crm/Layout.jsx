@@ -497,8 +497,16 @@ export default function Layout({ children, currentPageName }) {
               ) : (
                 <ul>
                   {searchResults.map(p => {
-                    const targetPage = p.rol === 'Líder' ? 'Leaders' : 'Members';
-                    const targetUrl = createPageUrl(targetPage);
+                    // Decidir destino según rol y estado
+                    let targetUrl;
+                    if (p.rol === 'Líder' && p.estado_aprobacion === 'pendiente') {
+                      targetUrl = '/crm/leaders/approvals';
+                    } else if (p.rol === 'Líder') {
+                      // Pasar el nombre como query param para que Leaders.jsx lo busque
+                      targetUrl = `${createPageUrl('Leaders')}?buscar=${encodeURIComponent((p.nombre + ' ' + p.apellido).trim())}`;
+                    } else {
+                      targetUrl = `${createPageUrl('Members')}?buscar=${encodeURIComponent((p.nombre + ' ' + p.apellido).trim())}`;
+                    }
                     return (
                       <li key={p.id}>
                         <a

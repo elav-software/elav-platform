@@ -21,12 +21,34 @@ export async function POST(req: NextRequest) {
 
     const { reportDate, topic, attendance, visits, newConverts, offering, notes } = await req.json();
 
-    // Buscar el líder en la tabla leaders del CRM por su email
-    const { data: crmLeader } = await supabaseAdmin
-      .from("leaders")
-      .select("id, church_id")
+    // Buscar el líder en la tabla leaders del CRM.
+    // Estrategia 1: por member_id (personas.id) — es el vínculo más confiable
+    // Estrategia 2: por email — fallback si no hay member_id linkeado
+    const { data: personaRow } = await supabaseAdmin
+      .from("personas")
+      .select("id")
       .ilike("email", user.email!)
       .maybeSingle();
+
+    let crmLeader = null;
+    if (personaRow) {
+      const { data } = await supabaseAdmin
+        .from("leaders")
+        .select("id, church_id")
+        .eq("member_id", personaRow.id)
+        .maybeSingle();
+      crmLeader = data;
+    }
+
+    // Fallback: buscar por email directo en leaders
+    if (!crmLeader) {
+      const { data } = await supabaseAdmin
+        .from("leaders")
+        .select("id, church_id")
+        .ilike("email", user.email!)
+        .maybeSingle();
+      crmLeader = data;
+    }
 
     if (!crmLeader) {
       // No hay entrada en leaders aún — sync ignorada silenciosamente
