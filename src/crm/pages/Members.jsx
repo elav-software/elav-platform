@@ -36,6 +36,60 @@ const F = ({ label, name, type = "text", options, optionLabels, form, setForm })
   </div>
 );
 
+// Campo de fecha: 3 inputs separados (Día / Mes / Año) — más intuitivo que el nativo
+const MESES_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+function DateField({ label, name, form, setForm }) {
+  const raw = form[name] || "";
+  const [yy = "", mm = "", dd = ""] = raw ? raw.split("-") : [];
+  const [localDay,  setLocalDay]  = React.useState(dd);
+  const [localYear, setLocalYear] = React.useState(yy);
+
+  const commit = (d, m, y) => {
+    const valid = d && m && y && String(y).length === 4 && Number(d) >= 1 && Number(d) <= 31;
+    setForm(f => ({
+      ...f,
+      [name]: valid
+        ? `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`
+        : "",
+    }));
+  };
+
+  return (
+    <div>
+      <Label className="text-xs font-medium text-slate-600 mb-1 block">{label}</Label>
+      <div className="flex gap-1 items-center">
+        <Input
+          type="number" placeholder="Día" min={1} max={31}
+          value={localDay}
+          onChange={e => { setLocalDay(e.target.value); commit(e.target.value, mm, localYear); }}
+          className="h-9 text-sm w-16 text-center"
+        />
+        <span className="text-slate-300 select-none text-sm">/</span>
+        <Select value={mm || ""} onValueChange={v => { commit(localDay, v, localYear); }}>
+          <SelectTrigger className="h-9 text-sm flex-1 min-w-0">
+            <SelectValue placeholder="Mes" />
+          </SelectTrigger>
+          <SelectContent>
+            {MESES_ES.map((m, i) => (
+              <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-slate-300 select-none text-sm">/</span>
+        <Input
+          type="number" placeholder="Año" min={1920} max={2030}
+          value={localYear}
+          onChange={e => { setLocalYear(e.target.value); commit(localDay, mm, e.target.value); }}
+          className="h-9 text-sm w-20 text-center"
+        />
+      </div>
+      {raw && (
+        <p className="text-[10px] text-slate-400 mt-0.5">{dd}/{mm}/{yy}</p>
+      )}
+    </div>
+  );
+}
+
 const STATUS_COLORS = {
   Visitor: "bg-sky-100 text-sky-700 border-sky-200",
   "New Believer": "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -579,7 +633,7 @@ export default function Members() {
             {/* PERSONAL */}
             <TabsContent value="personal" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <F label="Nombre Completo *" name="full_name" form={form} setForm={setForm} />
-              <F label="Fecha de Nacimiento" name="date_of_birth" type="date" form={form} setForm={setForm} />
+              <DateField key={editing?.id || "new"} label="Fecha de Nacimiento" name="date_of_birth" form={form} setForm={setForm} />
               <F label="Género" name="gender" options={["Male", "Female"]} optionLabels={["Masculino", "Femenino"]} form={form} setForm={setForm} />
               <F label="Estado Civil" name="marital_status"
                 options={["Single", "Married", "Widowed", "Divorced"]}

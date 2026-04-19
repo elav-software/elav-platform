@@ -81,7 +81,7 @@ export default function Ministries() {
   };
 
   const deleteMin = async (id) => {
-    if (!confirm("¿Eliminar este ministerio?")) return;
+    if (!confirm("¿Eliminar esta área de servicio?")) return;
     await api.entities.Ministry.delete(id);
     setMinistries(prev => prev.filter(m => m.id !== id));
   };
@@ -99,11 +99,11 @@ export default function Ministries() {
 
   return (
     <div>
-      <PageHeader title="Ministerios" subtitle="Gestiona ministerios y voluntarios" onAdd={openMinAdd} addLabel="Agregar Ministerio" />
+      <PageHeader title="Área de Servicios" subtitle="Gestiona áreas de servicio y voluntarios" onAdd={openMinAdd} addLabel="Agregar Área" />
 
       <Tabs defaultValue="ministries">
         <TabsList className="mb-6">
-          <TabsTrigger value="ministries">Ministerios ({ministries.length})</TabsTrigger>
+          <TabsTrigger value="ministries">Áreas de Servicio ({ministries.length})</TabsTrigger>
           <TabsTrigger value="volunteers">Voluntarios ({volunteers.length})</TabsTrigger>
         </TabsList>
 
@@ -114,7 +114,7 @@ export default function Ministries() {
             </div>
           ) : ministries.length === 0 ? (
             <Card className="border-0 shadow-sm">
-              <EmptyState icon={Church} title="Sin Ministerios" description="Crea tu primer ministerio para comenzar a organizar." onAction={openMinAdd} actionLabel="Agregar Ministerio" />
+              <EmptyState icon={Church} title="Sin Áreas de Servicio" description="Crea tu primera área de servicio para comenzar a organizar." onAction={openMinAdd} actionLabel="Agregar Área" />
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -182,10 +182,10 @@ export default function Ministries() {
       {/* Ministry Modal */}
       <Dialog open={minModal} onOpenChange={setMinModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editingMin ? "Editar Ministerio" : "Agregar Ministerio"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingMin ? "Editar Área de Servicio" : "Agregar Área de Servicio"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <MF label="Nombre del Ministerio *" name="ministry_name" set={setMinForm} val={minForm} />
-            <MF label="Líder del Ministerio" name="ministry_leader" set={setMinForm} val={minForm} />
+            <MF label="Nombre del Área *" name="ministry_name" set={setMinForm} val={minForm} />
+            <MF label="Líder del Área" name="ministry_leader" set={setMinForm} val={minForm} />
             <MF label="Día de Reunión" name="meeting_day" set={setMinForm} val={minForm} options={DAYS_EN} optionLabels={DAYS_ES} />
             <MF label="Lugar de Reunión" name="meeting_location" set={setMinForm} val={minForm} />
           </div>
@@ -194,7 +194,7 @@ export default function Ministries() {
             <Button variant="outline" onClick={() => setMinModal(false)} className="flex-1">Cancelar</Button>
             <Button onClick={saveMin} disabled={saving || !minForm.ministry_name}
               className="flex-1 bg-[#d4a843] hover:bg-[#c49a3a] text-[#1e293b] font-semibold">
-              {saving ? "Guardando..." : editingMin ? "Guardar Cambios" : "Agregar Ministerio"}
+              {saving ? "Guardando..." : editingMin ? "Guardar Cambios" : "Agregar Área"}
             </Button>
           </div>
         </DialogContent>
@@ -206,7 +206,7 @@ export default function Ministries() {
           <DialogHeader><DialogTitle>{editingVol ? "Editar Voluntario" : "Agregar Voluntario"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
             <MF label="Nombre del Miembro *" name="member_name" set={setVolForm} val={volForm} />
-            <MF label="Ministerio *" name="ministry_name" set={setVolForm} val={volForm}
+            <MF label="Área de Servicio *" name="ministry_name" set={setVolForm} val={volForm}
               options={ministries.map(m => m.ministry_name)} />
             <MF label="Rol" name="role" set={setVolForm} val={volForm} />
             <MF label="Fecha de Inicio" name="start_date" type="date" set={setVolForm} val={volForm} />

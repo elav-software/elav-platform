@@ -14,15 +14,23 @@ export default function PortalSetPassword() {
 
   useEffect(() => {
     let done = false;
+    let gotRecovery = false;
     let timeoutId;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (done) return;
-      if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && session) {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        gotRecovery = true;
         done = true;
         clearTimeout(timeoutId);
         subscription.unsubscribe();
         setChecking(false);
+      } else if (event === 'SIGNED_IN' && session && !gotRecovery) {
+        // Sesión normal — el usuario ya cambió la contraseña o llegó por otro camino
+        done = true;
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
+        window.location.replace("/connect/portal/dashboard");
       }
     });
 
@@ -68,7 +76,8 @@ export default function PortalSetPassword() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
-      redirect("/connect/portal/dashboard");
+      // Usar replace para que el botón "atrás" no vuelva a esta pantalla
+      window.location.replace("/connect/portal/dashboard");
     } catch (err) {
       console.error(err);
       setError(err?.message || "Error al guardar la contraseña. Intentá de nuevo.");

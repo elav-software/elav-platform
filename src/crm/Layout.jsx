@@ -21,7 +21,7 @@ const navItems = [
 { name: "Panel Principal", icon: LayoutDashboard, page: "Dashboard", adminOnly: false },
 { name: "Miembros", icon: Users, page: "Members", adminOnly: false },
 { name: "Visitantes", icon: UserPlus, page: "Visitors", adminOnly: false },
-{ name: "Ministerios", icon: Church, page: "Ministries", adminOnly: false },
+  { name: "Área de Servicios", icon: Church, page: "Ministries", adminOnly: false },
 { name: "Eventos", icon: Calendar, page: "Events", adminOnly: false },
 { name: "Peticiones de Oración", icon: HandHeart, page: "PrayerRequests", adminOnly: false },
 { name: "Tesorería", icon: DollarSign, page: "Donations", adminOnly: false },
