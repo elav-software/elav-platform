@@ -24,9 +24,10 @@ export async function POST(req: NextRequest) {
     // Buscar el líder en la tabla leaders del CRM.
     // Estrategia 1: por member_id (personas.id) — es el vínculo más confiable
     // Estrategia 2: por email — fallback si no hay member_id linkeado
+    // Estrategia 3: por full_name — último fallback si email también está vacío en leaders
     const { data: personaRow } = await supabaseAdmin
       .from("personas")
-      .select("id")
+      .select("id, nombre, apellido")
       .ilike("email", user.email!)
       .maybeSingle();
 
@@ -46,6 +47,17 @@ export async function POST(req: NextRequest) {
         .from("leaders")
         .select("id, church_id")
         .ilike("email", user.email!)
+        .maybeSingle();
+      crmLeader = data;
+    }
+
+    // Fallback 3: buscar por full_name usando nombre+apellido de personas
+    if (!crmLeader && personaRow) {
+      const fullName = `${personaRow.nombre} ${personaRow.apellido}`.trim();
+      const { data } = await supabaseAdmin
+        .from("leaders")
+        .select("id, church_id")
+        .ilike("full_name", fullName)
         .maybeSingle();
       crmLeader = data;
     }

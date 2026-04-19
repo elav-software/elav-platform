@@ -62,16 +62,6 @@ export default function Leaders() {
     if (match) setSelectedLeader(match);
   }, [leaders]);
 
-  // Auto-seleccionar líder si viene con ?buscar= desde búsqueda global
-  useEffect(() => {
-    if (leaders.length === 0) return;
-    const buscar = new URLSearchParams(window.location.search).get('buscar');
-    if (!buscar) return;
-    const q = buscar.toLowerCase().trim();
-    const match = leaders.find(l => l.full_name?.toLowerCase().includes(q));
-    if (match) setSelectedLeader(match);
-  }, [leaders]);
-
   const handleEdit = (leader) => {
     setEditingLeader(leader);
     setModalOpen(true);

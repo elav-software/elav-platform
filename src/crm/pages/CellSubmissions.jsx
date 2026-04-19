@@ -24,17 +24,61 @@ export default function CellSubmissions() {
     setLoading(true);
     try {
       const churchId = await getMyChurchId();
-      const { data, error } = await supabase
+
+      // 1. Reportes enviados desde el portal
+      const { data: submissions, error: e1 } = await supabase
         .from("leader_cell_submissions")
-        .select(`
-          *,
-          personas!leader_id(nombre, apellido, grupo_celula)
-        `)
+        .select(`*, personas!leader_id(nombre, apellido, grupo_celula)`)
         .eq("church_id", churchId)
         .order("report_date", { ascending: false });
+      if (e1) throw e1;
 
-      if (error) throw error;
-      setReports(data || []);
+      // 2. Reportes cargados directamente en CRM (cell_reports)
+      const { data: crmReports } = await supabase
+        .from("cell_reports")
+        .select(`*, leaders!leader_id(full_name, district, member_id)`)
+        .eq("church_id", churchId)
+        .order("date", { ascending: false });
+
+      // Deduplicar: si ya existe en portal con mismo líder (personas.id) + fecha, no agregar
+      const submissionKeys = new Set(
+        (submissions || []).map(s => `${s.leader_id}_${s.report_date}`)
+      );
+
+      const crmNormalized = (crmReports || [])
+        .filter(r => {
+          const personasId = r.leaders?.member_id;
+          if (!personasId) return true; // sin vínculo a personas → mostrar igual
+          return !submissionKeys.has(`${personasId}_${r.date}`);
+        })
+        .map(r => ({
+          id: r.id,
+          _fromCrm: true,
+          leader_email: null,
+          leader_id: r.leaders?.member_id || null,
+          report_date: r.date,
+          attendance_count: r.attendance || 0,
+          new_visitors: r.visits || 0,
+          offering_amount: r.offering || 0,
+          testimonies: r.topic,
+          prayer_requests: null,
+          observations: r.notes,
+          status: "reviewed",
+          created_at: r.created_at,
+          personas: r.leaders
+            ? {
+                nombre: r.leaders.full_name?.split(" ")[0] || r.leaders.full_name || "",
+                apellido: r.leaders.full_name?.split(" ").slice(1).join(" ") || "",
+                grupo_celula: r.leaders.district,
+              }
+            : null,
+        }));
+
+      const allReports = [...(submissions || []), ...crmNormalized].sort(
+        (a, b) => (b.report_date || "").localeCompare(a.report_date || "")
+      );
+
+      setReports(allReports);
     } catch (err) {
       console.error(err);
       toast.error("Error al cargar reportes");
