@@ -346,7 +346,7 @@ export default function Members() {
 
   return (
     <div>
-      <PageHeader title="Miembros" subtitle={`${members.length} miembros en total`} onAdd={openAdd} addLabel="Agregar Miembro" />
+      <PageHeader title="Miembros" subtitle={`${members.length} miembros en total`} onAdd={() => window.open('https://www.cfccasanova.com/miembros', '_blank')} addLabel="Agregar Miembro" />
 
       {/* SYNC BUTTON */}
       <div className="flex flex-wrap items-center gap-2 mb-4">

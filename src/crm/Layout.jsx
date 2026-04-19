@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate, useLocation } from "@crm/lib/router-compat";
 import { createPageUrl } from "@crm/utils";
 import { supabase } from "@crm/api/supabaseClient";
@@ -6,7 +6,7 @@ import { clearChurchIdCache, getMyChurchId, getMyRole, setSuperadminSelectedChur
 import {
   LayoutDashboard, Users, UserPlus, Church, Calendar,
   HandHeart, DollarSign, BarChart3, MessageSquare, ClipboardList,
-  Menu, X, LogOut, User, Crown, UserCheck, FolderOpen } from
+  Menu, X, LogOut, User, Crown, UserCheck, FolderOpen, Search } from
 "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -44,6 +44,12 @@ export default function Layout({ children, currentPageName }) {
   const [newVisitorsCount, setNewVisitorsCount] = useState(0);
   const [churches, setChurches] = useState([]);
   const [selectedChurch, setSelectedChurch] = useState(null);
+  // Búsqueda global
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -178,6 +184,48 @@ export default function Layout({ children, currentPageName }) {
     return () => window.removeEventListener('visitors-seen', handler);
   }, []);
 
+  // Ctrl+K abre la búsqueda global
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+        setSearchQuery("");
+        setSearchResults([]);
+      }
+      if (e.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    if (searchOpen && searchRef.current) searchRef.current.focus();
+  }, [searchOpen]);
+
+  const runSearch = useCallback(async (q) => {
+    if (!q || q.length < 2) { setSearchResults([]); return; }
+    setSearching(true);
+    try {
+      const churchId = await getMyChurchId();
+      const { data } = await supabase
+        .from('personas')
+        .select('id, nombre, apellido, rol, telefono, email, estado_aprobacion')
+        .eq('church_id', churchId)
+        .or(`nombre.ilike.%${q}%,apellido.ilike.%${q}%,email.ilike.%${q}%,telefono.ilike.%${q}%`)
+        .limit(15);
+      setSearchResults(data || []);
+    } catch (err) {
+      console.error('Error en búsqueda:', err);
+    }
+    setSearching(false);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => runSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, runSearch]);
+
   const handleChurchChange = (churchId) => {
     setSuperadminSelectedChurch(churchId);
     setSelectedChurch(churchId);
@@ -243,7 +291,9 @@ export default function Layout({ children, currentPageName }) {
           <img src="/logo.png" alt="CFC Logo" className="w-8 h-8 rounded-full object-cover" />
           <span className="text-slate-50 font-bold">CFC CASA CRM</span>
         </div>
-        <div className="w-10" />
+        <button onClick={() => { setSearchOpen(true); setSearchQuery(""); setSearchResults([]); }} className="p-2 text-slate-50 hover:text-white">
+          <Search className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Mobile Overlay */}
@@ -269,12 +319,26 @@ export default function Layout({ children, currentPageName }) {
                   <p className="text-xs text-slate-400">Sistema de Gestión</p>
                 </div>
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
+              <button
+                onClick={() => { setSearchOpen(true); setSearchQuery(""); setSearchResults([]); }}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                title="Buscar (Ctrl+K)"
+              >
+                <Search className="w-4 h-4" />
               </button>
             </div>
+            {/* Search hint */}
+            <button
+              onClick={() => { setSearchOpen(true); setSearchQuery(""); setSearchResults([]); }}
+              className="mt-3 w-full flex items-center gap-2 px-3 py-2 bg-slate-700/60 hover:bg-slate-700 rounded-lg text-xs text-slate-400 transition-colors"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="flex-1 text-left">Buscar personas...</span>
+              <kbd className="text-xs bg-slate-600 px-1.5 py-0.5 rounded font-mono">Ctrl+K</kbd>
+            </button>
+          </div>
 
-            {/* Selector de iglesia para superadmin */}
+          {/* Selector de iglesia para superadmin */}
             {user?.role === 'superadmin' && churches.length > 0 && (
               <div className="mt-4">
                 <p className="text-xs text-slate-400 mb-1.5">Viendo iglesia:</p>
@@ -403,6 +467,67 @@ export default function Layout({ children, currentPageName }) {
           {children}
         </div>
       </main>
+
+      {/* Modal de búsqueda global */}
+      {searchOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-20 px-4" onClick={() => setSearchOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Input */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+              <Search className="w-5 h-5 text-slate-400 flex-shrink-0" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre, teléfono, email..."
+                className="flex-1 text-base text-slate-800 placeholder-slate-400 outline-none bg-transparent"
+              />
+              {searching && <div className="w-4 h-4 border-2 border-slate-300 border-t-red-500 rounded-full animate-spin flex-shrink-0" />}
+              <button onClick={() => setSearchOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Resultados */}
+            <div className="max-h-80 overflow-y-auto">
+              {searchQuery.length < 2 ? (
+                <p className="text-center text-slate-400 text-sm py-8">Escribí al menos 2 caracteres para buscar</p>
+              ) : searchResults.length === 0 && !searching ? (
+                <p className="text-center text-slate-400 text-sm py-8">Sin resultados para "{searchQuery}"</p>
+              ) : (
+                <ul>
+                  {searchResults.map(p => (
+                    <li key={p.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-semibold text-slate-600">{(p.nombre || "?")[0].toUpperCase()}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">{p.nombre} {p.apellido}</p>
+                        <p className="text-xs text-slate-500 truncate">{p.telefono || p.email || "Sin contacto"}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          p.rol === 'Líder' ? 'bg-amber-100 text-amber-700' :
+                          p.rol === 'Miembro' ? 'bg-blue-100 text-blue-700' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>{p.rol || "—"}</span>
+                        {p.estado_aprobacion === 'pendiente' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">Pendiente</span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-400 flex justify-between">
+              <span>{searchResults.length > 0 ? `${searchResults.length} resultado${searchResults.length !== 1 ? 's' : ''}` : ''}</span>
+              <span>Esc para cerrar</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>);
 
 }

@@ -518,17 +518,6 @@ export default function Home() {
                       })}
                     </div>
                   </div>
-
-                  <div className={fieldGroupClasses}>
-                    <label className={labelClasses}>Ministerio principal</label>
-                    <select className={selectClasses} value={form.ministerio} onChange={set("ministerio")}>
-                      <option value="">Seleccionar...</option>
-                      <option value="Pastor">Pastor</option>
-                      <option value="Maestro">Maestro</option>
-                      <option value="Profeta">Profeta</option>
-                      <option value="Evangelista">Evangelista</option>
-                    </select>
-                  </div>
                 </div>
               )}
 
