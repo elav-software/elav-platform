@@ -67,10 +67,17 @@ export default function Communication() {
     api.entities.Member.list("-created_date", 500).then(setMembers);
   }, []);
 
-  // Áreas de servicio únicas extraídas de los miembros
-  const serviceAreas = [...new Set(
-    members.flatMap(m => (m.current_service_area || "").split(",").map(a => a.trim()).filter(Boolean))
-  )].sort((a, b) => a.localeCompare(b, "es"));
+  // Lista fija de áreas de servicio + cualquier área extra cargada en miembros
+  const AREAS_FIJAS = [
+    "Consolidación", "Vasos de barro", "Coro Kids", "Alabanza", "Expresión",
+    "Intercesión", "CFC Niños", "Medios", "Social media", "Sonido", "Luces",
+    "Pantalla", "Llamados a la escena", "Servicio Especial", "Seguridad",
+    "Casa en Orden", "Asesoramiento de Imagen", "Primeros Auxilios", "Embajadores de Alegría",
+  ];
+  const areasFromMembers = members.flatMap(m =>
+    (m.current_service_area || "").split(",").map(a => a.trim()).filter(Boolean)
+  );
+  const serviceAreas = [...new Set([...AREAS_FIJAS, ...areasFromMembers])].sort((a, b) => a.localeCompare(b, "es"));
 
   const now = new Date();
   const birthdayToday = members.filter(m => {

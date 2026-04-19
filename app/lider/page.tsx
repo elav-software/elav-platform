@@ -94,7 +94,7 @@ export default function Home() {
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [countdown, setCountdown] = useState(60);
+  const [countdown, setCountdown] = useState(15);
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -146,6 +146,33 @@ export default function Home() {
 
     const churchId = await resolveChurchId();
 
+    // Verificar duplicados antes de registrar
+    if (churchId) {
+      try {
+        const { data: existing } = await supabase
+          .from("personas")
+          .select("id, fecha_nacimiento")
+          .eq("church_id", churchId)
+          .ilike("nombre", form.nombre.trim())
+          .ilike("apellido", form.apellido.trim())
+          .limit(5);
+        if (existing && existing.length > 0) {
+          // Si hay fecha de nacimiento en ambos y coincide → duplicado seguro
+          // Si no hay DOB o no coincide → igual bloqueamos por nombre+apellido
+          const dobMatch = form.fecha_nacimiento
+            ? existing.some(e => e.fecha_nacimiento === form.fecha_nacimiento)
+            : false;
+          if (!form.fecha_nacimiento || dobMatch || existing.length >= 1) {
+            toast.error("Ya existe un registro con ese nombre y apellido. Si necesitás actualizar tus datos, contactate con el pastor.");
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Si RLS bloquea la consulta, continuar con el registro
+      }
+    }
+
     // Subir foto a Supabase Storage
     let fotoUrl = "";
     if (fotoFile) {
@@ -190,7 +217,7 @@ export default function Home() {
       console.error(error);
     } else {
       setSubmitted(true);
-      let secs = 60;
+      let secs = 15;
       setCountdown(secs);
       const interval = setInterval(() => {
         secs -= 1;

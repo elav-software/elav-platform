@@ -212,6 +212,22 @@ export default function Members() {
         await api.entities.Member.update(editing.id, payload);
         await syncToSupabase(payload, payload.supabase_id);
       } else {
+        // Verificar duplicados antes de crear
+        const nameLower = (form.full_name || "").toLowerCase().trim();
+        const dob = form.date_of_birth || "";
+        const duplicate = members.find(m => {
+          const sameName = (m.full_name || "").toLowerCase().trim() === nameLower;
+          if (!sameName) return false;
+          // Si ambos tienen fecha de nacimiento, compararla
+          if (dob && m.date_of_birth) return m.date_of_birth === dob;
+          // Mismo nombre sin fecha → asumir duplicado
+          return true;
+        });
+        if (duplicate) {
+          alert(`Ya existe "${duplicate.full_name}" en el CRM. Verificá si es la misma persona antes de agregar.`);
+          setSaving(false);
+          return;
+        }
         // api.entities.Member.create ya inserta en personas con church_id
         const created = await api.entities.Member.create(payload);
         // Guardar el supabase_id para futuros updates de sincronización
