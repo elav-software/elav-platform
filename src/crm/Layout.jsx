@@ -340,7 +340,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Selector de iglesia para superadmin */}
             {user?.role === 'superadmin' && churches.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-4 px-6 pb-4">
                 <p className="text-xs text-slate-400 mb-1.5">Viendo iglesia:</p>
                 <select
                   value={selectedChurch || ''}
@@ -353,7 +353,6 @@ export default function Layout({ children, currentPageName }) {
                 </select>
               </div>
             )}
-          </div>
 
           {/* Navigation */}
           <nav className="bg-slate-700 text-slate-50 px-3 py-4 flex-1 overflow-y-auto space-y-1">
