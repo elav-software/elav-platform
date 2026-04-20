@@ -102,7 +102,7 @@ export default function Leaders() {
       <PageHeader
         title="Líderes y Células"
         subtitle={`${leaders.length} líderes registrados · ${mappableLeaders.length} con ubicación`}
-        onAdd={() => { setEditingLeader(null); setModalOpen(true); }}
+        onAdd={() => window.open('https://www.cfccasanova.com/lider', '_blank')}
         addLabel="Agregar Líder"
       />
 
@@ -148,7 +148,7 @@ export default function Leaders() {
                 icon={Users}
                 title="Sin líderes registrados"
                 description="Agrega líderes para gestionar sus células."
-                onAction={() => setModalOpen(true)}
+                onAction={() => window.open('https://www.cfccasanova.com/lider', '_blank')}
                 actionLabel="Agregar Líder"
               />
             </Card>
