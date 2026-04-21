@@ -127,6 +127,18 @@ export default function Home() {
       toast.error("Nombre y apellido son obligatorios");
       return false;
     }
+    if (!form.email) {
+      toast.error("El correo electrónico es obligatorio");
+      return false;
+    }
+    if (!form.edad) {
+      toast.error("La edad es obligatoria");
+      return false;
+    }
+    if (!form.fecha_nacimiento) {
+      toast.error("La fecha de nacimiento es obligatoria");
+      return false;
+    }
     if (!form.telefono) {
       toast.error("Ingresá un teléfono");
       return false;
