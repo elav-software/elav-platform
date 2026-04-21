@@ -10,6 +10,7 @@ const PATH_TO_PAGE: Record<string, string> = {
   "/crm/leaders":         "Leaders",
   "/crm/cell-submissions": "CellSubmissions",
   "/crm/ministries":      "Ministries",
+  "/crm/service-areas":   "ServiceAreas",
   "/crm/events":          "Events",
   "/crm/prayer-requests": "PrayerRequests",
   "/crm/donations":       "Donations",
