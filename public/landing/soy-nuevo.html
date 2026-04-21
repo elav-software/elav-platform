@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Soy Nuevo - CFC</title>
+	<link rel="stylesheet" href="./style.css">
+	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+	<div id="menu-contenedor"></div>
+
+	<section class="page-header fade-in">
+		<h1>Bienvenido a Casa</h1>
+		<p>Conocé nuestra historia y prepará tu primera visita.</p>
+	</section>
+
+	<section class="soy-nuevo fade-in delay mt-40">
+		<div class="container-nuevo">
+			<div class="nuevo-grid">
+                
+				<div class="columna-info">
+					<div class="nuevo-info">
+						<h3>Nuestra Historia</h3>
+						<p class="mb-15">Nacimos en 1970 en el garage de una casa bajo la fe del Pastor Miguel Ángel Pereda y su esposa Susana. Hoy, con más de 50 años de trayectoria, el Centro Familiar Cristiano es una comunidad que trasciende fronteras, liderada por la Pastora Susana y sus cuatro hijos (Ingrid, Mariano, Jonatan y Jennifer) junto a sus familias.</p>
+                        
+						<p class="mb-15">Creemos en una iglesia que vive para estar cerca de Dios y sale para bendecir a otros. Nuestra misión es clara: hacer discípulos y llevar un mensaje de restauración a cada rincón de La Matanza.</p>
+                        
+						<p>No somos solo un edificio en Isidro Casanova; somos una familia presente en el barrio a través de nuestras células, brindando contención y esperanza.</p>
+					</div>
+
+					<div class="nuevo-horarios mt-40">
+						<h3>Horarios Fijos</h3>
+						<ul>
+							<li><span class="dia">Miércoles</span> <span class="hora">19:30 hs</span></li>
+							<li><span class="dia">Viernes</span> <span class="hora">19:30 hs</span></li>
+							<li><span class="dia">Sábado <small>(Jóvenes)</small></span> <span class="hora">19:30 hs</span></li>
+							<li><span class="dia">Domingos</span> <span class="hora">10:00 hs y 18:00 hs</span></li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="columna-accion">
+                    
+					<div class="formulario-box mb-20 p-30">
+						<h2>¡Nos encantaría conocerte!</h2>
+						<p>No queremos que te sientas un extraño. Dejanos tus datos y un miembro de nuestra familia te escribirá para que tu primera visita sea especial.</p>
+                        
+						<form action="https://formspree.io/f/TU_CODIGO_FORMSPREE" method="POST">
+							<input type="hidden" name="_subject" value="NUEVO VISITANTE - Quiere que lo llamen">
+                            
+							<input type="text" name="Nombre y Apellido" placeholder="Nombre y Apellido" required>
+							<input type="text" name="WhatsApp / Teléfono" placeholder="WhatsApp / Teléfono" required>                            
+							<button type="submit" class="btn-submit w-100">Quiero que me llamen!</button>
+						</form>
+					</div>
+
+					<div class="mapa-container">
+						<h3>Cómo Llegar</h3>
+						<p class="direccion" style="font-size: 0.9rem;">Av. Juan Manuel de Rosas 7840, Isidro Casanova</p>
+						<div class="mapa-responsive">
+							<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3279.799863778842!2d-58.5833446!3d-34.7102143!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bcc67396c21e69%3A0xc3cf936e39ab8254!2sAv.%20Brig.%20Gral.%20Juan%20Manuel%20de%20Rosas%207840%2C%20B1765%20Isidro%20Casanova%2C%20Provincia%20de%20Buenos%20Aires!5e0!3m2!1ses!2sar!4v1713283200000!5m2!1ses!2sar" width="100%" height="250" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+						</div>
+					</div>
+
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<div id="footer-contenedor"></div>
+
+	<script src="./componentes.js"></script>
+</body>
+</html>
