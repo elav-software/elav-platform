@@ -4,7 +4,6 @@ const PAGE_ROUTES: Record<string, string> = {
   Visitors:       "/crm/visitors",
   Leaders:        "/crm/leaders",
   CellSubmissions: "/crm/cell-submissions",
-  Ministries:     "/crm/ministries",
   ServiceAreas:   "/crm/service-areas",
   Events:         "/crm/events",
   PrayerRequests: "/crm/prayer-requests",
