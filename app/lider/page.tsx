@@ -419,7 +419,7 @@ export default function Home() {
                       <input type="tel" className={inputClasses} value={form.telefono} onChange={set("telefono")} placeholder="Ej: 1123456789" />
                     </div>
                     <div className={`${fieldGroupClasses} md:col-span-2`}>
-                      <label className={labelClasses}>Email</label>
+                      <label className={labelClasses}>Email *</label>
                       <input type="email" className={inputClasses} value={form.email} onChange={set("email")} placeholder="correo@ejemplo.com" />
                     </div>
                   </div>
