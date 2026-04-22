@@ -36,14 +36,19 @@ async function getMyChurchId() {
   if (selected) return selected;
 
   if (_churchId) return _churchId;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Usar getSession() — no hace llamada de red extra
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return null;
   const { data, error } = await supabase
     .from('church_users')
     .select('church_id, role')
     .eq('user_id', user.id)
+    .select('church_id')
+    .eq('user_id', session.user.id)
     .eq('is_active', true)
-    .single();
+    .not('church_id', 'is', null)
+    .limit(1)
+    .maybeSingle();
   if (error || !data) {
     console.warn('[apiClient/crm] No se encontró church_id para este usuario.');
     return null;
