@@ -42,8 +42,6 @@ async function getMyChurchId() {
   const { data, error } = await supabase
     .from('church_users')
     .select('church_id, role')
-    .eq('user_id', user.id)
-    .select('church_id')
     .eq('user_id', session.user.id)
     .eq('is_active', true)
     .not('church_id', 'is', null)
