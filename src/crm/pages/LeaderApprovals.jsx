@@ -45,7 +45,10 @@ export default function LeaderApprovals() {
         return;
       }
 
+
       // Superadmin: acceso directo desde JWT (no requiere DB)
+
+      // Superadmin: acceso directo desde JWT (sin DB)
       if (session.user.user_metadata?.role === 'superadmin') {
         setCurrentUser(session.user);
         loadLeaders();
@@ -60,6 +63,17 @@ export default function LeaderApprovals() {
         .maybeSingle();
 
       if (!churchUser || (churchUser.role !== 'admin' && churchUser.role !== 'superadmin')) {
+
+      const { data: churchUsers } = await supabase
+        .from('church_users')
+        .select('role, is_active, user_id')
+        .eq('user_id', session.user.id)
+        .eq('is_active', true);
+
+      const churchUser = (churchUsers || []).find(u => u.role === 'admin' || u.role === 'superadmin');
+
+      if (!churchUser) {
+
         toast.error("No tenés permisos de administrador");
         window.location.href = "/crm/dashboard";
         return;
