@@ -55,15 +55,6 @@ export default function LeaderApprovals() {
         return;
       }
 
-      const { data: churchUser } = await supabase
-        .from('church_users')
-        .select('role, is_active, user_id')
-        .eq('user_id', session.user.id)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (!churchUser || (churchUser.role !== 'admin' && churchUser.role !== 'superadmin')) {
-
       const { data: churchUsers } = await supabase
         .from('church_users')
         .select('role, is_active, user_id')
@@ -73,7 +64,6 @@ export default function LeaderApprovals() {
       const churchUser = (churchUsers || []).find(u => u.role === 'admin' || u.role === 'superadmin');
 
       if (!churchUser) {
-
         toast.error("No tenés permisos de administrador");
         window.location.href = "/crm/dashboard";
         return;
