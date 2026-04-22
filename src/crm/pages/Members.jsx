@@ -12,7 +12,7 @@ import { Label } from "@crm/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@crm/components/ui/tabs";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
-import { Users, Search, Phone, Mail, MapPin, Edit, Trash2, Crown, RefreshCw, Download, Layers } from "lucide-react";
+import { Users, Search, Phone, Mail, MapPin, Edit, Trash2, Crown, RefreshCw, Download, Layers, Camera } from "lucide-react";
 import { differenceInYears, parseISO } from "date-fns";
 import { Link } from "@crm/lib/router-compat";
 import { supabase, supabaseToCRM, crmToSupabase } from "@crm/api/supabaseClient";
@@ -151,6 +151,7 @@ const EMPTY_FORM = {
   church_family_ties: "",
 
   dia_reunion: "", hora_reunion: "", lugar_reunion: "", lugar_reunion_localidad: "",
+  foto_url: "",
   supabase_id: ""
 };
 
@@ -167,6 +168,8 @@ export default function Members() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
   const [activeTab, setActiveTab] = useState("personal");
+  const [fotoFile, setFotoFile] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
 
   const load = async () => {
     const data = await api.entities.Member.list("-created_date", 500);
@@ -182,8 +185,8 @@ export default function Members() {
     if (buscar) setSearch(buscar);
   }, []);
 
-  const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setActiveTab("personal"); setModalOpen(true); };
-  const openEdit = (m) => { setEditing(m); setForm({ ...EMPTY_FORM, ...m }); setActiveTab("personal"); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setFotoFile(null); setFotoPreview(null); setActiveTab("personal"); setModalOpen(true); };
+  const openEdit = (m) => { setEditing(m); setForm({ ...EMPTY_FORM, ...m }); setFotoFile(null); setFotoPreview(m.foto_url || null); setActiveTab("personal"); setModalOpen(true); };
 
   // --- SYNC: CRM → Supabase (al crear/editar) ---
   const syncToSupabase = async (member, supabaseId) => {
@@ -206,7 +209,21 @@ export default function Members() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = { ...form, household_size: form.household_size ? Number(form.household_size) : undefined };
+      let foto_url = form.foto_url || "";
+      if (fotoFile) {
+        const churchId = await getMyChurchId();
+        const ext = fotoFile.name.split(".").pop();
+        const path = `${churchId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("leader-photos").upload(path, fotoFile, { upsert: true });
+        if (uploadError) {
+          alert("Error al subir la foto. Intentá de nuevo.");
+          setSaving(false);
+          return;
+        }
+        const { data: urlData } = supabase.storage.from("leader-photos").getPublicUrl(path);
+        foto_url = urlData.publicUrl;
+      }
+      const payload = { ...form, foto_url, household_size: form.household_size ? Number(form.household_size) : undefined };
 
       if (editing) {
         await api.entities.Member.update(editing.id, payload);
@@ -648,6 +665,39 @@ export default function Members() {
 
             {/* PERSONAL */}
             <TabsContent value="personal" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              {/* Foto */}
+              <div className="sm:col-span-2 flex items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0">
+                  {fotoPreview
+                    ? <img src={fotoPreview} alt="Foto" className="w-full h-full object-cover" />
+                    : <Camera className="w-7 h-7 text-slate-400" />}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label className="text-xs font-medium text-slate-600">Foto del miembro</Label>
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#d4a843] text-[#1e293b] text-xs font-semibold hover:bg-[#c49a3a] transition-colors">
+                    <Camera className="w-3.5 h-3.5" />
+                    {fotoPreview ? "Cambiar foto" : "Subir foto"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) { alert("La foto no puede superar 5MB."); return; }
+                        setFotoFile(file);
+                        setFotoPreview(URL.createObjectURL(file));
+                      }}
+                    />
+                  </label>
+                  {fotoPreview && (
+                    <button type="button" className="text-xs text-slate-400 hover:text-red-500 transition-colors text-left"
+                      onClick={() => { setFotoFile(null); setFotoPreview(null); setForm(f => ({ ...f, foto_url: "" })); }}>
+                      Quitar foto
+                    </button>
+                  )}
+                </div>
+              </div>
               <F label="Nombre Completo *" name="full_name" form={form} setForm={setForm} />
               <DateField key={editing?.id || "new"} label="Fecha de Nacimiento" name="date_of_birth" form={form} setForm={setForm} />
               <F label="Género" name="gender" options={["Male", "Female"]} optionLabels={["Masculino", "Femenino"]} form={form} setForm={setForm} />

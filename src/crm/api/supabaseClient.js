@@ -97,5 +97,6 @@ export function crmToSupabase(member) {
     tamano_hogar: member.household_size ? Number(member.household_size) : null,
     vinculos_familiares_iglesia: member.church_family_ties || null,
     lider_id: member.lider_id || null,
+    foto_url: member.foto_url || null,
   };
 }
