@@ -392,7 +392,7 @@ export default function Members() {
       await load();
     } catch (err) {
       console.error("Error al importar:", err);
-      setSyncMsg("Error al importar desde Supabase");
+      setSyncMsg(`Error al importar desde Supabase: ${err?.message || err}`);
     }
     setSyncing(false);
   };
