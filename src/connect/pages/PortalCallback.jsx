@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 
 export default function PortalCallback() {
   const [status, setStatus] = useState("Verificando credenciales...");
@@ -53,6 +53,14 @@ export default function PortalCallback() {
   const verifyLeader = async (session) => {
     try {
       setStatus("Verificando permisos...");
+
+      // Superadmin bypass
+      const superadmin = await checkIsSuperadmin();
+      if (superadmin) {
+        redirect("/connect/portal/dashboard");
+        return;
+      }
+
       const churchId = await getCurrentChurchId();
 
       let query = supabase

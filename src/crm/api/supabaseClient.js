@@ -51,6 +51,7 @@ export function supabaseToCRM(persona) {
     children: persona.hijos || "",
     household_size: persona.tamano_hogar ? Number(persona.tamano_hogar) : undefined,
     church_family_ties: persona.vinculos_familiares_iglesia || "",
+    foto_url: persona.foto_url || "",
   };
 }
 
@@ -96,5 +97,6 @@ export function crmToSupabase(member) {
     tamano_hogar: member.household_size ? Number(member.household_size) : null,
     vinculos_familiares_iglesia: member.church_family_ties || null,
     lider_id: member.lider_id || null,
+    foto_url: member.foto_url || null,
   };
 }

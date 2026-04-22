@@ -64,12 +64,18 @@ export default function Visitors() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const data = await api.entities.Visitor.list("-created_date", 200);
+    const data = await api.entities.Visitor.list("-created_at", 200);
     setVisitors(data);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Marcar visitantes como vistos al abrir la página
+    localStorage.setItem('crm_visitors_last_seen', new Date().toISOString());
+    // Disparar evento para que el Layout actualice el badge
+    window.dispatchEvent(new Event('visitors-seen'));
+  }, []);
 
   const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setModalOpen(true); };
   const openEdit = (v) => { setEditing(v); setForm({ ...EMPTY_FORM, ...v }); setModalOpen(true); };
@@ -103,7 +109,7 @@ export default function Visitors() {
 
   return (
     <div>
-      <PageHeader title="Visitantes" subtitle={`${visitors.length} visitantes en total`} onAdd={openAdd} addLabel="Registrar Visitante" />
+      <PageHeader title="Visitantes" subtitle={`${visitors.length} visitantes en total`} onAdd={() => window.open('https://www.cfccasanova.com/connect/portal/login', '_blank')} addLabel="Registrar Visitante" />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">

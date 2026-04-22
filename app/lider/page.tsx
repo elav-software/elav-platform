@@ -61,6 +61,7 @@ type FormData = {
   area_servicio_actual: string[]; ministerio: string; grupo_celula: string;
   dia_reunion: string; hora_reunion: string; lugar_reunion: string; lugar_reunion_localidad: string;
   conyuge: string; hijos: string; tamano_hogar: string; vinculos_familiares_iglesia: string;
+  foto_url: string;
 };
 
 const INITIAL_FORM: FormData = {
@@ -72,6 +73,7 @@ const INITIAL_FORM: FormData = {
   disponibilidad_horaria: [], area_servicio_actual: [], 
   ministerio: "", grupo_celula: "", dia_reunion: "", hora_reunion: "", lugar_reunion: "", lugar_reunion_localidad: "",
   conyuge: "", hijos: "", tamano_hogar: "", vinculos_familiares_iglesia: "",
+  foto_url: "",
 };
 
 const STEPS = ["Personales", "Iglesia", "Servicio", "Célula", "Familia"];
@@ -89,6 +91,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [countdown, setCountdown] = useState(15);
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -105,13 +111,41 @@ export default function Home() {
     });
   };
 
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La foto no puede superar 5MB");
+      return;
+    }
+    setFotoFile(file);
+    setFotoPreview(URL.createObjectURL(file));
+  };
+
   const validate = () => {
     if (!form.nombre || !form.apellido) {
       toast.error("Nombre y apellido son obligatorios");
       return false;
     }
+    if (!form.email) {
+      toast.error("El correo electrónico es obligatorio");
+      return false;
+    }
+    if (!form.edad) {
+      toast.error("La edad es obligatoria");
+      return false;
+    }
+    if (!form.fecha_nacimiento) {
+      toast.error("La fecha de nacimiento es obligatoria");
+      return false;
+    }
     if (!form.telefono) {
       toast.error("Ingresá un teléfono");
+      return false;
+    }
+    if (!fotoFile) {
+      toast.error("La foto de perfil es obligatoria");
+      setStep(0);
       return false;
     }
     return true;
@@ -124,10 +158,55 @@ export default function Home() {
 
     const churchId = await resolveChurchId();
 
+    // Verificar duplicados antes de registrar
+    if (churchId) {
+      try {
+        const { data: existing } = await supabase
+          .from("personas")
+          .select("id, fecha_nacimiento")
+          .eq("church_id", churchId)
+          .ilike("nombre", form.nombre.trim())
+          .ilike("apellido", form.apellido.trim())
+          .limit(5);
+        if (existing && existing.length > 0) {
+          // Si hay fecha de nacimiento en ambos y coincide → duplicado seguro
+          // Si no hay DOB o no coincide → igual bloqueamos por nombre+apellido
+          const dobMatch = form.fecha_nacimiento
+            ? existing.some(e => e.fecha_nacimiento === form.fecha_nacimiento)
+            : false;
+          if (!form.fecha_nacimiento || dobMatch || existing.length >= 1) {
+            toast.error("Ya existe un registro con ese nombre y apellido. Si necesitás actualizar tus datos, contactate con el pastor.");
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Si RLS bloquea la consulta, continuar con el registro
+      }
+    }
+
+    // Subir foto a Supabase Storage
+    let fotoUrl = "";
+    if (fotoFile) {
+      const ext = fotoFile.name.split(".").pop();
+      const path = `${churchId ?? "sin-iglesia"}/${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("leader-photos")
+        .upload(path, fotoFile, { upsert: true });
+      if (uploadError) {
+        toast.error("Error al subir la foto");
+        setLoading(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("leader-photos").getPublicUrl(uploadData.path);
+      fotoUrl = urlData.publicUrl;
+    }
+
     const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
 
     const payload = {
       ...form,
+      foto_url: fotoUrl || null,
       nombre: cap(form.nombre),
       apellido: cap(form.apellido),
       rol: "Líder",
@@ -149,9 +228,14 @@ export default function Home() {
       toast.error("Error al guardar");
       console.error(error);
     } else {
-      toast.success("Datos enviados 🙌");
-      setForm(INITIAL_FORM);
-      setStep(0);
+      setSubmitted(true);
+      let secs = 15;
+      setCountdown(secs);
+      const interval = setInterval(() => {
+        secs -= 1;
+        setCountdown(secs);
+        if (secs <= 0) clearInterval(interval);
+      }, 1000);
     }
   };
 
@@ -178,7 +262,41 @@ export default function Home() {
     <div className="min-h-screen bg-slate-100 flex justify-center items-start py-8 px-4 sm:py-12">
       <Toaster position="top-center" />
 
-      <motion.div
+      {/* PANTALLA DE CONFIRMACIÓN */}
+      {submitted && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white p-10 rounded-[2rem] w-full max-w-md shadow-2xl border border-slate-100 flex flex-col items-center text-center gap-6"
+        >
+          <img src="/logo.png" alt="CFC Logo" className="w-20 h-auto object-contain" />
+          <div>
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-extrabold text-slate-800 mb-2">¡Registro Enviado!</h2>
+            <p className="text-slate-500 text-sm">
+              Tu solicitud fue recibida correctamente.<br />
+              El pastor revisará tu registro y te contactará pronto.
+            </p>
+          </div>
+          {countdown > 0 ? (
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-14 h-14 rounded-full border-4 border-blue-100 flex items-center justify-center">
+                <span className="text-2xl font-bold text-blue-600">{countdown}</span>
+              </div>
+              <p className="text-xs text-slate-400">Esta pantalla seguirá mostrando tu confirmación</p>
+            </div>
+          ) : (
+            <span className="inline-block px-6 py-2 bg-green-100 text-green-700 font-bold rounded-full text-sm tracking-wide">✓ ENVIADO</span>
+          )}
+        </motion.div>
+      )}
+
+      {!submitted && (
+        <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white p-6 sm:p-10 rounded-[2rem] w-full max-w-3xl shadow-2xl shadow-slate-200/50 border border-slate-100"
@@ -225,6 +343,46 @@ export default function Home() {
               {step === 0 && (
                 <div>
                   {sectionTitle("Información Personal")}
+
+                  {/* Foto de perfil */}
+                  <div className="flex flex-col items-center mb-8">
+                    <div
+                      className="w-28 h-28 rounded-full border-4 border-blue-100 bg-slate-100 overflow-hidden flex items-center justify-center mb-3 shadow-md cursor-pointer relative group"
+                      onClick={() => document.getElementById('foto-input')?.click()}
+                    >
+                      {fotoPreview ? (
+                        <img src={fotoPreview} alt="Foto" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-slate-400">
+                          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span className="text-xs font-bold">Foto</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-full transition-opacity">
+                        <span className="text-white text-xs font-bold">Cambiar</span>
+                      </div>
+                    </div>
+                    <input
+                      id="foto-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFotoChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('foto-input')?.click()}
+                      className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      {fotoPreview ? "Cambiar foto" : "Subir foto *"}
+                    </button>
+                    {!fotoPreview && (
+                      <p className="text-xs text-slate-400 mt-1">JPG, PNG o WEBP · Máx 5MB</p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-2">
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Nombre *</label>
@@ -261,7 +419,7 @@ export default function Home() {
                       <input type="tel" className={inputClasses} value={form.telefono} onChange={set("telefono")} placeholder="Ej: 1123456789" />
                     </div>
                     <div className={`${fieldGroupClasses} md:col-span-2`}>
-                      <label className={labelClasses}>Email</label>
+                      <label className={labelClasses}>Email *</label>
                       <input type="email" className={inputClasses} value={form.email} onChange={set("email")} placeholder="correo@ejemplo.com" />
                     </div>
                   </div>
@@ -438,17 +596,6 @@ export default function Home() {
                       })}
                     </div>
                   </div>
-
-                  <div className={fieldGroupClasses}>
-                    <label className={labelClasses}>Ministerio principal</label>
-                    <select className={selectClasses} value={form.ministerio} onChange={set("ministerio")}>
-                      <option value="">Seleccionar...</option>
-                      <option value="Pastor">Pastor</option>
-                      <option value="Maestro">Maestro</option>
-                      <option value="Profeta">Profeta</option>
-                      <option value="Evangelista">Evangelista</option>
-                    </select>
-                  </div>
                 </div>
               )}
 
@@ -583,6 +730,7 @@ export default function Home() {
           </div>
         </form>
       </motion.div>
+      )}
     </div>
   );
 }

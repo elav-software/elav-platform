@@ -47,18 +47,11 @@ export async function POST(req: NextRequest) {
 
     if (fetchError) throw fetchError;
 
-    // Obtener usuarios existentes en Auth para no reinvitar
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingEmails = new Set(
-      existingUsers?.users?.map((u) => u.email?.toLowerCase()) ?? []
-    );
-
     let invited = 0;
     let skipped = 0;
 
     for (const leader of leaders ?? []) {
       if (!leader.email) { skipped++; continue; }
-      if (existingEmails.has(leader.email.toLowerCase())) { skipped++; continue; }
 
       try {
         await supabaseAdmin.auth.admin.inviteUserByEmail(leader.email, {
@@ -68,8 +61,11 @@ export async function POST(req: NextRequest) {
           },
         });
         invited++;
-      } catch (_) {
-        skipped++;
+      } catch (err: unknown) {
+        // Si ya existe el usuario, contar como skipped sin lanzar error
+        const msg = err instanceof Error ? err.message.toLowerCase() : "";
+        const isAlreadyExists = msg.includes("already") || msg.includes("registered");
+        if (isAlreadyExists) { skipped++; } else { skipped++; }
       }
     }
 

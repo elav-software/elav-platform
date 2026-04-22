@@ -52,6 +52,16 @@ export default function Leaders() {
 
   useEffect(() => { load(); }, []);
 
+  // Auto-seleccionar líder si viene con ?buscar= desde búsqueda global
+  useEffect(() => {
+    if (leaders.length === 0) return;
+    const buscar = new URLSearchParams(window.location.search).get('buscar');
+    if (!buscar) return;
+    const q = buscar.toLowerCase().trim();
+    const match = leaders.find(l => l.full_name?.toLowerCase().includes(q));
+    if (match) setSelectedLeader(match);
+  }, [leaders]);
+
   const handleEdit = (leader) => {
     setEditingLeader(leader);
     setModalOpen(true);
@@ -92,7 +102,7 @@ export default function Leaders() {
       <PageHeader
         title="Líderes y Células"
         subtitle={`${leaders.length} líderes registrados · ${mappableLeaders.length} con ubicación`}
-        onAdd={() => { setEditingLeader(null); setModalOpen(true); }}
+        onAdd={() => window.open('https://www.cfccasanova.com/lider', '_blank')}
         addLabel="Agregar Líder"
       />
 
@@ -138,7 +148,7 @@ export default function Leaders() {
                 icon={Users}
                 title="Sin líderes registrados"
                 description="Agrega líderes para gestionar sus células."
-                onAction={() => setModalOpen(true)}
+                onAction={() => window.open('https://www.cfccasanova.com/lider', '_blank')}
                 actionLabel="Agregar Líder"
               />
             </Card>
@@ -177,8 +187,14 @@ export default function Leaders() {
                     {/* Leader header */}
                     <Card className="p-5 border-0 shadow-sm bg-gradient-to-r from-slate-800 to-slate-900 text-white">
                       <div className="flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-2xl font-bold text-white">{selectedLeader.full_name[0]}</span>
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/20">
+                          {selectedLeader.photo ? (
+                            <img src={selectedLeader.photo} alt={selectedLeader.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                              <span className="text-2xl font-bold text-white">{selectedLeader.full_name[0]}</span>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <h2 className="text-xl font-bold">{selectedLeader.full_name}</h2>

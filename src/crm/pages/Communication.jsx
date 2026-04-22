@@ -51,6 +51,7 @@ export default function Communication() {
   const [members, setMembers] = useState([]);
   const [channel, setChannel] = useState("whatsapp");
   const [recipient, setRecipient] = useState("all");
+  const [selectedArea, setSelectedArea] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -65,6 +66,18 @@ export default function Communication() {
   useEffect(() => {
     api.entities.Member.list("-created_date", 500).then(setMembers);
   }, []);
+
+  // Lista fija de áreas de servicio + cualquier área extra cargada en miembros
+  const AREAS_FIJAS = [
+    "Consolidación", "Vasos de barro", "Coro Kids", "Alabanza", "Expresión",
+    "Intercesión", "CFC Niños", "Medios", "Social media", "Sonido", "Luces",
+    "Pantalla", "Llamados a la escena", "Servicio Especial", "Seguridad",
+    "Casa en Orden", "Asesoramiento de Imagen", "Primeros Auxilios", "Embajadores de Alegría",
+  ];
+  const areasFromMembers = members.flatMap(m =>
+    (m.current_service_area || "").split(",").map(a => a.trim()).filter(Boolean)
+  );
+  const serviceAreas = [...new Set([...AREAS_FIJAS, ...areasFromMembers])].sort((a, b) => a.localeCompare(b, "es"));
 
   const now = new Date();
   const birthdayToday = members.filter(m => {
@@ -98,6 +111,13 @@ export default function Communication() {
     if (recipient === "leaders") return `${members.filter(m => m.member_status === "Leader").length} líderes`;
     if (recipient === "visitors") return `${members.filter(m => m.member_status === "Visitor").length} visitantes`;
     if (recipient === "new_believers") return `${members.filter(m => m.member_status === "New Believer").length} nuevos creyentes`;
+    if (recipient === "service_area") {
+      if (!selectedArea) return "Selecciona un área de servicio";
+      const count = members.filter(m =>
+        (m.current_service_area || "").split(",").map(a => a.trim()).includes(selectedArea)
+      ).length;
+      return `${count} miembro${count !== 1 ? "s" : ""} del área “${selectedArea}”`;
+    }
     return `${members.filter(m => m.member_status === "Member").length} miembros activos`;
   };
 
@@ -139,7 +159,7 @@ export default function Communication() {
               </div>
               <div>
                 <Label className="text-xs font-medium text-slate-600 mb-1 block">Destinatarios</Label>
-                <Select value={recipient} onValueChange={setRecipient}>
+                <Select value={recipient} onValueChange={v => { setRecipient(v); setSelectedArea(""); }}>
                   <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los Miembros</SelectItem>
@@ -147,8 +167,21 @@ export default function Communication() {
                     <SelectItem value="members">Miembros Activos</SelectItem>
                     <SelectItem value="leaders">Líderes</SelectItem>
                     <SelectItem value="new_believers">Nuevos Creyentes</SelectItem>
+                    <SelectItem value="service_area">Área de Servicios</SelectItem>
                   </SelectContent>
                 </Select>
+                {recipient === "service_area" && (
+                  <Select value={selectedArea} onValueChange={setSelectedArea}>
+                    <SelectTrigger className="h-9 mt-2 text-sm"><SelectValue placeholder="Seleccionar área..." /></SelectTrigger>
+                    <SelectContent>
+                      {serviceAreas.length === 0 ? (
+                        <SelectItem value="" disabled>Sin áreas cargadas</SelectItem>
+                      ) : serviceAreas.map(a => (
+                        <SelectItem key={a} value={a}>{a}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 

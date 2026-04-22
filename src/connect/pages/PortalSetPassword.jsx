@@ -13,14 +13,50 @@ export default function PortalSetPassword() {
   const redirect = (path) => { window.location.href = path; };
 
   useEffect(() => {
-    // Verificar que hay una sesión activa (viene del link de invitación)
+    let done = false;
+    let gotRecovery = false;
+    let timeoutId;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (done) return;
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        gotRecovery = true;
+        done = true;
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
+        setChecking(false);
+      } else if (event === 'SIGNED_IN' && session && !gotRecovery) {
+        // Sesión normal — el usuario ya cambió la contraseña o llegó por otro camino
+        done = true;
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
+        window.location.replace("/connect/portal/dashboard");
+      }
+    });
+
+    // Cubrir el caso de sesión ya establecida (invite vía callback)
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        redirect("/connect/portal/login");
-      } else {
+      if (done) return;
+      if (session) {
+        done = true;
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
         setChecking(false);
       }
     });
+
+    // Timeout de seguridad — si en 8s no hay sesión, ir al login
+    timeoutId = setTimeout(() => {
+      if (done) return;
+      done = true;
+      subscription.unsubscribe();
+      redirect("/connect/portal/login");
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const handleSubmit = async (e) => {
@@ -40,10 +76,11 @@ export default function PortalSetPassword() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
-      redirect("/connect/portal/dashboard");
+      // Usar replace para que el botón "atrás" no vuelva a esta pantalla
+      window.location.replace("/connect/portal/dashboard");
     } catch (err) {
       console.error(err);
-      setError("Error al guardar la contraseña. Intentá de nuevo.");
+      setError(err?.message || "Error al guardar la contraseña. Intentá de nuevo.");
     } finally {
       setLoading(false);
     }

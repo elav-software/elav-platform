@@ -118,10 +118,10 @@ export default function Layout({ children, currentPageName }) {
                     </Link>
                   ))}
 
-                  {/* Portal de Líderes */}
+                  {/* Portal CFC */}
                   <div className="px-4 mt-6 mb-2">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                      <UserCheck className="w-3 h-3" /> Portal de Líderes
+                      <UserCheck className="w-3 h-3" /> Portal CFC
                     </p>
                   </div>
                   <a
@@ -206,7 +206,7 @@ export default function Layout({ children, currentPageName }) {
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors"
             >
               <UserCheck className="w-3.5 h-3.5" />
-              Portal Líder
+              Portal CFC
             </a>
             <Button variant="ghost" size="icon" className="text-gray-700">
               <Bell className="w-5 h-5" />

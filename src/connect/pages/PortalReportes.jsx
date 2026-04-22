@@ -2,15 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
-import { getCurrentChurchId } from "@connect/api/apiClient";
+import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 import { 
   ArrowLeft, 
   Send, 
-  Calendar,
-  Users,
-  DollarSign,
-  MessageSquare,
-  Heart,
   CheckCircle
 } from "lucide-react";
 
@@ -24,12 +19,12 @@ export default function PortalReportes() {
 
   const [formData, setFormData] = useState({
     report_date: new Date().toISOString().split('T')[0],
-    attendance_count: 0,
-    new_visitors: 0,
-    offering_amount: '',
-    testimonies: '',
-    prayer_requests: '',
-    observations: ''
+    testimonies: '',       // Tema / Mensaje
+    attendance_count: '',  // Asistencia
+    new_visitors: '',      // Visitas realizadas
+    prayer_requests: '',   // Nuevos convertidos
+    offering_amount: '',   // Ofrenda ($)
+    observations: ''       // Notas adicionales
   });
 
   useEffect(() => {
@@ -46,6 +41,14 @@ export default function PortalReportes() {
       }
 
       const churchId = await getCurrentChurchId();
+      
+      // Superadmin bypass
+      const superadmin = await checkIsSuperadmin();
+      if (superadmin) {
+        setLeader({ id: null, nombre: 'Superadmin', apellido: '', email: session.user.email });
+        setLoading(false);
+        return;
+      }
       
       const { data: leaderData, error } = await supabase
         .from('personas')
@@ -103,22 +106,49 @@ export default function PortalReportes() {
           leader_id: leader.id,
           leader_email: leader.email,
           ...formData,
+          attendance_count: formData.attendance_count ? parseInt(formData.attendance_count) : 0,
+          new_visitors: formData.new_visitors ? parseInt(formData.new_visitors) : 0,
           offering_amount: formData.offering_amount ? parseFloat(formData.offering_amount) : null,
           status: 'submitted'
         }]);
 
       if (error) throw error;
 
+      // Sincronizar con cell_reports via API con service role (bypassea RLS)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          await fetch('/api/connect/sync-cell-report', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              reportDate: formData.report_date,
+              topic: formData.testimonies,
+              attendance: formData.attendance_count,
+              visits: formData.new_visitors,
+              newConverts: formData.prayer_requests,
+              offering: formData.offering_amount,
+              notes: formData.observations,
+            }),
+          });
+        }
+      } catch (syncErr) {
+        console.warn('No se pudo sincronizar con CRM:', syncErr);
+      }
+
       setSuccess(true);
       
       // Reset form
       setFormData({
         report_date: new Date().toISOString().split('T')[0],
-        attendance_count: 0,
-        new_visitors: 0,
-        offering_amount: '',
         testimonies: '',
+        attendance_count: '',
+        new_visitors: '',
         prayer_requests: '',
+        offering_amount: '',
         observations: ''
       });
 
@@ -175,136 +205,106 @@ export default function PortalReportes() {
           </div>
         )}
 
-        {/* Form */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Fecha */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-2" />
-                Fecha de la reunión
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.report_date}
-                onChange={(e) => setFormData({ ...formData, report_date: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
-              />
-            </div>
-
-            {/* Asistencia */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-8">
+          <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2 text-lg">
+            <Send className="w-4 h-4 text-amber-500" /> Enviar Reporte de Célula
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Fecha */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Users className="w-4 h-4 inline mr-2" />
-                  Asistencia total
-                </label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Fecha *</label>
                 <input
-                  type="number"
+                  type="date"
                   required
-                  min="0"
-                  value={formData.attendance_count}
-                  onChange={(e) => setFormData({ ...formData, attendance_count: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
+                  value={formData.report_date}
+                  onChange={(e) => setFormData({ ...formData, report_date: e.target.value })}
+                  className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                 />
               </div>
-
+              {/* Tema / Mensaje */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Users className="w-4 h-4 inline mr-2" />
-                  Visitantes nuevos
-                </label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Tema / Mensaje</label>
+                <input
+                  type="text"
+                  value={formData.testimonies}
+                  onChange={(e) => setFormData({ ...formData, testimonies: e.target.value })}
+                  className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+              {/* Asistencia */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Asistencia</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.attendance_count}
+                  onChange={(e) => setFormData({ ...formData, attendance_count: e.target.value })}
+                  className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+              {/* Visitas realizadas */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Visitas realizadas</label>
                 <input
                   type="number"
                   min="0"
                   value={formData.new_visitors}
-                  onChange={(e) => setFormData({ ...formData, new_visitors: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
+                  onChange={(e) => setFormData({ ...formData, new_visitors: e.target.value })}
+                  className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+              {/* Nuevos convertidos */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Nuevos convertidos</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.prayer_requests}
+                  onChange={(e) => setFormData({ ...formData, prayer_requests: e.target.value })}
+                  className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+              {/* Ofrenda */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Ofrenda ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.offering_amount}
+                  onChange={(e) => setFormData({ ...formData, offering_amount: e.target.value })}
+                  placeholder="0.00"
+                  className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                 />
               </div>
             </div>
 
-            {/* Ofrenda */}
+            {/* Notas adicionales */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <DollarSign className="w-4 h-4 inline mr-2" />
-                Ofrenda (opcional)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.offering_amount}
-                onChange={(e) => setFormData({ ...formData, offering_amount: e.target.value })}
-                placeholder="0.00"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
-              />
-            </div>
-
-            {/* Testimonios */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <MessageSquare className="w-4 h-4 inline mr-2" />
-                Testimonios
-              </label>
-              <textarea
-                rows="3"
-                value={formData.testimonies}
-                onChange={(e) => setFormData({ ...formData, testimonies: e.target.value })}
-                placeholder="Compartí los testimonios de la reunión..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
-              />
-            </div>
-
-            {/* Pedidos de oración */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Heart className="w-4 h-4 inline mr-2" />
-                Pedidos de oración
-              </label>
-              <textarea
-                rows="3"
-                value={formData.prayer_requests}
-                onChange={(e) => setFormData({ ...formData, prayer_requests: e.target.value })}
-                placeholder="Escribí los pedidos de oración..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
-              />
-            </div>
-
-            {/* Observaciones */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Observaciones generales
-              </label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Notas adicionales</label>
               <textarea
                 rows="2"
                 value={formData.observations}
                 onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-                placeholder="Cualquier otra información relevante..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-gray-900"
               />
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {submitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5" />
-                  Enviar Reporte
-                </>
-              )}
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {submitting ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Enviar Reporte
+              </button>
+            </div>
           </form>
         </div>
 

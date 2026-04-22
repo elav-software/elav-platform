@@ -13,7 +13,8 @@ import {
   User,
   AlertCircle,
   Send,
-  Users
+  Users,
+  Pencil
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -27,6 +28,9 @@ export default function LeaderApprovals() {
   const [invitingId, setInvitingId] = useState(null);
   const [invitingAll, setInvitingAll] = useState(false);
   const [invitedIds, setInvitedIds] = useState(new Set());
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [editingLeader, setEditingLeader] = useState(null); // { id, nombre, apellido, email, telefono }
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -41,12 +45,24 @@ export default function LeaderApprovals() {
         return;
       }
 
+
+      // Superadmin: acceso directo desde JWT (no requiere DB)
+
       // Superadmin: acceso directo desde JWT (sin DB)
       if (session.user.user_metadata?.role === 'superadmin') {
         setCurrentUser(session.user);
         loadLeaders();
         return;
       }
+
+      const { data: churchUser } = await supabase
+        .from('church_users')
+        .select('role, is_active, user_id')
+        .eq('user_id', session.user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!churchUser || (churchUser.role !== 'admin' && churchUser.role !== 'superadmin')) {
 
       const { data: churchUsers } = await supabase
         .from('church_users')
@@ -57,6 +73,7 @@ export default function LeaderApprovals() {
       const churchUser = (churchUsers || []).find(u => u.role === 'admin' || u.role === 'superadmin');
 
       if (!churchUser) {
+
         toast.error("No tenés permisos de administrador");
         window.location.href = "/crm/dashboard";
         return;
@@ -195,6 +212,7 @@ export default function LeaderApprovals() {
           latitude,
           longitude,
           member_id: leaderId,
+          photo: persona.foto_url || null,
         });
       }
 
@@ -278,9 +296,33 @@ export default function LeaderApprovals() {
     }
   };
 
+  const handleEditSave = async () => {
+    if (!editingLeader) return;
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from('personas')
+        .update({
+          nombre: editingLeader.nombre.trim(),
+          apellido: editingLeader.apellido.trim(),
+          email: editingLeader.email.trim() || null,
+          telefono: editingLeader.telefono.trim() || null,
+        })
+        .eq('id', editingLeader.id);
+      if (error) throw error;
+      toast.success('Datos actualizados');
+      setEditingLeader(null);
+      loadLeaders();
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al guardar: ' + err.message);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const handleReject = async (leaderId, leaderName) => {
     if (!confirm(`¿Estás seguro de rechazar a ${leaderName}?`)) return;
-
     try {
       const churchId = await getMyChurchId();
       const { error } = await supabase
@@ -318,6 +360,69 @@ export default function LeaderApprovals() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Modal de edición */}
+      {editingLeader && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Editar datos del líder</h2>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Nombre</label>
+                  <input value={editingLeader.nombre} onChange={e => setEditingLeader(p => ({...p, nombre: e.target.value}))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Apellido</label>
+                  <input value={editingLeader.apellido} onChange={e => setEditingLeader(p => ({...p, apellido: e.target.value}))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email (se usará para la invitación al portal)</label>
+                <input type="email" value={editingLeader.email} onChange={e => setEditingLeader(p => ({...p, email: e.target.value}))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
+                <input value={editingLeader.telefono} onChange={e => setEditingLeader(p => ({...p, telefono: e.target.value}))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setEditingLeader(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button onClick={handleEditSave} disabled={editSaving}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+                {editSaving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <img
+            src={lightboxUrl}
+            alt="Foto líder"
+            className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 text-white bg-black/40 hover:bg-black/70 rounded-full w-9 h-9 flex items-center justify-center text-xl font-bold transition-colors"
+            onClick={() => setLightboxUrl(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -415,8 +520,20 @@ export default function LeaderApprovals() {
                 <div className="flex-1">
                   {/* Leader Info */}
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                      {leader.nombre?.[0]}{leader.apellido?.[0]}
+                    <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200">
+                      {leader.foto_url ? (
+                        <img 
+                          src={leader.foto_url} 
+                          alt={`${leader.nombre} ${leader.apellido}`}
+                          className="w-full h-full object-cover cursor-zoom-in"
+                          onClick={() => setLightboxUrl(leader.foto_url)}
+                          title="Ver foto"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl">
+                          {leader.nombre?.[0]}{leader.apellido?.[0]}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold text-gray-900">
@@ -471,7 +588,14 @@ export default function LeaderApprovals() {
 
                 {/* Actions */}
                 {filter === 'pendiente' && (
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex flex-col gap-2 ml-4">
+                    <button
+                      onClick={() => setEditingLeader({ id: leader.id, nombre: leader.nombre || '', apellido: leader.apellido || '', email: leader.email || '', telefono: leader.telefono || '' })}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium text-sm"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Editar
+                    </button>
                     <button
                       onClick={() => handleApprove(leader.id, `${leader.nombre} ${leader.apellido}`)}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 font-medium"

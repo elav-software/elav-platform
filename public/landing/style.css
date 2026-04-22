@@ -1,0 +1,896 @@
+/* =========================================
+   1. VARIABLES Y BASE (Modo Claro Elegante)
+   ========================================= */
+:root {
+    --rojo-marca: #ed3237;
+    --rojo-ui: #d92d32;
+    --fondo-claro: #fafafa;
+    --fondo-secundario: rgba(255, 255, 255, 0.85);
+    --borde-tarjeta: rgba(0, 0, 0, 0.06);
+    --texto-principal: #18181b;
+    --texto-secundario: #52525b;
+    --blanco: #ffffff;
+    --curva-suave: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--fondo-claro);
+    color: var(--texto-principal);
+    line-height: 1.7;
+    overflow-x: hidden;
+}
+
+h1, h2, h3 {
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.5px;
+    color: var(--texto-principal);
+}
+
+/* =========================================
+   2. ANIMACIONES SOFT
+   ========================================= */
+.fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 1s var(--curva-suave) forwards;
+}
+
+.delay {
+    animation-delay: 0.3s;
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================
+   3. NAVEGACIÓN (Glassmorphism Claro)
+   ========================================= */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 5%;
+    background: rgba(250, 250, 250, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--borde-tarjeta);
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+
+.logo-img {
+    height: 50px;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+}
+
+.nav-links a {
+    color: var(--texto-secundario);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: color 0.3s ease;
+    padding-bottom: 5px;
+    position: relative;
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: var(--rojo-ui);
+    transition: width 0.3s var(--curva-suave);
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+
+.nav-links a:hover {
+    color: var(--texto-principal);
+}
+
+/* =========================================
+   4. BOTONES (Call to Action)
+   ========================================= */
+.btn-cta {
+    display: inline-block;
+    background: var(--rojo-ui);
+    color: var(--blanco);
+    padding: 14px 32px;
+    text-decoration: none;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    transition: all 0.4s var(--curva-suave);
+    border: 1px solid var(--rojo-ui);
+}
+
+.btn-cta:hover {
+    background: transparent;
+    color: var(--rojo-ui);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(217, 45, 50, 0.15);
+}
+
+/* =========================================
+   5. HEADER / HERO (Inicio y Páginas)
+   ========================================= */
+.hero {
+    height: 100vh;
+    /* CAMBIAMOS LA URL DE UNSPLASH POR TU FOTO LOCAL */
+    background: url('img/3.jpg') no-repeat center center/cover;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding-top: 80px;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Cambiamos 0.5 por 0.3 para que sea más transparente arriba */
+    /* Y usamos un rgba para el final para que no sea un color sólido tan rápido */
+    background: linear-gradient(to bottom, 
+        rgba(0, 0, 0, 0.3) 0%, 
+        rgba(250, 250, 250, 0.4) 100%);
+}
+
+.hero-content {
+    position: relative;
+    z-index: 10;
+    max-width: 900px; /* Aumentamos de 800 a 900 para dar más aire */
+    padding: 0 20px;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: var(--rojo-ui);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.main-title {
+    font-size: 4.5rem;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    color: var(--blanco); 
+}
+
+.slogan {
+    font-size: 1.5rem;
+    font-family: 'Outfit', sans-serif;
+    color: var(--blanco); /* Cambiado de var(--texto-principal) a var(--blanco) */
+    font-style: italic;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3); /* Agregamos sombra para legibilidad */
+}
+
+.page-header {
+    padding: 150px 5% 50px;
+    text-align: center;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, var(--fondo-claro) 100%);
+}
+
+.page-header h1 {
+    font-size: 3.5rem;
+    color: var(--texto-principal);
+    margin-bottom: 15px;
+}
+
+.page-header p {
+    color: var(--texto-secundario);
+    font-size: 1.2rem;
+}
+
+/* =========================================
+   6. QUIÉNES SOMOS 
+   ========================================= */
+.quienes-somos {
+    padding: 100px 5%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.somos-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+}
+
+.somos-texto h2 {
+    font-size: 2.8rem;
+    color: var(--texto-principal);
+    margin-bottom: 25px;
+    line-height: 1.2;
+}
+
+.somos-texto p {
+    font-size: 1.1rem;
+    color: var(--texto-secundario);
+    margin-bottom: 20px;
+}
+
+.somos-destacado {
+    font-size: 1.3rem !important;
+    color: var(--texto-principal) !important;
+    font-weight: 500;
+    border-left: 3px solid var(--rojo-ui);
+    padding-left: 20px;
+    margin-top: 30px;
+    background: rgba(237, 50, 55, 0.03);
+    padding: 15px 20px;
+    border-radius: 0 10px 10px 0;
+}
+
+/* Contenedor que agrupa el cartel y el video */
+.video-columna {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.somos-imagen {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    aspect-ratio: 16 / 9;
+    background-color: #000;
+    width: 100%;
+}
+
+.somos-imagen iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* =========================================
+   7. UTILIDADES GLOBALES (Tarjetas modernas)
+   ========================================= */
+.card-moderna {
+    background: var(--fondo-secundario);
+    border: 1px solid var(--borde-tarjeta);
+    border-radius: 16px;
+    padding: 30px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.4s var(--curva-suave), box-shadow 0.4s var(--curva-suave);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+}
+
+.card-moderna:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0,0,0,0.1);
+}
+
+.menu-toggle {
+    display: none;
+    cursor: pointer;
+    color: var(--texto-principal);
+    align-items: center;
+}
+
+/* =========================================
+   8. FORMULARIOS Y PÁGINAS INTERNAS
+   ========================================= */
+.soy-nuevo, .contacto-container {
+    padding: 60px 5% 100px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.nuevo-grid, .contacto-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: stretch;
+}
+
+.formulario-box h2, .mapa-container h3 {
+    font-size: 2.2rem;
+    margin-bottom: 15px;
+    color: var(--texto-principal);
+    line-height: 1.2;
+}
+
+.formulario-box p {
+    color: var(--texto-secundario);
+    margin-bottom: 30px;
+    font-size: 1.05rem;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--borde-tarjeta);
+    background: rgba(0, 0, 0, 0.02);
+    color: var(--texto-principal);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    transition: all 0.3s var(--curva-suave);
+    outline: none;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #a1a1aa;
+}
+
+input:focus, textarea:focus {
+    background: var(--blanco);
+    border-color: var(--rojo-ui);
+    box-shadow: 0 0 0 4px rgba(217, 45, 50, 0.08);
+}
+
+.btn-submit {
+    background: var(--rojo-ui);
+    color: var(--blanco);
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s var(--curva-suave);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 10px;
+}
+
+.btn-submit:hover {
+    background: var(--rojo-marca);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(217, 45, 50, 0.2);
+}
+
+.mapa-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.mapa-responsive {
+    width: 100%;
+    height: 350px;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    border: 1px solid var(--borde-tarjeta);
+}
+
+.mapa-responsive iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* =========================================
+   9. PÁGINA DE EVENTOS (Agenda Moderna)
+   ========================================= */
+.eventos-container {
+    padding: 60px 5% 100px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.mes-bloque {
+    margin-bottom: 50px;
+}
+
+.mes-titulo {
+    font-size: 2rem;
+    color: var(--texto-principal);
+    margin-bottom: 30px;
+    position: relative;
+    display: inline-block;
+}
+
+.mes-titulo::after {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 3px;
+    bottom: -5px;
+    left: 0;
+    background-color: var(--rojo-ui);
+    border-radius: 5px;
+}
+
+.evento-card {
+    display: flex;
+    align-items: center;
+    background: var(--fondo-secundario);
+    border: 1px solid var(--borde-tarjeta);
+    border-radius: 16px;
+    padding: 20px 25px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.4s var(--curva-suave), box-shadow 0.4s var(--curva-suave);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+    gap: 25px;
+}
+
+.evento-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0,0,0,0.1);
+}
+
+.evento-fecha {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+    height: 90px;
+    background: rgba(237, 50, 55, 0.04);
+    border-radius: 14px;
+    color: var(--rojo-ui);
+    border: 1px solid rgba(237, 50, 55, 0.1);
+}
+
+.dia-num {
+    font-size: 2.2rem;
+    font-weight: 900;
+    line-height: 1;
+    font-family: 'Outfit', sans-serif;
+}
+
+.dia-nombre {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+    color: var(--texto-secundario);
+}
+
+.evento-info {
+    flex-grow: 1;
+}
+
+.evento-info h3 {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+    color: var(--texto-principal);
+}
+
+.evento-hora {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--texto-secundario);
+    background: rgba(0,0,0,0.03);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+/* =========================================
+   10. PÁGINA MEDIA (Galería de Videos)
+   ========================================= */
+.media-section {
+    padding: 60px 5% 100px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 40px;
+    margin-bottom: 50px;
+}
+
+.video-card {
+    background: var(--fondo-secundario);
+    border: 1px solid var(--borde-tarjeta);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    transition: transform 0.4s var(--curva-suave), box-shadow 0.4s var(--curva-suave);
+}
+
+.video-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.video-responsive {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: #000;
+}
+
+.video-responsive iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* =========================================
+   11. PÁGINA CONTACTO (Redes Sociales)
+   ========================================= */
+.redes-lista {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.redes-lista a {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 16px 20px;
+    background: rgba(0,0,0,0.02);
+    border: 1px solid var(--borde-tarjeta);
+    border-radius: 12px;
+    color: var(--texto-principal);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s var(--curva-suave);
+}
+
+.redes-lista a:hover {
+    background: var(--blanco);
+    border-color: var(--rojo-ui);
+    transform: translateX(8px);
+    box-shadow: 0 5px 15px rgba(217, 45, 50, 0.08);
+    color: var(--rojo-ui);
+}
+
+.input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+/* =========================================
+   12. CLASES DE UTILIDAD Y COMPONENTES
+   ========================================= */
+.footer-principal {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid var(--borde-tarjeta);
+    color: var(--texto-secundario);
+    margin-top: 50px;
+}
+
+.v-mobile { display: none; }
+
+.mt-40 { margin-top: 40px; }
+.mt-60 { margin-top: 60px; }
+.mb-15 { margin-bottom: 15px; }
+.mb-20 { margin-bottom: 20px; }
+.p-30 { padding: 30px; }
+.w-100 { width: 100%; }
+.text-center { text-align: center; }
+
+/* Estilo del cartel fuera del video */
+.video-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--rojo-ui);
+    color: var(--blanco);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.video-tag::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background-color: var(--blanco);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulso-live 1.5s infinite;
+}
+
+@keyframes pulso-live {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* =========================================
+   13. GALERÍA DE IMÁGENES (Carrusel)
+   ========================================= */
+.galeria-section {
+    padding: 20px 5% 60px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.carrusel-container {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    background-color: var(--fondo-secundario);
+}
+
+.carrusel-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.6s var(--curva-suave);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carrusel-slide.active {
+    opacity: 1;
+    z-index: 1;
+}
+
+.carrusel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.carrusel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--rojo-ui);
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s var(--curva-suave);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.carrusel-btn:hover {
+    background: var(--rojo-ui);
+    color: var(--blanco);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.carrusel-btn.prev { left: 20px; }
+.carrusel-btn.next { right: 20px; }
+
+/* =========================================
+   14. AJUSTES PARA CELULARES (RESPONSIVE)
+   ========================================= */
+@media (max-width: 768px) {
+    /* Activa los saltos de línea para que quede una palabra por debajo de la otra */
+    .v-mobile { display: block; }
+
+    .main-title { font-size: 3rem; }
+    
+    .somos-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+    }
+    
+    /* Movemos TODA la columna (cartel + video) arriba */
+    .video-columna {
+        order: -1; 
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Ajustes para las grillas de páginas internas */
+    .nuevo-grid, .contacto-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+    }
+
+    /* TRUCO: Eliminamos los "contenedores padre" en celular para reordenar los hijos */
+    .columna-info, .columna-accion {
+        display: contents; 
+    }
+
+    /* Asignamos el orden exacto para la página SOY NUEVO y CONTACTO */
+    .formulario-box { order: 1; }
+    .redes-box      { order: 2; }
+    .nuevo-info     { order: 2; }
+    .nuevo-horarios { order: 3; }
+    .mapa-container { order: 4; }
+
+    /* Quitamos el order de aquí para que no tape al cartel */
+    .somos-imagen {
+        order: 0; 
+        margin-bottom: 0;
+    }
+    
+    .somos-texto {
+        order: 1;
+    }
+
+    .input-row {
+        grid-template-columns: 1fr;
+    }
+
+    .evento-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+        padding: 25px 20px;
+    }
+    
+    .evento-fecha {
+        width: 100%;
+        height: auto;
+        padding: 15px 0;
+    }
+
+    .menu-toggle {
+        display: flex;
+    }
+    
+   .nav-links {
+        display: flex; 
+        flex-direction: column;
+        width: 100%;
+        background-color: var(--fondo-claro);
+        position: absolute;
+        top: 80px;
+        left: 0;
+        text-align: center;
+        padding: 20px 0;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        z-index: 1000;
+        
+        /* ANIMACIÓN DEL MENÚ */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-20px);
+        transition: all 0.4s var(--curva-suave);
+    }
+    
+    .nav-links li {
+        margin: 15px 0;
+    }
+    
+    .nav-links.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .carrusel-container { height: 300px; }
+    .carrusel-btn { width: 40px; height: 40px; }
+}}
+
+/* =========================================
+   15. BOTÓN PORTAL CFC EN NAVBAR
+   ========================================= */
+.btn-portal-nav {
+    display: inline-block;
+    background: var(--rojo-ui);
+    color: var(--blanco) !important;
+    padding: 9px 22px;
+    text-decoration: none;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s var(--curva-suave);
+    border: 2px solid var(--rojo-ui);
+    white-space: nowrap;
+    margin-left: 20px;
+}
+
+.btn-portal-nav:hover {
+    background: transparent;
+    color: var(--rojo-ui) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(217, 45, 50, 0.2);
+}
+
+/* Fix hero: fondo oscuro de respaldo si la imagen no carga */
+.hero {
+    background-color: #1a1a2e;
+}
+
+@media (max-width: 768px) {
+    .btn-portal-nav {
+        display: block;
+        text-align: center;
+        margin: 15px auto 0;
+        width: fit-content;
+    }
+}
+
+/* Botón Portal CFC en navbar - tamaño reducido */
+.navbar .btn-cta {
+    padding: 8px 18px;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    margin-left: 20px;
+}
+
+/* Alinear nav-links y Portal CFC a la derecha juntos */
+.navbar {
+    justify-content: space-between;
+}
+.navbar .nav-links {
+    margin-left: auto;
+    margin-right: 15px;
+}
