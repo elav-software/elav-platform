@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@crm/api/supabaseClient";
 import { getMyChurchId } from "@crm/api/apiClient";
-import { FileText, Users, DollarSign, Eye, CheckCircle, Clock, Archive } from "lucide-react";
+import { FileText, Users, DollarSign, Eye, CheckCircle, Clock, Archive, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const STATUS_LABEL = { submitted: "Pendiente", reviewed: "Revisado", archived: "Archivado" };
@@ -85,6 +85,16 @@ export default function CellSubmissions() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const deleteReport = async (report) => {
+    if (!confirm("¿Eliminar este reporte? Esta acción no se puede deshacer.")) return;
+    const table = report._fromCrm ? "cell_reports" : "leader_cell_submissions";
+    const { error } = await supabase.from(table).delete().eq("id", report.id);
+    if (error) { toast.error("Error al eliminar: " + error.message); return; }
+    toast.success("Reporte eliminado");
+    setReports(prev => prev.filter(r => r.id !== report.id));
+    setSelected(null);
   };
 
   const markReviewed = async (id) => {
@@ -251,6 +261,13 @@ export default function CellSubmissions() {
                 Marcar como Revisado
               </button>
             )}
+            <button
+              onClick={() => deleteReport(selected)}
+              className="w-full flex items-center justify-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-2.5 rounded-xl transition-colors border border-rose-200"
+            >
+              <Trash2 className="w-4 h-4" />
+              Eliminar Reporte
+            </button>
           </div>
         ) : (
           <div className="hidden lg:flex w-96 bg-slate-50 rounded-2xl border border-dashed border-slate-200 items-center justify-center text-slate-400 self-start" style={{ minHeight: 200 }}>

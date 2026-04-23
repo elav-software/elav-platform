@@ -32,8 +32,8 @@ export default function PortalLogin() {
         const userEmail = session.user.email?.toLowerCase().trim();
         const rol = await verifyApprovedLeader(userEmail);
         
-        if (rol === 'servicio') {
-          redirect("/connect/portal/dashboard?view=consolidacion");
+        if (rol === 'consolidacion' || rol === 'servicio') {
+          redirect("/connect/portal/consolidacion");
         } else if (rol) {
           redirect("/connect/portal/dashboard");
         } else {
@@ -60,8 +60,11 @@ export default function PortalLogin() {
 
       if (error || !data) return null;
 
-      // Líder aprobado → acceso completo
+      // Líder aprobado → acceso completo al dashboard
       if (data.rol === 'Líder' && data.estado_aprobacion === 'aprobado') return 'Líder';
+
+      // Rol Consolidación → acceso al portal de consolidación
+      if (data.rol === 'Consolidación') return 'consolidacion';
 
       // Persona con área que tiene sección portal → acceso
       const PORTAL_AREAS = ['Consolidación']; // sincronizado con AREA_PORTAL_SECTIONS en PortalDashboard
@@ -100,8 +103,8 @@ export default function PortalLogin() {
         // Verificar si tiene acceso al portal
         const rol = await verifyApprovedLeader(data.user.email);
         
-        if (rol === 'servicio') {
-          redirect("/connect/portal/dashboard?view=consolidacion");
+        if (rol === 'consolidacion' || rol === 'servicio') {
+          redirect("/connect/portal/consolidacion");
         } else if (rol) {
           redirect("/connect/portal/dashboard");
         } else {
