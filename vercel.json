@@ -5,5 +5,11 @@
       "destination": "/landing",
       "permanent": false
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/landing",
+      "destination": "/landing/index.html"
+    }
   ]
 }
