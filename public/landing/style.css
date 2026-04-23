@@ -83,7 +83,16 @@ h1, h2, h3 {
     gap: 30px;
 }
 
-.nav-links a {
+/* CÓDIGO NUEVO PARA REEMPLAZAR EL ANTERIOR */
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    align-items: center; /* Centra el botón con el texto */
+}
+
+/* Solo afecta a los links que NO son el botón (.btn-cta) */
+.nav-links a:not(.btn-cta) {
     color: var(--texto-secundario);
     text-decoration: none;
     font-weight: 500;
@@ -93,7 +102,8 @@ h1, h2, h3 {
     position: relative;
 }
 
-.nav-links a::after {
+/* La rayita roja solo para los links comunes */
+.nav-links a:not(.btn-cta)::after {
     content: '';
     position: absolute;
     width: 0;
@@ -104,11 +114,11 @@ h1, h2, h3 {
     transition: width 0.3s var(--curva-suave);
 }
 
-.nav-links a:hover::after {
+.nav-links a:not(.btn-cta):hover::after {
     width: 100%;
 }
 
-.nav-links a:hover {
+.nav-links a:not(.btn-cta):hover {
     color: var(--texto-principal);
 }
 
@@ -834,34 +844,6 @@ input:focus, textarea:focus {
 
     .carrusel-container { height: 300px; }
     .carrusel-btn { width: 40px; height: 40px; }
-}}
-
-/* =========================================
-   15. BOTÓN PORTAL CFC EN NAVBAR
-   ========================================= */
-.btn-portal-nav {
-    display: inline-block;
-    background: var(--rojo-ui);
-    color: var(--blanco) !important;
-    padding: 9px 22px;
-    text-decoration: none;
-    font-family: 'Outfit', sans-serif;
-    font-weight: 700;
-    font-size: 0.85rem;
-    border-radius: 50px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: all 0.3s var(--curva-suave);
-    border: 2px solid var(--rojo-ui);
-    white-space: nowrap;
-    margin-left: 20px;
-}
-
-.btn-portal-nav:hover {
-    background: transparent;
-    color: var(--rojo-ui) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(217, 45, 50, 0.2);
 }
 
 /* Fix hero: fondo oscuro de respaldo si la imagen no carga */
@@ -869,28 +851,29 @@ input:focus, textarea:focus {
     background-color: #1a1a2e;
 }
 
-@media (max-width: 768px) {
-    .btn-portal-nav {
-        display: block;
-        text-align: center;
-        margin: 15px auto 0;
-        width: fit-content;
-    }
-}
-
-/* Botón Portal CFC en navbar - tamaño reducido */
-.navbar .btn-cta {
+/* =========================================
+   15. AJUSTES DEL BOTÓN EN NAVBAR Y CELULAR
+   ========================================= */
+/* Tamaño reducido para el botón en la barra de la compu */
+.nav-links .btn-cta {
     padding: 8px 18px;
     font-size: 0.8rem;
     letter-spacing: 1px;
-    margin-left: 20px;
 }
 
-/* Alinear nav-links y Portal CFC a la derecha juntos */
-.navbar {
-    justify-content: space-between;
-}
-.navbar .nav-links {
-    margin-left: auto;
-    margin-right: 15px;
+@media (max-width: 768px) {
+    /* Separamos el botón de los textos para que respire */
+    .btn-mobile-item {
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+    
+    /* Centramos el botón en el menú desplegable del celular */
+    .nav-links .btn-cta {
+        display: inline-block;
+        padding: 12px 28px;
+        font-size: 0.9rem;
+        width: fit-content;
+        margin: 0 auto;
+    }
 }
