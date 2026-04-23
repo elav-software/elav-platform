@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       if (!alreadyExists) throw inviteError;
 
       const { error: resetError } = await supabasePublic.auth.resetPasswordForEmail(email, {
-        redirectTo: `${redirectBase}/connect/portal/set-password`,
+        redirectTo: `${redirectBase}/connect/portal/callback`,
       });
       if (resetError) throw resetError;
       return NextResponse.json({ success: true, resent: true });

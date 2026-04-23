@@ -5,11 +5,12 @@
       "has": [{"type": "host", "value": "crm.cfccasanova.com"}],
       "destination": "/crm/login",
       "permanent": false
-    },
+    }
+  ],
+  "rewrites": [
     {
       "source": "/",
-      "destination": "/landing/index.html",
-      "permanent": false
+      "destination": "/landing/index.html"
     }
   ]
 }
