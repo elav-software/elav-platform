@@ -10,6 +10,16 @@
     <link rel="icon" href="logo.png">
     <link rel="stylesheet" href="./style.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script>
+      // Si Supabase redirigió aquí con un token de auth (recovery/invite),
+      // lo reenviamos al callback del portal que sabe manejarlo.
+      (function() {
+        var hash = window.location.hash;
+        if (hash && hash.includes('access_token')) {
+          window.location.replace('/connect/portal/callback' + hash);
+        }
+      })();
+    </script>
 </head>
 <body>
 
