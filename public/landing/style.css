@@ -834,7 +834,17 @@ input:focus, textarea:focus {
 
     .carrusel-container { height: 300px; }
     .carrusel-btn { width: 40px; height: 40px; }
-}}
+
+    /* Estilos del botón Portal CFC dentro del Navbar en Móvil */
+    .navbar .btn-cta {
+        display: block;
+        text-align: center;
+        margin: 15px auto 0;
+        width: fit-content;
+        padding: 8px 18px;
+        font-size: 0.8rem;
+    }
+}
 
 /* =========================================
    15. BOTÓN PORTAL CFC EN NAVBAR
@@ -869,17 +879,8 @@ input:focus, textarea:focus {
     background-color: #1a1a2e;
 }
 
-@media (max-width: 768px) {
-    .btn-portal-nav {
-        display: block;
-        text-align: center;
-        margin: 15px auto 0;
-        width: fit-content;
-    }
-}
-
 /* Botón Portal CFC en navbar - tamaño reducido */
-.navbar .btn-cta {
+.navbar .btn-cta:not(.btn-submit) {
     padding: 8px 18px;
     font-size: 0.8rem;
     letter-spacing: 1px;
