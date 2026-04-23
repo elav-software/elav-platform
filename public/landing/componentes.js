@@ -2,8 +2,8 @@
 const menuHTML = `
     <nav class="navbar">
         <div class="logo-container">
-            <a href="index.html" style="display: flex; align-items: center;">
-                <img src="./logo.png" alt="CFC Logo" class="logo-img">
+            <a href="/" style="display: flex; align-items: center;">
+                <img src="/landing/logo.png" alt="CFC Logo" class="logo-img">
             </a>
         </div>
         
@@ -12,13 +12,13 @@ const menuHTML = `
         </div>
         
         <ul class="nav-links">
-            <li><a href="index.html">Inicio</a></li>
-            <li><a href="soy-nuevo.html">Soy Nuevo</a></li>
-            <li><a href="eventos.html">Eventos</a></li>
-            <li><a href="media.html">Media</a></li>
-            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="/">Inicio</a></li>
+            <li><a href="/soy-nuevo">Soy Nuevo</a></li>
+            <li><a href="/eventos">Eventos</a></li>
+            <li><a href="/media">Media</a></li>
+            <li><a href="/contacto">Contacto</a></li>
         </ul>
-        <a href="https://www.cfccasanova.com/connect/portal/login" class="btn-cta" target="_blank" rel="noopener">Portal CFC</a>
+        <a href="/connect/portal/login" class="btn-cta">Portal CFC</a>
     </nav>
 `;
 

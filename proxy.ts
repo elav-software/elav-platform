@@ -75,6 +75,19 @@ export function proxy(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // URLs limpias de la landing (sin .html en la barra del browser)
+  const landingPages: Record<string, string> = {
+    "/soy-nuevo": "/landing/soy-nuevo.html",
+    "/eventos":   "/landing/eventos.html",
+    "/media":     "/landing/media.html",
+    "/contacto":  "/landing/contacto.html",
+  };
+  if (landingPages[pathname]) {
+    const url = request.nextUrl.clone();
+    url.pathname = landingPages[pathname];
+    return NextResponse.rewrite(url);
+  }
+
   if (
     !pathname.startsWith("/connect") &&
     !pathname.startsWith("/crm") &&
