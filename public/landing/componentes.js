@@ -17,8 +17,11 @@ const menuHTML = `
             <li><a href="/eventos">Eventos</a></li>
             <li><a href="/media">Media</a></li>
             <li><a href="/contacto">Contacto</a></li>
+            
+            <li class="btn-mobile-item">
+                <a href="/connect/portal/login" class="btn-cta">Portal CFC</a>
+            </li>
         </ul>
-        <a href="/connect/portal/login" class="btn-cta">Portal CFC</a>
     </nav>
 `;
 
