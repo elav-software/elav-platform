@@ -589,10 +589,15 @@ export default function Members() {
                   {m.email && <div className="flex items-center gap-2 text-xs text-slate-500"><Mail className="w-3.5 h-3.5" />{m.email}</div>}
                   {m.city_neighborhood && <div className="flex items-center gap-2 text-xs text-slate-500"><MapPin className="w-3.5 h-3.5" />{m.city_neighborhood}</div>}
                 </div>
-                {/* Tags de área */}
-                {m.current_service_area && (
+                {/* Tags de célula y área */}
+                {((!m.small_group || !m.small_group.trim()) && m.member_status === "Member" || m.current_service_area) && (
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {m.current_service_area.split(", ").filter(Boolean).map(area => (
+                    {(!m.small_group || !m.small_group.trim()) && m.member_status === "Member" && (
+                      <span className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded-full text-[10px] font-semibold border border-orange-200">
+                        Sin célula
+                      </span>
+                    )}
+                    {m.current_service_area && m.current_service_area.split(", ").filter(Boolean).map(area => (
                       <span key={area} className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-semibold border border-indigo-100">
                         {area}
                       </span>
