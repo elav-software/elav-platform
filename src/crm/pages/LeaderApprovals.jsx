@@ -236,7 +236,7 @@ export default function LeaderApprovals() {
         body: JSON.stringify({
           email,
           fullName,
-          redirectBase: window.location.origin,
+          redirectBase: process.env.NEXT_PUBLIC_PORTAL_URL || window.location.origin.replace(/^https?:\/\/crm\./, 'https://www.'),
         }),
       });
       const data = await res.json();
@@ -271,7 +271,7 @@ export default function LeaderApprovals() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify({ redirectBase: window.location.origin }),
+        body: JSON.stringify({ redirectBase: process.env.NEXT_PUBLIC_PORTAL_URL || window.location.origin.replace(/^https?:\/\/crm\./, 'https://www.') }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
