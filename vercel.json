@@ -2,6 +2,12 @@
   "redirects": [
     {
       "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?:www\.)?cfccasanova\.com"
+        }
+      ],
       "destination": "/landing/index.html",
       "permanent": false
     }

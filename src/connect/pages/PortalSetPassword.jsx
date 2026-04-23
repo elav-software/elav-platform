@@ -26,11 +26,11 @@ export default function PortalSetPassword() {
         subscription.unsubscribe();
         setChecking(false);
       } else if (event === 'SIGNED_IN' && session && !gotRecovery) {
-        // Sesión normal — el usuario ya cambió la contraseña o llegó por otro camino
+        // Invite link — mostrar formulario para que creen su contraseña
         done = true;
         clearTimeout(timeoutId);
         subscription.unsubscribe();
-        window.location.replace("/connect/portal/dashboard");
+        setChecking(false);
       }
     });
 
@@ -38,6 +38,7 @@ export default function PortalSetPassword() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (done) return;
       if (session) {
+        // Hay sesión activa — mostrar formulario para crear contraseña
         done = true;
         clearTimeout(timeoutId);
         subscription.unsubscribe();
