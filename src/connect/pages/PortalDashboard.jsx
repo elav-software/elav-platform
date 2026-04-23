@@ -47,10 +47,44 @@ function ConsolidacionView({ leader, churchId, onBack }) {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [recent, setRecent] = useState([]);
+  const [nuevasPersonas, setNuevasPersonas] = useState([]);
+  const [contactando, setContactando] = useState(new Set());
 
   const setF = (field) => (e) => setForm(p => ({ ...p, [field]: e.target.value }));
 
-  useEffect(() => { loadRecent(); }, []);
+  useEffect(() => { loadRecent(); loadNuevas(); }, []);
+
+  const loadNuevas = async () => {
+    const { data } = await supabase
+      .from('visitors')
+      .select('id, name, phone, follow_up_status, created_at')
+      .eq('church_id', churchId)
+      .eq('invited_by', 'web:soy-nuevo')
+      .eq('follow_up_status', 'Pending')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setNuevasPersonas(data || []);
+  };
+
+  const markAsContacted = async (visitor) => {
+    if (contactando.has(visitor.id)) return;
+    setContactando(prev => new Set(prev).add(visitor.id));
+    try {
+      const contactadoPor = `${leader.nombre} ${leader.apellido}`.trim();
+      const { error } = await supabase
+        .from('visitors')
+        .update({ follow_up_status: 'Contacted', contacted_by: contactadoPor })
+        .eq('id', visitor.id);
+      if (error) throw error;
+      setTimeout(() => {
+        setNuevasPersonas(prev => prev.filter(v => v.id !== visitor.id));
+        setContactando(prev => { const s = new Set(prev); s.delete(visitor.id); return s; });
+      }, 1200);
+    } catch (err) {
+      console.error('Error marcando contacto:', err);
+      setContactando(prev => { const s = new Set(prev); s.delete(visitor.id); return s; });
+    }
+  };
 
   const loadRecent = async () => {
     const { data } = await supabase
@@ -98,6 +132,45 @@ function ConsolidacionView({ leader, churchId, onBack }) {
         </button>
       )}
       <h2 className="text-xl font-bold text-gray-900 mb-6">Registrar Visitante</h2>
+
+      {/* Personas Nuevas desde la web */}
+      {nuevasPersonas.length > 0 && (
+        <div className="mb-6 bg-orange-50 border border-orange-200 rounded-2xl overflow-hidden">
+          <div className="bg-orange-500 px-5 py-4 flex items-center gap-3">
+            <Bell className="w-5 h-5 text-white" />
+            <div>
+              <p className="text-white font-bold text-sm">Personas Nuevas desde la web</p>
+              <p className="text-orange-100 text-xs">{nuevasPersonas.length} persona{nuevasPersonas.length !== 1 ? 's' : ''} esperando contacto</p>
+            </div>
+          </div>
+          <ul className="divide-y divide-orange-100">
+            {nuevasPersonas.map(v => (
+              <li key={v.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-900 text-sm">{v.name}</p>
+                  {v.phone && (
+                    <a href={`https://wa.me/${v.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                      className="text-xs text-green-600 hover:underline">📱 {v.phone}</a>
+                  )}
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {new Date(v.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                {contactando.has(v.id) ? (
+                  <span className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1 flex-shrink-0">
+                    <CheckCircle className="w-3 h-3" /> Contactada
+                  </span>
+                ) : (
+                  <button onClick={() => markAsContacted(v)}
+                    className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-orange-100 text-orange-700 hover:bg-green-100 hover:text-green-700 transition-colors flex-shrink-0">
+                    Por contactar
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {submitted && (
         <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
           <CheckCircle className="w-4 h-4" /> Visitante registrado con éxito
