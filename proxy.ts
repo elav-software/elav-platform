@@ -67,11 +67,12 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ── miiglesia.com / www.miiglesia.com → web pública (Connect) ───────────
+  // ── miiglesia.com / www.miiglesia.com → landing estática ───────────────
+  // Rewrite: sirve el HTML sin cambiar la URL en el browser
   if (pathname === "/" || pathname === "") {
     const url = request.nextUrl.clone();
-    url.pathname = "/connect/home";
-    return NextResponse.redirect(url);
+    url.pathname = "/landing/index.html";
+    return NextResponse.rewrite(url);
   }
 
   if (
