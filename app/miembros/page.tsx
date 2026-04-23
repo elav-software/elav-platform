@@ -86,6 +86,8 @@ export default function MiembrosPage() {
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [tieneCelula, setTieneCelula] = useState<boolean | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [countdown, setCountdown] = useState(15);
 
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -240,12 +242,14 @@ export default function MiembrosPage() {
       toast.error("Error al guardar");
       console.error(error);
     } else {
-      toast.success("Datos enviados 🙌");
-      setForm(INITIAL_FORM);
-      setFotoFile(null);
-      setFotoPreview(null);
-      setTieneCelula(null);
-      setStep(0);
+      setSubmitted(true);
+      let secs = 15;
+      setCountdown(secs);
+      const interval = setInterval(() => {
+        secs -= 1;
+        setCountdown(secs);
+        if (secs <= 0) clearInterval(interval);
+      }, 1000);
     }
   };
 
@@ -266,7 +270,40 @@ export default function MiembrosPage() {
     <div className="min-h-screen bg-slate-50 flex justify-center items-start py-10 px-4">
       <Toaster position="top-right" />
 
-      <motion.form
+      {/* PANTALLA DE CONFIRMACIÓN */}
+      {submitted && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white p-10 rounded-[2rem] w-full max-w-md shadow-2xl border border-slate-100 flex flex-col items-center text-center gap-6"
+        >
+          <img src="/logo.png" alt="CFC Logo" className="w-20 h-auto object-contain" />
+          <div>
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-extrabold text-slate-800 mb-2">¡Registro Enviado!</h2>
+            <p className="text-slate-500 text-sm">
+              Tu solicitud fue recibida correctamente.<br />
+              El pastor revisará tu registro y te contactará pronto.
+            </p>
+          </div>
+          {countdown > 0 ? (
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-14 h-14 rounded-full border-4 border-blue-100 flex items-center justify-center">
+                <span className="text-2xl font-bold text-blue-600">{countdown}</span>
+              </div>
+              <p className="text-xs text-slate-400">Esta pantalla seguirá mostrando tu confirmación</p>
+            </div>
+          ) : (
+            <span className="inline-block px-6 py-2 bg-green-100 text-green-700 font-bold rounded-full text-sm tracking-wide">✓ ENVIADO</span>
+          )}
+        </motion.div>
+      )}
+
+      {!submitted && <motion.form
         onSubmit={handleSubmit}
         onKeyDown={(e: React.KeyboardEvent) => {
           if (e.key === "Enter" && step < STEPS.length - 1) e.preventDefault();
@@ -558,7 +595,7 @@ export default function MiembrosPage() {
             )}
           </div>
         </div>
-      </motion.form>
+      </motion.form>}
     </div>
   );
 }
