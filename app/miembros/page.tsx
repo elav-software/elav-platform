@@ -85,6 +85,7 @@ export default function MiembrosPage() {
   const [lideres, setLideres] = useState<Lider[]>([]);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [tieneCelula, setTieneCelula] = useState<boolean | null>(null);
 
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -144,8 +145,14 @@ export default function MiembrosPage() {
       setStep(0);
       return false;
     }
-    if (!form.lider_id) {
+    if (tieneCelula === null) {
+      toast.error("Indicá si pertenecés a una célula");
+      setStep(1);
+      return false;
+    }
+    if (tieneCelula && !form.lider_id) {
       toast.error("Seleccioná tu líder");
+      setStep(1);
       return false;
     }
     return true;
@@ -219,7 +226,7 @@ export default function MiembrosPage() {
       conyuge: form.conyuge || null,
       hijos: form.hijos || null,
       rol: "Miembro",
-      lider_id: form.lider_id,
+      lider_id: tieneCelula ? form.lider_id : null,
       foto_url: fotoUrl || null,
       area_servicio_actual: form.area_servicio_actual.length > 0 ? form.area_servicio_actual.join(", ") : null,
       ...(churchId ? { church_id: churchId } : {}),
@@ -237,6 +244,7 @@ export default function MiembrosPage() {
       setForm(INITIAL_FORM);
       setFotoFile(null);
       setFotoPreview(null);
+      setTieneCelula(null);
       setStep(0);
     }
   };
@@ -419,21 +427,51 @@ export default function MiembrosPage() {
               </div>
             </div>
 
-            {sectionTitle("Tu Líder *")}
-            <div className={fieldGroupClasses}>
-              <label className={labelClasses}>Seleccioná tu líder</label>
-              <select className={inputClasses} value={form.lider_id} onChange={set("lider_id")}>
-                <option value="">Buscar en la lista...</option>
-                {lideres.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.apellido}, {l.nombre}
-                  </option>
-                ))}
-              </select>
-              {lideres.length === 0 && (
-                <p className="text-sm text-slate-500 mt-2 italic">Cargando líderes disponibles...</p>
-              )}
+            {sectionTitle("¿Pertenecés a una célula?")}
+            <div className="flex gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => setTieneCelula(true)}
+                className={`flex-1 py-3 rounded-lg border-2 font-semibold text-sm transition-all ${
+                  tieneCelula === true
+                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                    : "bg-white text-slate-600 border-slate-300 hover:border-blue-400"
+                }`}
+              >
+                Sí, tengo célula
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTieneCelula(false); setForm(f => ({ ...f, lider_id: "" })); }}
+                className={`flex-1 py-3 rounded-lg border-2 font-semibold text-sm transition-all ${
+                  tieneCelula === false
+                    ? "bg-slate-700 text-white border-slate-700 shadow-md"
+                    : "bg-white text-slate-600 border-slate-300 hover:border-slate-500"
+                }`}
+              >
+                No, no tengo célula
+              </button>
             </div>
+
+            {tieneCelula === true && (
+              <>
+                {sectionTitle("Tu Líder *")}
+                <div className={fieldGroupClasses}>
+                  <label className={labelClasses}>Seleccioná tu líder</label>
+                  <select className={inputClasses} value={form.lider_id} onChange={set("lider_id")}>
+                    <option value="">Buscar en la lista...</option>
+                    {lideres.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.apellido}, {l.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  {lideres.length === 0 && (
+                    <p className="text-sm text-slate-500 mt-2 italic">Cargando líderes disponibles...</p>
+                  )}
+                </div>
+              </>
+            )}
 
             {sectionTitle("¿Servís en algún área?")}
             <p className="text-sm text-slate-500 mb-3">Opcional. Podés seleccionar una o más áreas.</p>
