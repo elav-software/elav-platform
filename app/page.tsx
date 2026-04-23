@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
 /**
- * Root page - redirects to the static landing page.
- * cfccasanova.com -> /landing/index.html
+ * Root page — en producción Vercel reescribe "/" a "/landing/index.html"
+ * (ver vercel.json). Este redirect es solo fallback para desarrollo local.
  */
 export default function RootPage() {
   redirect("/landing/index.html");
