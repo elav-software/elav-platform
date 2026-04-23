@@ -628,7 +628,15 @@ export default function Home() {
                     </div>
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Hora de Reunión de la Célula</label>
-                      <input type="time" className={inputClasses} value={form.hora_reunion} onChange={set("hora_reunion")} />
+                      <select className={selectClasses} value={form.hora_reunion} onChange={set("hora_reunion")}>
+                        <option value="">Seleccionar hora...</option>
+                        {Array.from({ length: 48 }, (_, i) => {
+                          const h = Math.floor(i / 2).toString().padStart(2, "0");
+                          const m = i % 2 === 0 ? "00" : "30";
+                          const val = `${h}:${m}`;
+                          return <option key={val} value={val}>{val}</option>;
+                        })}
+                      </select>
                     </div>
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Dirección de la Célula</label>
