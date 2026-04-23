@@ -2,12 +2,12 @@
   "redirects": [
     {
       "source": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "(?:www\.)?cfccasanova\.com"
-        }
-      ],
+      "has": [{"type": "host", "value": "crm.cfccasanova.com"}],
+      "destination": "/crm/login",
+      "permanent": false
+    },
+    {
+      "source": "/",
       "destination": "/landing/index.html",
       "permanent": false
     }
