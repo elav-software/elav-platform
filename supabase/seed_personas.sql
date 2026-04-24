@@ -7,6 +7,9 @@
 --   DELETE FROM public.personas WHERE email LIKE '%@seed.test';
 -- =============================================================================
 
+-- Soltar temporalmente NOT NULL para poder insertar sin church_id
+ALTER TABLE public.personas ALTER COLUMN church_id DROP NOT NULL;
+
 DO $$
 DECLARE
   -- IDs de los 10 líderes (se asignan al insertar)
@@ -365,3 +368,11 @@ VALUES ('Antonella', 'Ibáñez', 'aibanez@seed.test', '+541155520040', '+5411555
 RAISE NOTICE 'Seed finalizado: 10 líderes + 30 miembros insertados correctamente.';
 
 END $$;
+
+-- Asignar church_id de CFC a todos los registros de seed
+UPDATE public.personas
+  SET church_id = (SELECT id FROM public.churches WHERE slug = 'cfc')
+  WHERE church_id IS NULL AND email LIKE '%@seed.test';
+
+-- Restaurar NOT NULL
+ALTER TABLE public.personas ALTER COLUMN church_id SET NOT NULL;

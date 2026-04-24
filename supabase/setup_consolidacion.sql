@@ -42,7 +42,10 @@ CREATE POLICY "consolidacion_insert_visitors"
     )
   );
 
--- Política RLS: el equipo de consolidación puede ver solo sus propios registros
+-- Política RLS: el equipo de consolidación puede ver visitors de su iglesia
+-- NOTA: NO usar my_leader_church_id() aquí — esa función solo funciona para
+-- rol='Líder' con estado_aprobacion='aprobado'. Para Consolidación usamos
+-- una subquery directa en personas que compara church_id del visitor.
 DROP POLICY IF EXISTS "consolidacion_select_own_visitors" ON public.visitors;
 
 CREATE POLICY "consolidacion_select_own_visitors"
@@ -50,7 +53,7 @@ CREATE POLICY "consolidacion_select_own_visitors"
   FOR SELECT
   TO authenticated
   USING (
-    -- Admin CRM ve todos
+    -- Admin CRM ve todos los de su iglesia
     (
       church_id = public.my_church_id()
       AND EXISTS (
@@ -59,19 +62,40 @@ CREATE POLICY "consolidacion_select_own_visitors"
       )
     )
     OR
-    -- Consolidación y Líderes con acceso ven los que registraron
+    -- Consolidación y Líderes con acceso: ven visitors de su misma iglesia
     (
-      church_id = public.my_leader_church_id()
-      AND EXISTS (
-        SELECT 1 FROM public.personas
-        WHERE email ILIKE auth.jwt() ->> 'email'
+      EXISTS (
+        SELECT 1 FROM public.personas p
+        WHERE p.email ILIKE auth.jwt() ->> 'email'
           AND (
-            rol = 'Consolidación'
-            OR (rol = 'Líder' AND acceso_consolidacion = true)
+            p.rol = 'Consolidación'
+            OR (p.rol = 'Líder' AND p.acceso_consolidacion = true)
           )
+          AND p.church_id = visitors.church_id
       )
     )
   );
+
+-- Política RLS: el equipo de consolidación puede actualizar visitors de su iglesia
+-- (para marcar contactado, cambiar follow_up_status, guardar contacted_by, etc.)
+DROP POLICY IF EXISTS "consolidacion_update_visitors" ON public.visitors;
+
+CREATE POLICY "consolidacion_update_visitors"
+  ON public.visitors
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.personas p
+      WHERE p.email ILIKE auth.jwt() ->> 'email'
+        AND (
+          p.rol = 'Consolidación'
+          OR (p.rol = 'Líder' AND p.acceso_consolidacion = true)
+        )
+        AND p.church_id = visitors.church_id
+    )
+  )
+  WITH CHECK (true);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Agregar usuarios de Consolidación a la tabla personas

@@ -146,7 +146,16 @@ export default function Visitors() {
                       {v.phone && <span className="text-xs text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" />{v.phone}</span>}
                       {v.email && <span className="text-xs text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" />{v.email}</span>}
                       {v.visit_date && <span className="text-xs text-slate-500 flex items-center gap-1"><Calendar className="w-3 h-3" />{format(parseISO(v.visit_date), "d MMM yyyy")}</span>}
-                      {v.invited_by && <span className="text-xs text-slate-500">Invitado por: {v.invited_by}</span>}
+                      {v.invited_by === 'web:soy-nuevo'
+                        ? <span className="text-xs text-orange-600 font-medium">Desde la web (Soy Nuevo)</span>
+                        : v.invited_by
+                          ? <span className="text-xs text-slate-500">Invitado por: {v.invited_by}</span>
+                          : null}
+                      {v.contacted_by
+                        ? <span className="text-xs text-green-600 font-medium">Contactado por: {v.contacted_by}</span>
+                        : v.follow_up_status === 'Pending'
+                          ? <span className="text-xs text-amber-500 font-medium">Pendiente de contacto</span>
+                          : null}
                     </div>
                   </div>
                 </div>

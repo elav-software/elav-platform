@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId } from "@connect/api/apiClient";
-import { LogOut, UserPlus, CheckCircle, ChevronDown } from "lucide-react";
+import { LogOut, UserPlus, CheckCircle, ChevronDown, Bell } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+
+// Marcador que usa la API /api/soy-nuevo para identificar registros de la landing
+const SOY_NUEVO_SOURCE = "web:soy-nuevo";
 
 const EMPTY_FORM = {
   name: "",
@@ -26,6 +29,8 @@ export default function ConsolidacionPortal() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitted, setSubmitted] = useState(false);
   const [recentVisitors, setRecentVisitors] = useState([]);
+  const [nuevasPersonas, setNuevasPersonas] = useState([]);
+  const [contactando, setContactando] = useState(new Set());
 
   const redirect = (path) => { window.location.href = path; };
 
@@ -64,12 +69,55 @@ export default function ConsolidacionPortal() {
 
       setUser({ ...persona, churchId });
       await loadRecent(churchId, userEmail);
+      await loadNuevasPersonas(churchId);
     } catch (err) {
       console.error("Error en consolidación:", err);
       supabase.auth.signOut();
       redirect("/connect/portal/login");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadNuevasPersonas = async (churchId) => {
+    try {
+      const { data } = await supabase
+        .from('visitors')
+        .select('id, name, phone, visit_date, follow_up_status, created_at')
+        .eq('church_id', churchId)
+        .eq('invited_by', SOY_NUEVO_SOURCE)
+        .eq('follow_up_status', 'Pending')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      setNuevasPersonas(data || []);
+    } catch (err) {
+      console.error("Error cargando personas nuevas:", err);
+    }
+  };
+
+  const markAsContacted = async (visitor) => {
+    if (contactando.has(visitor.id)) return;
+    setContactando(prev => new Set(prev).add(visitor.id));
+    try {
+      const contactadoPor = `${user.nombre} ${user.apellido}`.trim();
+      const { error } = await supabase
+        .from('visitors')
+        .update({
+          follow_up_status: 'Contacted',
+          contacted_by: contactadoPor,
+        })
+        .eq('id', visitor.id);
+      if (error) throw error;
+      // Quitar de la lista luego de un momento para dar feedback visual
+      setTimeout(() => {
+        setNuevasPersonas(prev => prev.filter(v => v.id !== visitor.id));
+        setContactando(prev => { const s = new Set(prev); s.delete(visitor.id); return s; });
+      }, 1200);
+      toast.success(`${visitor.name} marcada como contactada`);
+    } catch (err) {
+      console.error("Error marcando contacto:", err);
+      toast.error("Error al actualizar. Intentá de nuevo.");
+      setContactando(prev => { const s = new Set(prev); s.delete(visitor.id); return s; });
     }
   };
 
@@ -116,6 +164,7 @@ export default function ConsolidacionPortal() {
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
       await loadRecent(user.churchId, user.email);
+      await loadNuevasPersonas(user.churchId);
     } catch (err) {
       console.error("Error guardando visitante:", err);
       toast.error("Error al guardar. Intentá de nuevo.");
@@ -167,6 +216,54 @@ export default function ConsolidacionPortal() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+
+        {/* Personas Nuevas — llegaron por la landing "Soy Nuevo" */}
+        {nuevasPersonas.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-orange-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-lg">Personas Nuevas</h2>
+                  <p className="text-orange-100 text-sm">{nuevasPersonas.length} personas se registraron desde la web</p>
+                </div>
+              </div>
+            </div>
+            <ul className="divide-y divide-gray-50">
+              {nuevasPersonas.map(v => (
+                <li key={v.id} className="px-6 py-4 flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 text-sm">{v.name}</p>
+                    {v.phone && (
+                      <a href={`https://wa.me/${v.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                        className="text-xs text-green-600 hover:underline">
+                        📱 {v.phone}
+                      </a>
+                    )}
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {new Date(v.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  {contactando.has(v.id) ? (
+                    <span className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-green-100 text-green-700 flex-shrink-0 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Contactada
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => markAsContacted(v)}
+                      className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-orange-100 text-orange-700 flex-shrink-0 hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer"
+                    >
+                      Por contactar
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
 
         {/* Formulario de visitante */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">

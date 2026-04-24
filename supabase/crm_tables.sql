@@ -29,6 +29,9 @@ create table if not exists public.visitors (
   visit_date  date,
   invited_by  text,
   follow_up_status text default 'Pending',
+  edad        integer,
+  estado_civil text,
+  barrio       text,
   notes       text
 );
 
