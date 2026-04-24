@@ -51,9 +51,20 @@
                         
 						<form action="https://formspree.io/f/TU_CODIGO_FORMSPREE" method="POST">
 							<input type="hidden" name="_subject" value="NUEVO VISITANTE - Quiere que lo llamen">
-                            
+							
 							<input type="text" name="Nombre y Apellido" placeholder="Nombre y Apellido" required>
-							<input type="text" name="WhatsApp / Teléfono" placeholder="WhatsApp / Teléfono" required>                            
+							<input type="text" name="WhatsApp / Teléfono" placeholder="WhatsApp / Teléfono" required>
+							<input type="text" name="Barrio / Localidad" placeholder="Barrio / Localidad" required>
+
+							
+							<select name="Estado Civil" required>
+								<option value="" disabled selected>Estado Civil</option>
+								<option value="Soltero/a">Soltero/a</option>
+								<option value="Casado/a">Casado/a</option>
+								<option value="Divorciado/a">Divorciado/a</option>
+								<option value="Viudo/a">Viudo/a</option>
+							</select>
+							
 							<button type="submit" class="btn-submit w-100">Quiero que me llamen!</button>
 						</form>
 					</div>
