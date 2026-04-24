@@ -40,7 +40,7 @@ const ATT_LABELS = {
 const EVENT_TYPES = ["Service", "Conference", "Small Group", "Training", "Special Event"];
 const ATT_STATUSES = ["Present", "Absent", "Late", "Excused"];
 
-const EMPTY_EVENT = { event_name: "", event_type: "Service", date: "", location: "", organizer: "" };
+const EMPTY_EVENT = { title: "", type: "Service", date: "", time: "", location: "", notes: "" };
 const EMPTY_ATT = { member_name: "", event_name: "", event_id: "", attendance_status: "Present", notes: "" };
 
 const EF = ({ label, name, type = "text", options, optionLabels, set, val }) => (
@@ -68,6 +68,29 @@ export default function Events() {
   const [eventForm, setEventForm] = useState(EMPTY_EVENT);
   const [attForm, setAttForm] = useState(EMPTY_ATT);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  const LANDING_EVENTS = [
+    { title: "Encuentro de Mujeres",            type: "Special Event", date: "2026-05-01", time: "19:30", location: "Quinta CFC",                   notes: "Mayo 1-3 · 19:30 hs" },
+    { title: "Misioneros Unidos: Viaje a Salta", type: "Special Event", date: "2026-06-05", time: "",      location: "Tartagal/Santa Victoria Este", notes: "Junio 5-14" },
+    { title: "Congreso: CRECE",                 type: "Special Event", date: "2026-06-19", time: "",      location: "Auditorio CFC Casanova",        notes: "Junio 19-20" },
+  ];
+
+  const importLandingEvents = async () => {
+    setImporting(true);
+    const existing = events.map(e => e.title);
+    let created = 0;
+    for (const ev of LANDING_EVENTS) {
+      if (!existing.includes(ev.title)) {
+        await api.entities.Event.create(ev);
+        created++;
+      }
+    }
+    await load();
+    setImporting(false);
+    if (created === 0) alert("Los eventos de la landing ya están en el CRM.");
+    else alert(`Se importaron ${created} evento${created > 1 ? "s" : ""} desde la landing.`);
+  };
 
   const load = async () => {
     const [e, a] = await Promise.all([
@@ -85,7 +108,7 @@ export default function Events() {
   const openEventEdit = (e) => { setEditingEvent(e); setEventForm({ ...EMPTY_EVENT, ...e }); setEventModal(true); };
   const openAttAdd = (event) => {
     setEditingAtt(null);
-    setAttForm({ ...EMPTY_ATT, event_name: event ? event.event_name : "", event_id: event ? event.id : "" });
+    setAttForm({ ...EMPTY_ATT, event_name: event ? event.title : "", event_id: event ? event.id : "" });
     setAttModal(true);
   };
 
@@ -112,6 +135,11 @@ export default function Events() {
   return (
     <div>
       <PageHeader title="Eventos" subtitle="Gestiona eventos y asistencia" onAdd={openEventAdd} addLabel="Agregar Evento" />
+      <div className="mb-4 flex justify-end">
+        <Button variant="outline" size="sm" onClick={importLandingEvents} disabled={importing} className="text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50">
+          {importing ? "Importando..." : "↓ Importar eventos de la web"}
+        </Button>
+      </div>
 
       <Tabs defaultValue="events">
         <TabsList className="mb-6">
@@ -129,11 +157,11 @@ export default function Events() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {events.map(e => {
-                const attCount = attendance.filter(a => a.event_id === e.id || a.event_name === e.event_name).length;
+                const attCount = attendance.filter(a => a.event_id === e.id || a.event_name === e.title).length;
                 return (
                   <Card key={e.id} className="p-5 border-0 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
-                      <Badge className={`text-xs ${TYPE_COLORS[e.event_type] || "bg-slate-100 text-slate-600"}`}>{TYPE_LABELS[e.event_type] || e.event_type}</Badge>
+                      <Badge className={`text-xs ${TYPE_COLORS[e.type] || "bg-slate-100 text-slate-600"}`}>{TYPE_LABELS[e.type] || e.type}</Badge>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openAttAdd(e)} className="h-7 text-xs px-2">
                           <CheckSquare className="w-3 h-3 mr-1" /> Asistencia
@@ -142,11 +170,12 @@ export default function Events() {
                         <Button variant="ghost" size="sm" onClick={() => deleteEvent(e.id)} className="h-7 w-7 p-0 text-rose-500 hover:bg-rose-50"><Trash2 className="w-3.5 h-3.5" /></Button>
                       </div>
                     </div>
-                    <h3 className="font-semibold text-slate-900 mb-2">{e.event_name}</h3>
+                    <h3 className="font-semibold text-slate-900 mb-2">{e.title}</h3>
                     <div className="space-y-1.5">
                       {e.date && <div className="flex items-center gap-2 text-xs text-slate-500"><Calendar className="w-3.5 h-3.5" />{format(parseISO(e.date), "d 'de' MMMM 'de' yyyy")}</div>}
                       {e.location && <div className="flex items-center gap-2 text-xs text-slate-500"><MapPin className="w-3.5 h-3.5" />{e.location}</div>}
-                      {e.organizer && <div className="flex items-center gap-2 text-xs text-slate-500"><User className="w-3.5 h-3.5" />{e.organizer}</div>}
+                      {e.time && <div className="flex items-center gap-2 text-xs text-slate-500"><User className="w-3.5 h-3.5" />{e.time} hs</div>}
+                      {e.notes && <div className="text-xs text-slate-400 italic">{e.notes}</div>}
                     </div>
                     {attCount > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-100">
@@ -195,16 +224,17 @@ export default function Events() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editingEvent ? "Editar Evento" : "Agregar Evento"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <EF label="Nombre del Evento *" name="event_name" set={setEventForm} val={eventForm} />
-            <EF label="Tipo de Evento" name="event_type" set={setEventForm} val={eventForm}
+            <EF label="Nombre del Evento *" name="title" set={setEventForm} val={eventForm} />
+            <EF label="Tipo de Evento" name="type" set={setEventForm} val={eventForm}
               options={EVENT_TYPES} optionLabels={EVENT_TYPES.map(t => TYPE_LABELS[t])} />
             <EF label="Fecha" name="date" type="date" set={setEventForm} val={eventForm} />
+            <EF label="Hora" name="time" type="time" set={setEventForm} val={eventForm} />
             <EF label="Lugar" name="location" set={setEventForm} val={eventForm} />
-            <EF label="Organizador" name="organizer" set={setEventForm} val={eventForm} />
+            <EF label="Notas" name="notes" set={setEventForm} val={eventForm} />
           </div>
           <div className="flex gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setEventModal(false)} className="flex-1">Cancelar</Button>
-            <Button onClick={saveEvent} disabled={saving || !eventForm.event_name}
+            <Button onClick={saveEvent} disabled={saving || !eventForm.title}
               className="flex-1 bg-[#d4a843] hover:bg-[#c49a3a] text-[#1e293b] font-semibold">
               {saving ? "Guardando..." : editingEvent ? "Guardar Cambios" : "Agregar Evento"}
             </Button>
@@ -218,7 +248,7 @@ export default function Events() {
           <DialogHeader><DialogTitle>Registrar Asistencia</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
             <EF label="Nombre del Miembro *" name="member_name" set={setAttForm} val={attForm} />
-            <EF label="Evento *" name="event_name" set={setAttForm} val={attForm} options={events.map(e => e.event_name)} />
+            <EF label="Evento *" name="event_name" set={setAttForm} val={attForm} options={events.map(e => e.title)} />
             <EF label="Estado" name="attendance_status" set={setAttForm} val={attForm}
               options={ATT_STATUSES} optionLabels={ATT_STATUSES.map(s => ATT_LABELS[s])} />
           </div>
