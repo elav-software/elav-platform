@@ -169,11 +169,11 @@ h1, h2, h3 {
     left: 0;
     width: 100%;
     height: 100%;
-    /* Cambiamos 0.5 por 0.3 para que sea más transparente arriba */
-    /* Y usamos un rgba para el final para que no sea un color sólido tan rápido */
+    /* Ajustamos el degradado para que se funda perfectamente con el fondo */
     background: linear-gradient(to bottom, 
-        rgba(0, 0, 0, 0.3) 0%, 
-        rgba(250, 250, 250, 0.4) 100%);
+        rgba(0, 0, 0, 0.3) 0%,           /* Arriba: Un poco oscuro para que se lea el menú */
+        rgba(250, 250, 250, 0) 70%,      /* Medio: Totalmente transparente para que la foto brille */
+        rgba(250, 250, 250, 1) 100%);    /* Abajo: 100% sólido del color de tu fondo para ocultar el corte */
 }
 
 .hero-content {
