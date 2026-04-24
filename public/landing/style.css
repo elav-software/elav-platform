@@ -424,109 +424,118 @@ input:focus, textarea:focus {
 }
 
 /* =========================================
-   9. PÁGINA DE EVENTOS (Agenda Moderna)
+   9. PÁGINA DE EVENTOS (Estilo Elevation Church)
    ========================================= */
 .eventos-container {
     padding: 60px 5% 100px;
-    max-width: 900px;
+    max-width: 1200px; /* Ampliamos para que entren 3 tarjetas por fila en PC */
     margin: 0 auto;
 }
 
-.mes-bloque {
-    margin-bottom: 50px;
-}
-
-.mes-titulo {
-    font-size: 2rem;
+.titulo-seccion-eventos {
+    font-size: 2.5rem;
     color: var(--texto-principal);
-    margin-bottom: 30px;
-    position: relative;
-    display: inline-block;
+    text-align: center;
+    margin-bottom: 40px;
 }
 
-.mes-titulo::after {
-    content: '';
-    position: absolute;
-    width: 40px;
-    height: 3px;
-    bottom: -5px;
-    left: 0;
-    background-color: var(--rojo-ui);
-    border-radius: 5px;
+.grilla-eventos {
+    display: grid;
+    /* Esto hace que automáticamente se acomoden en 1, 2 o 3 columnas según la pantalla */
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 30px;
 }
 
-.evento-card {
-    display: flex;
-    align-items: center;
+.evento-card-elevation {
     background: var(--fondo-secundario);
     border: 1px solid var(--borde-tarjeta);
     border-radius: 16px;
-    padding: 20px 25px;
-    margin-bottom: 20px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    transition: transform 0.4s var(--curva-suave), box-shadow 0.4s var(--curva-suave);
+    overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
-    gap: 25px;
-}
-
-.evento-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
-    border-color: rgba(0,0,0,0.1);
-}
-
-.evento-fecha {
+    transition: transform 0.4s var(--curva-suave), box-shadow 0.4s var(--curva-suave);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 90px;
-    height: 90px;
-    background: rgba(237, 50, 55, 0.04);
-    border-radius: 14px;
+}
+
+.evento-card-elevation:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+}
+
+.evento-imagen-wrapper {
+    position: relative;
+    width: 100%;
+    /* Formato horizontal estándar para que todas se vean iguales */
+    aspect-ratio: 16 / 9; 
+    background-color: rgba(0,0,0,0.03); 
+}
+
+.evento-imagen-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.evento-cuerpo {
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Permite que el botón siempre quede abajo si los títulos varían en largo */
+}
+
+.evento-meta {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+
+.evento-fecha-destacada {
+    font-size: 0.95rem;
+    font-weight: 800;
     color: var(--rojo-ui);
-    border: 1px solid rgba(237, 50, 55, 0.1);
-}
-
-.dia-num {
-    font-size: 2.2rem;
-    font-weight: 900;
-    line-height: 1;
-    font-family: 'Outfit', sans-serif;
-}
-
-.dia-nombre {
-    font-size: 0.85rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-top: 4px;
-    color: var(--texto-secundario);
+    margin-bottom: 4px;
 }
 
-.evento-info {
-    flex-grow: 1;
-}
-
-.evento-info h3 {
-    font-size: 1.4rem;
-    margin-bottom: 8px;
-    color: var(--texto-principal);
-}
-
-.evento-hora {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+.evento-hora-lugar {
     font-size: 0.9rem;
     color: var(--texto-secundario);
-    background: rgba(0,0,0,0.03);
-    padding: 6px 14px;
-    border-radius: 20px;
     font-weight: 500;
 }
 
+.evento-titulo-elevation {
+    font-size: 1.5rem;
+    color: var(--texto-principal);
+    margin-bottom: 25px;
+    font-family: 'Outfit', sans-serif;
+    line-height: 1.2;
+}
+
+/* Botón fantasma (Outline) para no recargar de color sólido toda la grilla */
+.btn-evento-outline {
+    margin-top: auto; 
+    display: block;
+    text-align: center;
+    background: transparent;
+    color: var(--texto-principal);
+    padding: 12px 0;
+    border: 1px solid var(--borde-tarjeta);
+    border-radius: 50px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-decoration: none;
+    transition: all 0.3s var(--curva-suave);
+}
+
+.btn-evento-outline:hover {
+    border-color: var(--rojo-ui);
+    color: var(--rojo-ui);
+    background: rgba(237, 50, 55, 0.03);
+}
 /* =========================================
    10. PÁGINA MEDIA (Galería de Videos)
    ========================================= */
