@@ -13,7 +13,7 @@
 
 	<div id="menu-contenedor"></div>
 
-	<section class="page-header fade-in">
+	<section class="page-header fade-in" style="background-image: url('img/1.jpg');">
 		<h1>Bienvenido a Casa</h1>
 		<p>Conocé nuestra historia y prepará tu primera visita.</p>
 	</section>
@@ -49,22 +49,23 @@
 						<h2>¡Nos encantaría conocerte!</h2>
 						<p>No queremos que te sientas un extraño. Dejanos tus datos y un miembro de nuestra familia te escribirá para que tu primera visita sea especial.</p>
                         
-						<form id="form-soy-nuevo">
-							<input type="text" id="sn-nombre" placeholder="Nombre y Apellido" required>
-							<input type="text" id="sn-telefono" placeholder="WhatsApp / Teléfono" required>
-							<input type="number" id="sn-edad" placeholder="Edad" min="1" max="120" style="width:100%; box-sizing:border-box;">
-							<select id="sn-estado-civil" style="width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid #ddd; border-radius:8px; font-size:1rem; font-family:inherit; color:#333; background:#fff; margin-bottom:0;">
-								<option value="" disabled selected>Estado civil</option>
+						<form action="https://formspree.io/f/TU_CODIGO_FORMSPREE" method="POST">
+							<input type="hidden" name="_subject" value="NUEVO VISITANTE - Quiere que lo llamen">
+							
+							<input type="text" name="Nombre y Apellido" placeholder="Nombre y Apellido" required>
+							<input type="text" name="WhatsApp / Teléfono" placeholder="WhatsApp / Teléfono" required>
+							<input type="text" name="Barrio / Localidad" placeholder="Barrio / Localidad" required>
+
+							
+							<select name="Estado Civil" required>
+								<option value="" disabled selected>Estado Civil</option>
 								<option value="Soltero/a">Soltero/a</option>
 								<option value="Casado/a">Casado/a</option>
-								<option value="En pareja">En pareja</option>
 								<option value="Divorciado/a">Divorciado/a</option>
 								<option value="Viudo/a">Viudo/a</option>
 							</select>
-							<input type="text" id="sn-barrio" placeholder="Barrio donde vivís">
-							<button type="submit" class="btn-submit w-100" id="sn-btn">Quiero que me llamen!</button>
-							<p id="sn-msg" style="display:none; margin-top:12px; font-weight:600; color:#2ecc71; text-align:center;">¡Gracias! Pronto te contactamos 🙌</p>
-							<p id="sn-err" style="display:none; margin-top:12px; font-weight:600; color:#e74c3c; text-align:center;">Hubo un error. Intentá de nuevo.</p>
+							
+							<button type="submit" class="btn-submit w-100">Quiero que me llamen!</button>
 						</form>
 						<script>
 							document.getElementById('form-soy-nuevo').addEventListener('submit', async function(e) {

@@ -209,21 +209,51 @@ h1, h2, h3 {
     text-shadow: 0 2px 4px rgba(0,0,0,0.3); /* Agregamos sombra para legibilidad */
 }
 
+/* =========================================
+   REEMPLAZO PARA .page-header (Páginas Internas)
+   ========================================= */
 .page-header {
-    padding: 150px 5% 50px;
+    position: relative;
+    padding: 160px 5% 80px; /* Altura controlada: no ocupa toda la pantalla */
     text-align: center;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.02) 0%, var(--fondo-claro) 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: hidden;
+}
+
+/* El mismo degradado del Index aplicado a todas las cabeceras */
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, 
+        rgba(0, 0, 0, 0.4) 0%,           /* Oscuro arriba para leer el menú */
+        rgba(250, 250, 250, 0) 60%,      /* Transparente al medio para ver la foto */
+        rgba(250, 250, 250, 1) 100%);    /* Fundido al blanco abajo */
+    z-index: 1;
+}
+
+/* Forzamos que el título y descripción sean blancos y estén sobre el degradado */
+.page-header h1, 
+.page-header p {
+    position: relative;
+    z-index: 2;
+    color: var(--blanco) !important;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 
 .page-header h1 {
     font-size: 3.5rem;
-    color: var(--texto-principal);
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .page-header p {
-    color: var(--texto-secundario);
     font-size: 1.2rem;
+    opacity: 0.9;
 }
 
 /* =========================================
@@ -356,7 +386,7 @@ form {
     gap: 15px;
 }
 
-input, textarea {
+input, textarea, select {
     width: 100%;
     padding: 16px 20px;
     border-radius: 12px;
@@ -369,11 +399,31 @@ input, textarea {
     outline: none;
 }
 
+/* Diseño exclusivo para el SELECT */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 20px center;
+    background-size: 16px;
+    cursor: pointer;
+}
+
+select:invalid {
+    color: #a1a1aa;
+}
+
+select option {
+    color: var(--texto-principal);
+}
+
 input::placeholder, textarea::placeholder {
     color: #a1a1aa;
 }
 
-input:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
     background: var(--blanco);
     border-color: var(--rojo-ui);
     box-shadow: 0 0 0 4px rgba(217, 45, 50, 0.08);
