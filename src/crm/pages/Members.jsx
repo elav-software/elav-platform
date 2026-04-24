@@ -152,7 +152,8 @@ const EMPTY_FORM = {
 
   dia_reunion: "", hora_reunion: "", lugar_reunion: "", lugar_reunion_localidad: "",
   foto_url: "",
-  supabase_id: ""
+  supabase_id: "",
+  lider_id: ""
 };
 
 export default function Members() {
@@ -170,6 +171,7 @@ export default function Members() {
   const [activeTab, setActiveTab] = useState("personal");
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
+  const [lideres, setLideres] = useState([]);
 
   const load = async () => {
     const data = await api.entities.Member.list("-created_date", 500);
@@ -177,7 +179,19 @@ export default function Members() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  const loadLideres = async () => {
+    const churchId = await getMyChurchId();
+    if (!churchId) return;
+    const { data } = await supabase
+      .from("personas")
+      .select("id, nombre, apellido")
+      .eq("rol", "Líder")
+      .eq("church_id", churchId)
+      .order("apellido");
+    if (data) setLideres(data);
+  };
+
+  useEffect(() => { load(); loadLideres(); }, []);
 
   // Leer ?buscar= de la URL (desde búsqueda global Ctrl+K)
   useEffect(() => {
@@ -589,10 +603,17 @@ export default function Members() {
                   {m.email && <div className="flex items-center gap-2 text-xs text-slate-500"><Mail className="w-3.5 h-3.5" />{m.email}</div>}
                   {m.city_neighborhood && <div className="flex items-center gap-2 text-xs text-slate-500"><MapPin className="w-3.5 h-3.5" />{m.city_neighborhood}</div>}
                 </div>
+                {/* Líder asignado */}
+                {m.lider_id && (() => { const l = lideres.find(x => x.id === m.lider_id); return l ? (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1.5">
+                    <Crown className="w-3 h-3 text-amber-500" />
+                    <span>{`${l.nombre || ""} ${l.apellido || ""}`.trim()}</span>
+                  </div>
+                ) : null; })()}
                 {/* Tags de célula y área */}
-                {((!m.small_group || !m.small_group.trim()) && m.member_status === "Member" || m.current_service_area) && (
+                {((!m.small_group || !m.small_group.trim()) && m.member_status === "Member" && !m.lider_id || m.current_service_area) && (
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {(!m.small_group || !m.small_group.trim()) && m.member_status === "Member" && (
+                    {(!m.small_group || !m.small_group.trim()) && m.member_status === "Member" && !m.lider_id && (
                       <span className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded-full text-[10px] font-semibold border border-orange-200">
                         Sin célula
                       </span>
@@ -646,7 +667,6 @@ export default function Members() {
                   type="button"
                   onClick={() => {
                     setForm(f => ({ ...f, member_status: opt.value }));
-                    if (opt.value !== "Leader" && activeTab === "celula") setActiveTab("personal");
                   }}
                   className={`flex-1 py-2 px-1 rounded-lg text-xs font-semibold border transition-colors
                     ${form.member_status === opt.value
@@ -664,7 +684,7 @@ export default function Members() {
               <TabsTrigger value="personal" className="flex-1 text-xs">Personal</TabsTrigger>
               <TabsTrigger value="iglesia" className="flex-1 text-xs">Iglesia</TabsTrigger>
               <TabsTrigger value="servicio" className="flex-1 text-xs">Servicio</TabsTrigger>
-              <TabsTrigger value="celula" className="flex-1 text-xs" disabled={form.member_status !== "Leader"}>Célula</TabsTrigger>
+              <TabsTrigger value="celula" className="flex-1 text-xs">Célula</TabsTrigger>
               <TabsTrigger value="familia" className="flex-1 text-xs">Familia</TabsTrigger>
             </TabsList>
 
@@ -773,7 +793,6 @@ export default function Members() {
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <F label="Ministerio" name="ministry_involvement" form={form} setForm={setForm} />
                 <F label="Habilidades Técnicas" name="technical_skills" form={form} setForm={setForm} />
               </div>
 
@@ -786,6 +805,22 @@ export default function Members() {
               <F label="Hora de Reunión de la Célula" name="hora_reunion" type="time" form={form} setForm={setForm} />
               <F label="Dirección de la Célula" name="lugar_reunion" form={form} setForm={setForm} />
               <F label="Localidad / Barrio de la Célula" name="lugar_reunion_localidad" options={LOCALIDADES} form={form} setForm={setForm} />
+              <div>
+                <Label className="text-xs font-medium text-slate-600 mb-1 block">Líder asignado</Label>
+                <Select value={form.lider_id || "__none__"} onValueChange={v => setForm(f => ({ ...f, lider_id: v === "__none__" ? "" : v }))}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="— Sin asignar —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin asignar —</SelectItem>
+                    {lideres.map(l => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {`${l.nombre || ""} ${l.apellido || ""}`.trim()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </TabsContent>
 
             {/* FAMILIA */}
