@@ -723,7 +723,7 @@ export default function PortalDashboard() {
     { title: "Cargar Reporte", description: "Reportar asistencia, ofrendas y testimonios", icon: FileText, href: "/connect/portal/reportes", color: "from-blue-500 to-blue-600", badge: stats.recentReports > 0 ? `${stats.recentReports} este mes` : null },
     { title: "Materiales", description: "Accede a recursos y capacitaciones", icon: BookOpen, href: "/connect/portal/materiales", color: "from-purple-500 to-purple-600", badge: unreadMaterials > 0 ? `${unreadMaterials} nuevo${unreadMaterials > 1 ? 's' : ''}` : null, badgeNew: unreadMaterials > 0 },
     { title: "Mis Miembros", description: "Lista de miembros de tu célula", icon: Users, href: "/connect/portal/miembros", color: "from-green-500 to-green-600", badge: stats.cellMembers > 0 ? `${stats.cellMembers} personas` : null },
-    { title: "Pedidos de Oración", description: "Ver y agregar pedidos de oración", icon: Heart, href: "/connect/portal/oracion", color: "from-red-500 to-red-600", badge: stats.prayerRequests > 0 ? `${stats.prayerRequests} activos` : null },
+
     { title: "Accesos de Célula", description: "Dar acceso al portal a tus miembros de servicio", icon: ShieldCheck, href: null, action: () => setActiveView('accesos-celula'), color: "from-teal-500 to-teal-600", badge: cellPortalMembers.length > 0 ? `${cellPortalMembers.length} miembro${cellPortalMembers.length > 1 ? 's' : ''}` : null },
     ...userPortalAreas.map(area => {
       const section = AREA_PORTAL_SECTIONS[area];
