@@ -102,6 +102,7 @@ const STATUS_LABELS = {
   "New Believer": "Nuevo Creyente",
   Member: "Miembro",
   Leader: "Líder",
+  Pastor: "Pastor",
 };
 
 const LOCALIDADES = [
@@ -659,6 +660,7 @@ export default function Members() {
               {[
                 { value: "Member", label: "Miembro" },
                 { value: "Leader", label: "Líder" },
+                { value: "Pastor", label: "Pastor" },
                 { value: "Visitor", label: "Visitante" },
                 { value: "New Believer", label: "Nuevo creyente" },
               ].map(opt => (

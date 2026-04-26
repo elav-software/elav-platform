@@ -63,6 +63,9 @@ export default function PortalLogin() {
       // Líder aprobado → acceso completo al dashboard
       if (data.rol === 'Líder' && data.estado_aprobacion === 'aprobado') return 'Líder';
 
+      // Pastor → acceso completo al dashboard (sin requerir estado_aprobacion)
+      if (data.rol === 'Pastor') return 'Pastor';
+
       // Rol Consolidación (legado) → mismo acceso que área de servicio
       if (data.rol === 'Consolidación') return 'servicio';
 

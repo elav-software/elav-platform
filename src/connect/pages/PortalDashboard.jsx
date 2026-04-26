@@ -546,7 +546,7 @@ export default function PortalDashboard() {
   const userPortalAreas = user
     ? (user.area_servicio_actual || '').split(',').map(a => a.trim()).filter(a => AREA_PORTAL_SECTIONS[a])
     : [];
-  const isLider = user?.rol === 'Líder';
+  const isLider = user?.rol === 'Líder' || user?.rol === 'Pastor';
   const isServicio = !isLider && userPortalAreas.length > 0;
 
   const SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000;
@@ -592,7 +592,7 @@ export default function PortalDashboard() {
 
       const areas = (persona.area_servicio_actual || '').split(',').map(a => a.trim());
       const hasPortalArea = areas.some(a => AREA_PORTAL_SECTIONS[a]);
-      const isApprovedLider = persona.rol === 'Líder' && persona.estado_aprobacion === 'aprobado';
+      const isApprovedLider = (persona.rol === 'Líder' && persona.estado_aprobacion === 'aprobado') || persona.rol === 'Pastor';
 
       if (!isApprovedLider && !hasPortalArea) {
         await supabase.auth.signOut();
@@ -601,7 +601,7 @@ export default function PortalDashboard() {
       }
 
       setUser(persona);
-      if (persona.rol === 'Líder') {
+      if (persona.rol === 'Líder' || persona.rol === 'Pastor') {
         await loadStats(persona.id, userEmail);
         await loadCellPortalMembers(persona.id, cid);
       }
