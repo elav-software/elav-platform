@@ -15,7 +15,8 @@ import {
   UserPlus,
   CheckCircle,
   ArrowLeft,
-  ShieldCheck
+  ShieldCheck,
+  HandHeart
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,6 +31,13 @@ const AREA_PORTAL_SECTIONS = {
     description: 'Anotar datos de nuevos visitantes',
     icon: UserPlus,
     color: 'from-orange-500 to-orange-600',
+  },
+  'Intercesión': {
+    key: 'intercesion',
+    title: 'Pedidos de Oración',
+    description: 'Ver y orar por los pedidos recibidos',
+    icon: HandHeart,
+    color: 'from-pink-500 to-pink-600',
   },
   // Futuras áreas — descomentar y agregar vista cuando corresponda:
   // 'Alabanza': { key: 'alabanza', title: 'Alabanza', description: '...', icon: Music, color: 'from-yellow-500 to-yellow-600' },
@@ -237,6 +245,143 @@ function ConsolidacionView({ leader, churchId, onBack }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Vista de Intercesión (pedidos de oración de la landing)
+// ─────────────────────────────────────────────────────────────────────────────
+function IntercesionView({ user, churchId, onBack }) {
+  const [prayers, setPrayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [filter, setFilter] = useState('Active');
+
+  useEffect(() => { loadPrayers(); }, [filter]);
+
+  const loadPrayers = async () => {
+    setLoading(true);
+    try {
+      let q = supabase
+        .from('prayer_requests')
+        .select('id, requester_name, request, category, status, source, phone, email, created_at')
+        .eq('church_id', churchId)
+        .order('created_at', { ascending: false });
+
+      if (filter !== 'all') q = q.eq('status', filter);
+
+      const { data, error } = await q;
+      if (!error) setPrayers(data || []);
+    } catch (err) {
+      console.error('Error cargando pedidos:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateStatus = async (id, newStatus) => {
+    setUpdatingId(id);
+    try {
+      const { error } = await supabase
+        .from('prayer_requests')
+        .update({ status: newStatus })
+        .eq('id', id)
+        .eq('church_id', churchId);
+      if (!error) {
+        setPrayers(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+      }
+    } catch (err) {
+      console.error('Error actualizando pedido:', err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const CATEGORY_ES = {
+    Health: 'Salud', Family: 'Familia', Financial: 'Finanzas',
+    Spiritual: 'Espiritual', Work: 'Trabajo', Relationships: 'Relaciones', Other: 'Otro'
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6">
+        <ArrowLeft className="w-4 h-4" /> Volver al portal
+      </button>
+      <h2 className="text-xl font-bold text-gray-900 mb-1">Pedidos de Oración</h2>
+      <p className="text-sm text-gray-500 mb-6">Pedidos recibidos desde el sitio web y del CRM. Podés marcarlos como respondidos.</p>
+
+      {/* Filtros */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {[['Active', 'Activos'], ['Answered', 'Respondidos'], ['all', 'Todos']].map(([val, label]) => (
+          <button key={val} onClick={() => setFilter(val)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              filter === val
+                ? 'bg-pink-600 text-white'
+                : 'bg-white border border-gray-200 text-gray-700 hover:border-pink-300'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 border-4 border-pink-600/30 border-t-pink-600 rounded-full animate-spin" />
+        </div>
+      ) : prayers.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
+          <HandHeart className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">No hay pedidos en esta categoría.</p>
+        </div>
+      ) : (
+        <ul className="space-y-4">
+          {prayers.map(p => (
+            <li key={p.id} className={`bg-white rounded-2xl border p-5 ${p.status === 'Answered' ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm">{p.requester_name}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {p.source === 'landing' && (
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-semibold">Desde la web</span>
+                    )}
+                    {p.category && p.category !== 'Other' && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">{CATEGORY_ES[p.category] || p.category}</span>
+                    )}
+                    <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-gray-500">
+                      {new Date(p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+                {p.status === 'Answered' ? (
+                  <span className="flex items-center gap-1 text-xs font-medium text-green-600 flex-shrink-0">
+                    <CheckCircle className="w-4 h-4" /> Respondido
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => updateStatus(p.id, 'Answered')}
+                    disabled={updatingId === p.id}
+                    className="flex-shrink-0 px-3 py-1.5 bg-pink-100 hover:bg-green-100 text-pink-700 hover:text-green-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
+                    {updatingId === p.id ? '...' : 'Marcar respondido'}
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">{p.request}</p>
+              {(p.phone || p.email) && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {p.phone && (
+                    <a href={`https://wa.me/${p.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                      className="text-xs text-green-600 hover:underline">📱 {p.phone}</a>
+                  )}
+                  {p.email && (
+                    <a href={`mailto:${p.email}`} className="text-xs text-blue-600 hover:underline">✉ {p.email}</a>
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Gestión de accesos de la célula (vista del líder)
 // ─────────────────────────────────────────────────────────────────────────────
 function CelularAccessView({ leader, onBack }) {
@@ -381,6 +526,7 @@ export default function PortalDashboard() {
   const [loading, setLoading] = useState(true);
   const [unreadMaterials, setUnreadMaterials] = useState(0);
   const [unreadList, setUnreadList] = useState([]);
+  const [newPrayers, setNewPrayers] = useState(0);
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -460,6 +606,9 @@ export default function PortalDashboard() {
         await loadCellPortalMembers(persona.id, cid);
       }
       await loadUnreadCount(cid, session.user.id);
+      if (areas.some(a => a === 'Intercesión')) {
+        await loadNewPrayers(cid);
+      }
 
     } catch (err) {
       console.error("Error verificando usuario:", err);
@@ -468,6 +617,17 @@ export default function PortalDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadNewPrayers = async (cid) => {
+    try {
+      const { count } = await supabase
+        .from('prayer_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('church_id', cid)
+        .eq('status', 'Active');
+      setNewPrayers(count || 0);
+    } catch (err) { console.error('Error cargando pedidos activos:', err); }
   };
 
   const loadUnreadCount = async (cid, userId) => {
@@ -567,7 +727,8 @@ export default function PortalDashboard() {
     { title: "Accesos de Célula", description: "Dar acceso al portal a tus miembros de servicio", icon: ShieldCheck, href: null, action: () => setActiveView('accesos-celula'), color: "from-teal-500 to-teal-600", badge: cellPortalMembers.length > 0 ? `${cellPortalMembers.length} miembro${cellPortalMembers.length > 1 ? 's' : ''}` : null },
     ...userPortalAreas.map(area => {
       const section = AREA_PORTAL_SECTIONS[area];
-      return { title: section.title, description: section.description, icon: section.icon, href: null, action: () => setActiveView(section.key), color: section.color, badge: null };
+      const badge = area === 'Intercesión' && newPrayers > 0 ? `${newPrayers} activo${newPrayers > 1 ? 's' : ''}` : null;
+      return { title: section.title, description: section.description, icon: section.icon, href: null, action: () => setActiveView(section.key), color: section.color, badge, badgeNew: badge != null };
     }),
   ];
 
@@ -610,13 +771,13 @@ export default function PortalDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            {isLider && (
+            {(isLider || (isServicio && newPrayers > 0)) && (
               <div className="relative" ref={bellRef}>
                 <button onClick={() => setBellOpen(o => !o)} className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Notificaciones">
                   <Bell className="w-5 h-5 text-gray-700" />
-                  {unreadMaterials > 0 && (
+                  {(unreadMaterials + newPrayers) > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                      {unreadMaterials}
+                      {unreadMaterials + newPrayers}
                     </span>
                   )}
                 </button>
@@ -624,10 +785,29 @@ export default function PortalDashboard() {
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
                     <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                       <span className="font-semibold text-gray-900 text-sm">Notificaciones</span>
-                      {unreadMaterials > 0 && <span className="text-xs text-red-600 font-medium">{unreadMaterials} sin leer</span>}
+                      {(unreadMaterials + newPrayers) > 0 && <span className="text-xs text-red-600 font-medium">{unreadMaterials + newPrayers} pendientes</span>}
                     </div>
-                    {unreadList.length === 0 ? (
-                      <div className="px-4 py-6 text-center text-sm text-gray-500">Todo al día, no hay materiales nuevos.</div>
+                    {/* Pedidos de oración activos — para intercesores */}
+                    {newPrayers > 0 && (
+                      <button onClick={() => { setBellOpen(false); setActiveView('intercesion'); }}
+                        className="w-full text-left px-4 py-3 hover:bg-pink-50 transition-colors flex items-start gap-3 border-b border-gray-100">
+                        <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <HandHeart className="w-4 h-4 text-pink-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">Pedidos de Oración</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            <span className="text-pink-600 font-medium">{newPrayers} pedido{newPrayers > 1 ? 's' : ''} activo{newPrayers > 1 ? 's' : ''}</span> esperando intercesión
+                          </p>
+                        </div>
+                        <span className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0 mt-2" />
+                      </button>
+                    )}
+                    {/* Materiales no leídos — para líderes */}
+                    {unreadList.length === 0 && newPrayers === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-gray-500">Todo al día, no hay novedades.</div>
+                    ) : unreadList.length === 0 && isLider ? (
+                      <div className="px-4 py-4 text-center text-sm text-gray-500">No hay materiales nuevos.</div>
                     ) : (
                       <ul>
                         {unreadList.map(m => (
@@ -675,7 +855,7 @@ export default function PortalDashboard() {
           <ConsolidacionView
             leader={user}
             churchId={churchId}
-            onBack={isLider ? () => setActiveView('home') : null}
+            onBack={() => setActiveView('home')}
           />
         )}
 
@@ -683,6 +863,15 @@ export default function PortalDashboard() {
         {activeView === 'accesos-celula' && (
           <CelularAccessView
             leader={user}
+            onBack={() => setActiveView('home')}
+          />
+        )}
+
+        {/* ── VISTA INTERCESIÓN ── */}
+        {activeView === 'intercesion' && (
+          <IntercesionView
+            user={user}
+            churchId={churchId}
             onBack={() => setActiveView('home')}
           />
         )}
@@ -740,6 +929,7 @@ export default function PortalDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {userPortalAreas.map(area => {
                 const section = AREA_PORTAL_SECTIONS[area];
+                const areaBadge = area === 'Intercesión' && newPrayers > 0 ? `${newPrayers} activo${newPrayers > 1 ? 's' : ''}` : null;
                 return (
                   <button key={area} onClick={() => setActiveView(section.key)}
                     className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-200 text-left group">
@@ -751,6 +941,11 @@ export default function PortalDashboard() {
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{section.title}</h3>
                     <p className="text-sm text-gray-600">{section.description}</p>
+                    {areaBadge && (
+                      <span className="inline-block mt-3 px-3 py-1 text-xs font-medium rounded-full bg-pink-100 text-pink-700">
+                        {areaBadge}
+                      </span>
+                    )}
                   </button>
                 );
               })}

@@ -51,17 +51,21 @@ export default function ConsolidacionPortal() {
       const churchId = await getCurrentChurchId();
       const userEmail = session.user.email?.toLowerCase().trim();
 
-      // Verificar que tenga rol Consolidación
+      // Verificar acceso: rol 'Consolidación' O area_servicio_actual contiene 'Consolidación'
       const { data: persona, error } = await supabase
         .from('personas')
-        .select('id, nombre, apellido, email')
+        .select('id, nombre, apellido, email, rol, area_servicio_actual, estado_aprobacion')
         .eq('church_id', churchId)
         .ilike('email', userEmail)
-        .eq('rol', 'Consolidación')
         .single();
 
-      if (error || !persona) {
-        console.error("Usuario de consolidación no encontrado:", userEmail, error);
+      const tieneAcceso = persona && (
+        persona.rol === 'Consolidación' ||
+        (persona.area_servicio_actual || '').split(',').map(a => a.trim()).includes('Consolidación')
+      );
+
+      if (error || !tieneAcceso) {
+        console.error("Sin acceso a consolidación:", userEmail, error);
         supabase.auth.signOut();
         redirect("/connect/portal/login");
         return;

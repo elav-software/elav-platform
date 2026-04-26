@@ -23,19 +23,65 @@
             
 			<div class="formulario-box card-moderna">
 				<h2>Pedido de Oración</h2>
-				<p>¿Cómo podemos orar por vos hoy? Nuestro equipo pastoral estará intercediendo por tu necesidad.</p>
+				<p>¿Cómo podemos orar por vos hoy? Nuestro equipo de intercesión estará orando por tu necesidad.</p>
+
+				<div id="oracion-exito" style="display:none; background:#dcfce7; border:1px solid #86efac; border-radius:10px; padding:14px 18px; color:#166534; font-size:0.95rem; margin-bottom:16px;">
+					🙏 Tu pedido fue recibido. Estaremos orando por vos.
+				</div>
+				<div id="oracion-error" style="display:none; background:#fee2e2; border:1px solid #fca5a5; border-radius:10px; padding:14px 18px; color:#991b1b; font-size:0.95rem; margin-bottom:16px;">
+					Hubo un error al enviar tu pedido. Por favor intentá de nuevo.
+				</div>
                 
-				<form action="https://formspree.io/f/TU_CODIGO_FORMSPREE" method="POST">
+				<form id="form-oracion">
 					<div class="input-row">
-						<input type="text" name="Nombre" placeholder="Nombre" required>
-						<input type="text" name="Apellido" placeholder="Apellido" required>
+						<input type="text" id="or-nombre" placeholder="Nombre" required>
+						<input type="text" id="or-apellido" placeholder="Apellido">
 					</div>
-					<input type="tel" name="Telefono" placeholder="Número de teléfono" required>
-					<input type="email" name="Email" placeholder="Mail (Opcional)">
-					<textarea name="Mensaje" rows="5" placeholder="Escribí tu pedido acá..." required></textarea>
+					<input type="tel" id="or-telefono" placeholder="Número de teléfono">
+					<input type="email" id="or-email" placeholder="Mail (Opcional)">
+					<textarea id="or-mensaje" rows="5" placeholder="Escribí tu pedido acá..." required></textarea>
                     
-					<button type="submit" class="btn-submit">Enviar Pedido</button>
+					<button type="submit" class="btn-submit" id="btn-oracion">Enviar Pedido</button>
 				</form>
+
+				<script>
+				document.getElementById('form-oracion').addEventListener('submit', async function(e) {
+					e.preventDefault();
+					var btn = document.getElementById('btn-oracion');
+					btn.disabled = true;
+					btn.textContent = 'Enviando...';
+					document.getElementById('oracion-exito').style.display = 'none';
+					document.getElementById('oracion-error').style.display = 'none';
+					try {
+						var res = await fetch('/api/oracion', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								nombre: document.getElementById('or-nombre').value,
+								apellido: document.getElementById('or-apellido').value,
+								telefono: document.getElementById('or-telefono').value,
+								email: document.getElementById('or-email').value,
+								mensaje: document.getElementById('or-mensaje').value,
+								church_slug: 'cfc'
+							})
+						});
+						if (res.ok) {
+							document.getElementById('oracion-exito').style.display = 'block';
+							document.getElementById('form-oracion').reset();
+						} else {
+							var errData = await res.json().catch(() => ({}));
+							console.error('Error oracion:', errData);
+							var errEl = document.getElementById('oracion-error');
+							errEl.textContent = errData.error || 'Hubo un error al enviar tu pedido. Por favor intentá de nuevo.';
+							errEl.style.display = 'block';
+						}
+					} catch(err) {
+						document.getElementById('oracion-error').style.display = 'block';
+					}
+					btn.disabled = false;
+					btn.textContent = 'Enviar Pedido';
+				});
+				</script>
 			</div>
 
 			<div class="redes-box card-moderna">
