@@ -43,8 +43,8 @@ const STATUS_LABELS = {
 const CATEGORIES = ["Health", "Family", "Financial", "Spiritual", "Work", "Relationships", "Other"];
 
 const EMPTY_FORM = {
-  member_name: "", request: "", category: "Other",
-  date_submitted: "", assigned_prayer_leader: "", status: "Active"
+  requester_name: "", request: "", category: "Other",
+  assigned_prayer_leader: "", status: "Active"
 };
 
 const F = ({ label, name, type = "text", options, optionLabels, textarea, form, setForm }) => (
@@ -106,7 +106,7 @@ export default function PrayerRequests() {
 
   const filtered = requests.filter(r => {
     const q = search.toLowerCase();
-    const matchSearch = !q || r.member_name?.toLowerCase().includes(q) || r.request?.toLowerCase().includes(q);
+    const matchSearch = !q || r.requester_name?.toLowerCase().includes(q) || r.request?.toLowerCase().includes(q);
     const matchStatus = filterStatus === "all" || r.status === filterStatus;
     const matchCat = filterCategory === "all" || r.category === filterCategory;
     return matchSearch && matchStatus && matchCat;
@@ -195,10 +195,10 @@ export default function PrayerRequests() {
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
-                    {r.member_name && <span className="font-semibold text-slate-900 text-sm">{r.member_name}</span>}
+                    {r.requester_name && <span className="font-semibold text-slate-900 text-sm">{r.requester_name}</span>}
                     <Badge className={`text-xs ${CATEGORY_COLORS[r.category] || "bg-slate-100 text-slate-600"}`}>{CATEGORY_LABELS[r.category] || r.category}</Badge>
                     <Badge className={`text-xs ${r.status === "Active" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>{STATUS_LABELS[r.status] || r.status}</Badge>
-                    {r.date_submitted && <span className="text-xs text-slate-400">{format(parseISO(r.date_submitted), "d MMM yyyy")}</span>}
+                    {r.created_at && <span className="text-xs text-slate-400">{format(parseISO(r.created_at), "d MMM yyyy")}</span>}
                   </div>
                   <p className={`text-sm text-slate-700 ${r.status === "Answered" ? "line-through text-slate-400" : ""}`}>{r.request}</p>
                   {r.assigned_prayer_leader && <p className="text-xs text-slate-400 mt-1">Líder de oración: {r.assigned_prayer_leader}</p>}
@@ -217,11 +217,10 @@ export default function PrayerRequests() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editing ? "Editar Petición de Oración" : "Agregar Petición de Oración"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <F label="Nombre del Miembro" name="member_name" form={form} setForm={setForm} />
+            <F label="Nombre del Solicitante" name="requester_name" form={form} setForm={setForm} />
             <F label="Categoría" name="category"
               options={CATEGORIES}
               optionLabels={CATEGORIES.map(c => CATEGORY_LABELS[c])} form={form} setForm={setForm} />
-            <F label="Fecha de Envío" name="date_submitted" type="date" form={form} setForm={setForm} />
             <F label="Líder de Oración Asignado" name="assigned_prayer_leader" form={form} setForm={setForm} />
             <F label="Estado" name="status"
               options={["Active", "Answered", "Closed"]}
