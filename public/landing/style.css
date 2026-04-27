@@ -452,18 +452,13 @@ input:focus, textarea:focus, select:focus {
 }
 
 .mapa-container {
-    display: flex;
-    flex-direction: column;
+    grid-column: span 2; /* MAGIA: Ocupa todo el ancho inferior */
+    margin-top: 40px;
 }
 
 .mapa-responsive {
-    width: 100%;
-    height: 350px;
-    border-radius: 16px;
-    overflow: hidden;
-    margin-top: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-    border: 1px solid var(--borde-tarjeta);
+    height: 450px; /* Aumentado para que sea más imponente */
+    border-radius: 24px;
 }
 
 .mapa-responsive iframe {
@@ -471,6 +466,60 @@ input:focus, textarea:focus, select:focus {
     height: 100%;
     border: none;
     display: block;
+}
+
+/* --- TARJETA DE HORARIOS (PC y Móvil) --- */
+.nuevo-horarios {
+    background-color: var(--rojo-ui);
+    color: var(--blanco);
+    padding: 25px; /* Reducido para ser más compacto */
+    border-radius: 20px; /* Bordes un poco más suaves */
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(217, 45, 50, 0.15);
+    margin-top: 30px; /* Reducido para que pegue mejor con el texto */
+    width: 100%;
+    transition: transform 0.3s var(--curva-suave);
+}
+
+.nuevo-horarios:hover {
+    transform: translateY(-5px);
+}
+
+.nuevo-horarios h3 {
+    color: var(--blanco);
+    margin-bottom: 15px; /* Menos espacio de separación */
+    font-size: 1.5rem; /* Letra un poco más chica */
+    letter-spacing: 1px;
+}
+
+.nuevo-horarios ul {
+    list-style: none;
+    padding: 0;
+    max-width: 500px; 
+    margin: 0 auto;
+}
+
+.nuevo-horarios li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0; /* Renglones más juntitos */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.nuevo-horarios li:last-child {
+    border-bottom: none;
+}
+
+.nuevo-horarios .dia {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+}
+
+.nuevo-horarios .hora {
+    font-weight: 400;
+    opacity: 0.95;
 }
 
 /* =========================================
@@ -834,7 +883,10 @@ input:focus, textarea:focus, select:focus {
     }
 
     /* Asignamos el orden exacto para la página SOY NUEVO y CONTACTO */
-    .formulario-box { order: 1; }
+    .formulario-box { 
+        order: 1; 
+        padding: 0 !important; /* Quita el relleno interno en celulares para igualar el ancho del texto */
+    }
     .redes-box      { order: 2; }
     .nuevo-info     { order: 2; }
     .nuevo-horarios { order: 3; }

@@ -21,104 +21,53 @@
 	<section class="soy-nuevo fade-in delay mt-40">
 		<div class="container-nuevo">
 			<div class="nuevo-grid">
-                
 				<div class="columna-info">
 					<div class="nuevo-info">
 						<h3>Nuestra Historia</h3>
-						<p class="mb-15">Nacimos en 1970 en el garage de una casa bajo la fe del Pastor Miguel Ángel Pereda y su esposa Susana. Hoy, con más de 50 años de trayectoria, el Centro Familiar Cristiano es una comunidad que trasciende fronteras, liderada por la Pastora Susana y sus cuatro hijos (Ingrid, Mariano, Jonatan y Jennifer) junto a sus familias.</p>
-                        
-						<p class="mb-15">Creemos en una iglesia que vive para estar cerca de Dios y sale para bendecir a otros. Nuestra misión es clara: hacer discípulos y llevar un mensaje de restauración a cada rincón de La Matanza.</p>
-                        
-						<p>No somos solo un edificio en Isidro Casanova; somos una familia presente en el barrio a través de nuestras células, brindando contención y esperanza.</p>
+						<p class="mb-15">Nacimos en 1970 en el garage de una casa bajo la fe del Pastor Miguel Ángel Pereda y su esposa Susana...</p>
+						<p class="mb-15">Creemos en una iglesia que vive para estar cerca de Dios y sale para bendecir a otros...</p>
+						<p>No somos solo un edificio en Isidro Casanova; somos una familia presente en el barrio...</p>
 					</div>
 
-					<div class="nuevo-horarios mt-40">
+					<div class="nuevo-horarios">
 						<h3>Horarios Fijos</h3>
 						<ul>
 							<li><span class="dia">Miércoles</span> <span class="hora">19:30 hs</span></li>
 							<li><span class="dia">Viernes</span> <span class="hora">19:30 hs</span></li>
-							<li><span class="dia">Sábado <small>(Jóvenes)</small></span> <span class="hora">19:30 hs</span></li>
-							<li><span class="dia">Domingos</span> <span class="hora">10:00 hs y 18:00 hs</span></li>
+							<li><span class="dia">Sábado</span> <span class="hora">19:30 hs</span></li>
+							<li><span class="dia">Domingos</span> <span class="hora">10:00 y 18:00 hs</span></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="columna-accion">
-                    
-					<div class="formulario-box mb-20 p-30">
+					<div class="formulario-box p-30">
 						<h2>¡Nos encantaría conocerte!</h2>
-						<p>No queremos que te sientas un extraño. Dejanos tus datos y un miembro de nuestra familia te escribirá para que tu primera visita sea especial.</p>
-                        
-						<form action="https://formspree.io/f/TU_CODIGO_FORMSPREE" method="POST">
-							<input type="hidden" name="_subject" value="NUEVO VISITANTE - Quiere que lo llamen">
-							
-							<input type="text" name="Nombre y Apellido" placeholder="Nombre y Apellido" required>
-							<input type="text" name="WhatsApp / Teléfono" placeholder="WhatsApp / Teléfono" required>
-							<input type="text" name="Barrio / Localidad" placeholder="Barrio / Localidad" required>
-
-							
-							<select name="Estado Civil" required>
+						<p>Dejanos tus datos y un miembro de nuestra familia te escribirá.</p>
+						
+						<form action="#" method="POST">
+							<input type="text" name="nombre" placeholder="Nombre y Apellido" required>
+							<input type="text" name="tel" placeholder="WhatsApp / Teléfono" required>
+							<input type="text" name="barrio" placeholder="Barrio / Localidad" required>
+							<input type="number" name="edad" placeholder="Edad" required>
+							<select name="estado" required>
 								<option value="" disabled selected>Estado Civil</option>
 								<option value="Soltero/a">Soltero/a</option>
 								<option value="Casado/a">Casado/a</option>
 								<option value="Divorciado/a">Divorciado/a</option>
 								<option value="Viudo/a">Viudo/a</option>
 							</select>
-							
 							<button type="submit" class="btn-submit w-100">Quiero que me llamen!</button>
 						</form>
-						<script>
-							document.getElementById('form-soy-nuevo').addEventListener('submit', async function(e) {
-								e.preventDefault();
-								var btn = document.getElementById('sn-btn');
-								btn.disabled = true;
-								btn.textContent = 'Enviando...';
-								document.getElementById('sn-msg').style.display = 'none';
-								document.getElementById('sn-err').style.display = 'none';
-								var edadVal = document.getElementById('sn-edad').value;
-								try {
-									var res = await fetch('/api/soy-nuevo', {
-										method: 'POST',
-										headers: { 'Content-Type': 'application/json' },
-										body: JSON.stringify({
-											nombre: document.getElementById('sn-nombre').value,
-											telefono: document.getElementById('sn-telefono').value,
-											edad: edadVal ? parseInt(edadVal, 10) : null,
-											estado_civil: document.getElementById('sn-estado-civil').value || null,
-											barrio: document.getElementById('sn-barrio').value || null,
-											church_slug: 'cfc'
-										})
-									});
-									if (res.ok) {
-										document.getElementById('sn-msg').style.display = 'block';
-										document.getElementById('sn-nombre').value = '';
-										document.getElementById('sn-telefono').value = '';
-										document.getElementById('sn-edad').value = '';
-										document.getElementById('sn-estado-civil').selectedIndex = 0;
-										document.getElementById('sn-barrio').value = '';
-										btn.textContent = 'Enviado ✓';
-									} else {
-										document.getElementById('sn-err').style.display = 'block';
-										btn.disabled = false;
-										btn.textContent = 'Quiero que me llamen!';
-									}
-								} catch(err) {
-									document.getElementById('sn-err').style.display = 'block';
-									btn.disabled = false;
-									btn.textContent = 'Quiero que me llamen!';
-								}
-							});
-						</script>
 					</div>
+				</div>
 
-					<div class="mapa-container">
-						<h3>Cómo Llegar</h3>
-						<p class="direccion" style="font-size: 0.9rem;">Av. Juan Manuel de Rosas 7840, Isidro Casanova</p>
-						<div class="mapa-responsive">
-							<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3279.799863778842!2d-58.5833446!3d-34.7102143!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bcc67396c21e69%3A0xc3cf936e39ab8254!2sAv.%20Brig.%20Gral.%20Juan%20Manuel%20de%20Rosas%207840%2C%20B1765%20Isidro%20Casanova%2C%20Provincia%20de%20Buenos%20Aires!5e0!3m2!1ses!2sar!4v1713283200000!5m2!1ses!2sar" width="100%" height="250" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-						</div>
+				<div class="mapa-container">
+					<h3>Cómo Llegar</h3>
+					<p class="direccion" style="font-size: 0.9rem; margin-bottom: 15px;">Av. Juan Manuel de Rosas 7840, Isidro Casanova</p>
+					<div class="mapa-responsive">
+						<iframe src="https://maps.google.com/maps?q=Av.%20Juan%20Manuel%20de%20Rosas%207840,%20Isidro%20Casanova&t=&z=16&ie=UTF8&iwloc=&output=embed" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
 					</div>
-
 				</div>
 			</div>
 		</div>
