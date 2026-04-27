@@ -32,8 +32,8 @@ export default function PortalLogin() {
         const userEmail = session.user.email?.toLowerCase().trim();
         const rol = await verifyApprovedLeader(userEmail);
         
-        if (rol === 'consolidacion' || rol === 'servicio') {
-          redirect("/connect/portal/consolidacion");
+        if (rol === 'servicio') {
+          redirect("/connect/portal/dashboard");
         } else if (rol) {
           redirect("/connect/portal/dashboard");
         } else {
@@ -63,11 +63,15 @@ export default function PortalLogin() {
       // Líder aprobado → acceso completo al dashboard
       if (data.rol === 'Líder' && data.estado_aprobacion === 'aprobado') return 'Líder';
 
-      // Rol Consolidación → acceso al portal de consolidación
-      if (data.rol === 'Consolidación') return 'consolidacion';
+      // Pastor → acceso completo al dashboard (sin requerir estado_aprobacion)
+      if (data.rol === 'Pastor') return 'Pastor';
 
-      // Persona con área que tiene sección portal → acceso
-      const PORTAL_AREAS = ['Consolidación']; // sincronizado con AREA_PORTAL_SECTIONS en PortalDashboard
+      // Rol Consolidación (legado) → mismo acceso que área de servicio
+      if (data.rol === 'Consolidación') return 'servicio';
+
+      // Persona con área que tiene sección portal → acceso al dashboard
+      // IMPORTANTE: sincronizar con AREA_PORTAL_SECTIONS en PortalDashboard.jsx
+      const PORTAL_AREAS = ['Consolidación', 'Intercesión'];
       const areas = (data.area_servicio_actual || '').split(',').map(a => a.trim());
       if (areas.some(a => PORTAL_AREAS.includes(a))) return 'servicio';
 
@@ -103,9 +107,7 @@ export default function PortalLogin() {
         // Verificar si tiene acceso al portal
         const rol = await verifyApprovedLeader(data.user.email);
         
-        if (rol === 'consolidacion' || rol === 'servicio') {
-          redirect("/connect/portal/consolidacion");
-        } else if (rol) {
+        if (rol === 'servicio' || rol) {
           redirect("/connect/portal/dashboard");
         } else {
           setError("Tu cuenta no está habilitada para acceder al portal. Contactá al pastor.");

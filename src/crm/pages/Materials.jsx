@@ -77,16 +77,18 @@ export default function Materials() {
       if (selectedFile) {
         const ext = selectedFile.name.split(".").pop();
         filePath = `${churchId}/${Date.now()}-${form.title.replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("materiales")
-          .upload(filePath, selectedFile, { upsert: false });
-        if (uploadError) throw uploadError;
 
-        // URL firmada válida por 1 año (se renueva al descargar desde el portal)
-        const { data: signedData } = await supabase.storage
-          .from("materiales")
-          .createSignedUrl(filePath, 60 * 60 * 24 * 365);
-        fileUrl = signedData?.signedUrl ?? "";
+        const fd = new FormData();
+        fd.append("file", selectedFile);
+        fd.append("filePath", filePath);
+        const res = await fetch("/api/crm/upload-material", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+          body: fd,
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error ?? "Error al subir archivo");
+        fileUrl = result.signedUrl;
         fileSize = selectedFile.size;
       }
 

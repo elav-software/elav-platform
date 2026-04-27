@@ -1,13 +1,15 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "@crm/api/supabaseClient";
 import { getMyChurchId } from "@crm/api/apiClient";
 import { Card } from "@crm/components/ui/card";
 import PageHeader from "../components/shared/PageHeader";
+import toast from "react-hot-toast";
 import {
   Users, Heart, Package, Music, Music2, Mic2, HandHeart, Star,
   Video, Share2, Volume2, Zap, Monitor, Sparkles, Award, Shield,
   Home, Scissors, Activity, Smile, X, Phone, Mail, ChevronRight,
+  FileText, Upload, File, Trash2, Plus, BookOpen,
 } from "lucide-react";
 
 const AREAS_CONFIG = [
@@ -37,6 +39,25 @@ export default function ServiceAreas() {
   const [personas, setPersonas] = useState([]);
   const [selectedArea, setSelectedArea] = useState(null);
 
+  // ── Materiales por área ──
+  const [areaTab, setAreaTab] = useState("members"); // "members" | "materials"
+  const [areaMaterials, setAreaMaterials] = useState([]);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [showMaterialForm, setShowMaterialForm] = useState(false);
+  const [matForm, setMatForm] = useState({ title: "", description: "", category: "", url: "" });
+  const [matFile, setMatFile] = useState(null);
+  const [matUploading, setMatUploading] = useState(false);
+  const matFileRef = useRef(null);
+
+  const CATEGORIAS = ["Estudio bíblico", "Planilla", "Manual", "Recurso", "Otro"];
+
+  const formatSize = (bytes) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   useEffect(() => {
     const load = async () => {
       const churchId = await getMyChurchId();
@@ -51,6 +72,125 @@ export default function ServiceAreas() {
     };
     load();
   }, []);
+
+  // Cargar materiales cuando cambia el área o la pestaña
+  useEffect(() => {
+    if (selectedArea && areaTab === "materials") loadAreaMaterials(selectedArea);
+  }, [selectedArea, areaTab]);
+
+  const loadAreaMaterials = async (areaName) => {
+    setMaterialsLoading(true);
+    try {
+      const churchId = await getMyChurchId();
+      const { data, error } = await supabase
+        .from("leader_materials")
+        .select("id, title, description, category, type, url, is_active, created_at")
+        .eq("church_id", churchId)
+        .eq("service_area", areaName)
+        .order("created_at", { ascending: false });
+      if (error) {
+        console.error("[loadAreaMaterials] code:", error.code, "message:", error.message, "details:", error.details, "hint:", error.hint);
+        toast.error(`Error: ${error.message || error.code || JSON.stringify(error)}`);
+      } else {
+        setAreaMaterials(data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setMaterialsLoading(false);
+    }
+  };
+
+  const handleMatFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMatFile(file);
+    setMatForm(prev => ({ ...prev, title: prev.title || file.name.replace(/\.[^/.]+$/, "") }));
+  };
+
+  const handleMatSubmit = async (e) => {
+    e.preventDefault();
+    if (!matForm.title) { toast.error("El título es obligatorio"); return; }
+    if (!matFile && !matForm.url) { toast.error("Subí un archivo o ingresá una URL"); return; }
+    setMatUploading(true);
+    try {
+      const churchId = await getMyChurchId();
+      const { data: { session } } = await supabase.auth.getSession();
+      let fileUrl = matForm.url;
+      let filePath = null;
+      let fileSize = null;
+
+      if (matFile) {
+        const ext = matFile.name.split(".").pop();
+        filePath = `${churchId}/${Date.now()}-${matForm.title.replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
+
+        const fd = new FormData();
+        fd.append("file", matFile);
+        fd.append("filePath", filePath);
+        const res = await fetch("/api/crm/upload-material", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+          body: fd,
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error ?? "Error al subir archivo");
+        fileUrl = result.signedUrl;
+        fileSize = matFile.size;
+      }
+
+      const { error } = await supabase.from("leader_materials").insert({
+        church_id: churchId,
+        title: matForm.title,
+        description: matForm.description || null,
+        category: matForm.category || null,
+        type: matFile ? "document" : "link",
+        url: fileUrl,
+        file_path: filePath,
+        file_size: fileSize,
+        uploaded_by: session?.user?.id,
+        is_active: true,
+        service_area: selectedArea,
+      });
+
+      if (error) throw error;
+
+      // Notificar en el portal a los miembros del área
+      await supabase.from("portal_notifications").insert({
+        church_id: churchId,
+        type: "material",
+        title: matForm.title,
+        body: `Nuevo material disponible para el área de ${selectedArea}`,
+        target: selectedArea,
+        source_table: "leader_materials",
+      });
+
+      toast.success("Material subido correctamente");
+      setShowMaterialForm(false);
+      setMatForm({ title: "", description: "", category: "", url: "" });
+      setMatFile(null);
+      loadAreaMaterials(selectedArea);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al subir el material");
+    } finally {
+      setMatUploading(false);
+    }
+  };
+
+  const handleMatDelete = async (material) => {
+    if (!confirm(`¿Eliminar "${material.title}"?`)) return;
+    try {
+      if (material.file_path) {
+        await supabase.storage.from("materiales").remove([material.file_path]);
+      }
+      await supabase.from("leader_materials").delete().eq("id", material.id);
+      toast.success("Material eliminado");
+      loadAreaMaterials(selectedArea);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al eliminar");
+    }
+  };
 
   const membersForArea = (areaName) =>
     personas.filter(p =>
@@ -100,7 +240,12 @@ export default function ServiceAreas() {
               return (
                 <button
                   key={area.name}
-                  onClick={() => setSelectedArea(isSelected ? null : area.name)}
+                  onClick={() => {
+                    setSelectedArea(isSelected ? null : area.name);
+                    setAreaTab("members");
+                    setAreaMaterials([]);
+                    setShowMaterialForm(false);
+                  }}
                   className={`group relative flex flex-col items-start gap-3 p-4 rounded-2xl border-2 text-left transition-all duration-200 shadow-sm hover:shadow-md
                     ${isSelected
                       ? `${area.bg} ${area.border} shadow-md scale-[1.01]`
@@ -149,7 +294,12 @@ export default function ServiceAreas() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setSelectedArea(null)}
+                    onClick={() => {
+                      setSelectedArea(null);
+                      setAreaTab("members");
+                      setAreaMaterials([]);
+                      setShowMaterialForm(false);
+                    }}
                     className="w-7 h-7 rounded-full bg-white/60 flex items-center justify-center hover:bg-white transition-colors"
                   >
                     <X className="w-3.5 h-3.5 text-slate-500" />
@@ -157,8 +307,35 @@ export default function ServiceAreas() {
                 </div>
               </div>
 
+              {/* Pestañas: Miembros / Materiales */}
+              <div className="flex border-b border-slate-100">
+                <button
+                  onClick={() => setAreaTab("members")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
+                    areaTab === "members"
+                      ? `${selectedConfig.text} border-b-2 ${selectedConfig.border.replace("border-", "border-b-")}`
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  Miembros ({selectedMembers.length})
+                </button>
+                <button
+                  onClick={() => setAreaTab("materials")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
+                    areaTab === "materials"
+                      ? `${selectedConfig.text} border-b-2 ${selectedConfig.border.replace("border-", "border-b-")}`
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Materiales
+                </button>
+              </div>
+
               {/* Member list */}
-              <div className="p-3 max-h-[calc(100vh-280px)] overflow-y-auto">
+              {areaTab === "members" && (
+              <div className="p-3 max-h-[calc(100vh-320px)] overflow-y-auto">
                 {selectedMembers.length === 0 ? (
                   <div className="text-center py-10 text-slate-400">
                     <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -202,10 +379,173 @@ export default function ServiceAreas() {
                   </div>
                 )}
               </div>
+              )}
+
+              {/* Materials panel */}
+              {areaTab === "materials" && (
+                <div className="p-3 max-h-[calc(100vh-320px)] overflow-y-auto">
+                  {/* Botón subir */}
+                  <button
+                    onClick={() => setShowMaterialForm(true)}
+                    className={`w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-xl border-2 border-dashed text-xs font-semibold transition-colors ${selectedConfig.border} ${selectedConfig.text} hover:opacity-80`}
+                  >
+                    <Plus className="w-4 h-4" /> Subir material
+                  </button>
+
+                  {materialsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="w-5 h-5 border-4 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                    </div>
+                  ) : areaMaterials.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">
+                      <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm font-medium">Sin materiales todavía</p>
+                      <p className="text-xs mt-1">Subí el primero con el botón de arriba</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {areaMaterials.map(m => (
+                        <div key={m.id} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 hover:bg-white border border-transparent hover:border-slate-100 transition-all">
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedConfig.bg}`}>
+                            <FileText className={`w-4 h-4 ${selectedConfig.text}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">{m.title}</p>
+                            {m.category && <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">{m.category}</span>}
+                            {m.file_size && <span className="text-[10px] text-slate-400 ml-1">{formatSize(m.file_size)}</span>}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <a href={m.url} target="_blank" rel="noopener noreferrer"
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                              <FileText className="w-3.5 h-3.5" />
+                            </a>
+                            <button onClick={() => handleMatDelete(m)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           </div>
         )}
       </div>
+
+      {/* Modal subir material */}
+      {showMaterialForm && selectedConfig && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Subir material</h2>
+                <p className={`text-sm font-medium mt-0.5 ${selectedConfig.text}`}>{selectedArea}</p>
+              </div>
+              <button onClick={() => { setShowMaterialForm(false); setMatFile(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleMatSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Archivo</label>
+                <div
+                  onClick={() => matFileRef.current?.click()}
+                  className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all"
+                >
+                  {matFile ? (
+                    <div className="flex items-center justify-center gap-3 text-blue-600">
+                      <File className="w-5 h-5" />
+                      <span className="font-medium text-sm">{matFile.name}</span>
+                      <span className="text-gray-400 text-xs">({formatSize(matFile.size)})</span>
+                    </div>
+                  ) : (
+                    <div className="text-gray-400">
+                      <Upload className="w-7 h-7 mx-auto mb-1" />
+                      <p className="text-sm">Click para seleccionar un archivo</p>
+                      <p className="text-xs mt-0.5">PDF, Excel, Word, etc.</p>
+                    </div>
+                  )}
+                </div>
+                <input ref={matFileRef} type="file" className="hidden" onChange={handleMatFileSelect} />
+              </div>
+
+              {!matFile && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">O pegá un link externo</label>
+                  <input
+                    type="url"
+                    placeholder="https://drive.google.com/..."
+                    value={matForm.url}
+                    onChange={e => setMatForm(p => ({ ...p, url: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Título *</label>
+                <input
+                  type="text"
+                  value={matForm.title}
+                  onChange={e => setMatForm(p => ({ ...p, title: e.target.value }))}
+                  placeholder="Ej: Repertorio Mayo 2026"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Descripción</label>
+                <textarea
+                  value={matForm.description}
+                  onChange={e => setMatForm(p => ({ ...p, description: e.target.value }))}
+                  placeholder="Descripción breve del contenido..."
+                  rows={2}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Categoría</label>
+                <select
+                  value={matForm.category}
+                  onChange={e => setMatForm(p => ({ ...p, category: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                >
+                  <option value="">Sin categoría</option>
+                  {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowMaterialForm(false); setMatFile(null); }}
+                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={matUploading}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {matUploading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  {matUploading ? "Subiendo..." : "Subir material"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,7 +14,8 @@ export function supabaseToCRM(persona) {
   const baptismMap = { "Sí": "Baptized", "No": "Not Baptized" };
 
   const isLider = persona.rol === "Líder" || persona.rol === "Lider";
-  const memberStatus = isLider ? "Leader" : "Member";
+  const isPastor = persona.rol === "Pastor";
+  const memberStatus = isPastor ? "Pastor" : isLider ? "Leader" : "Member";
 
   return {
     supabase_id: persona.id,
@@ -59,7 +60,7 @@ export function crmToSupabase(member) {
   const genderMap = { Male: "Masculino", Female: "Femenino" };
   const maritalMap = { Single: "Soltero/a", Married: "Casado/a", Widowed: "Viudo/a", Divorced: "Divorciado/a" };
   const baptismMap = { Baptized: "Sí", "Not Baptized": "No" };
-  const rolMap = { Visitor: "Visitante", "New Believer": "Nuevo Creyente", Member: "Miembro", Leader: "Líder" };
+  const rolMap = { Visitor: "Visitante", "New Believer": "Nuevo Creyente", Member: "Miembro", Leader: "Líder", Pastor: "Pastor" };
   const nameParts = (member.full_name || "").trim().split(/\s+/);
   return {
     nombre: nameParts[0] || "",
@@ -76,6 +77,9 @@ export function crmToSupabase(member) {
     ocupacion: member.occupation || null,
     nivel_educacion: member.education_level || null,
     rol: rolMap[member.member_status] || null,
+    // Si el CRM asigna Líder o Pastor directamente, se aprueba automáticamente
+    // (el pastor lo está promoviendo, no requiere flujo de aprobación)
+    ...(["Leader", "Pastor"].includes(member.member_status) && { estado_aprobacion: "aprobado" }),
     ano_conversion: member.conversion_year || null,
     fecha_llegada_cfc: member.date_joined || null,
     bautizado: baptismMap[member.baptism_status] || "No",
