@@ -1,5 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# scripts de utilidad local (no son parte de la app)
+commit.ps1
+commit.sh
+
 # dependencies
 /node_modules
 /.pnp
