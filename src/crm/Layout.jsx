@@ -44,6 +44,12 @@ export default function Layout({ children, currentPageName }) {
   const [newVisitorsCount, setNewVisitorsCount] = useState(0);
   const [churches, setChurches] = useState([]);
   const [selectedChurch, setSelectedChurch] = useState(null);
+  const [churchBranding, setChurchBranding] = useState({
+    name: 'CRM',
+    short_name: 'CRM',
+    logo_url: '/logo.png',
+    primary_color: '#dc2626',
+  });
   // Búsqueda global
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,6 +103,22 @@ export default function Layout({ children, currentPageName }) {
         };
         setUser(u);
 
+        // Cargar branding de la iglesia actual
+        const loadChurchBranding = async (churchId) => {
+          if (!churchId) return;
+          const { data: ch } = await supabase
+            .from('churches')
+            .select('name, short_name, logo_url, primary_color')
+            .eq('id', churchId)
+            .single();
+          if (ch) setChurchBranding({
+            name: ch.name ?? 'CRM',
+            short_name: ch.short_name ?? ch.name ?? 'CRM',
+            logo_url: ch.logo_url || '/logo.png',
+            primary_color: ch.primary_color || '#dc2626',
+          });
+        };
+
         if (u.role === 'superadmin') {
           const { data: allChurches } = await supabase
             .from('churches')
@@ -105,19 +127,33 @@ export default function Layout({ children, currentPageName }) {
             .order('name');
           setChurches(allChurches || []);
           const saved = getSuperadminSelectedChurch();
+          let activeChurchId;
           if (saved && allChurches?.find(c => c.id === saved)) {
             setSelectedChurch(saved);
+            activeChurchId = saved;
           } else if (allChurches?.length) {
             const first = allChurches[0].id;
             setSuperadminSelectedChurch(first);
             setSelectedChurch(first);
+            activeChurchId = first;
           }
+          await loadChurchBranding(activeChurchId);
           loadPendingLeaders();
           loadPendingReports();
           loadNewVisitors();
         } else if (u.role !== 'admin') {
           setAccessDenied(true);
         } else {
+          // Admin: obtener su church_id y cargar branding
+          const { data: cu } = await supabase
+            .from('church_users')
+            .select('church_id')
+            .eq('user_id', activeUser.id)
+            .eq('is_active', true)
+            .not('church_id', 'is', null)
+            .limit(1)
+            .maybeSingle();
+          if (cu?.church_id) await loadChurchBranding(cu.church_id);
           loadPendingLeaders();
           loadPendingReports();
           loadNewVisitors();
@@ -279,17 +315,18 @@ export default function Layout({ children, currentPageName }) {
           --church-navy: #1e293b;
           --church-gold: #d4a843;
           --church-gold-light: #f5e6c4;
+          --church-primary: ${churchBranding.primary_color};
         }
       `}</style>
 
       {/* Mobile Header */}
-      <div className="bg-red-600 px-4 opacity-100 lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-slate-200 h-16 flex items-center justify-between">
+      <div className="px-4 opacity-100 lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-slate-200 h-16 flex items-center justify-between" style={{ backgroundColor: churchBranding.primary_color }}>
         <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2">
           <Menu className="text-slate-50 lucide lucide-menu w-6 h-6" />
         </button>
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="CFC Logo" className="w-8 h-8 rounded-full object-cover" />
-          <span className="text-slate-50 font-bold">CFC CASA CRM</span>
+          <img src={churchBranding.logo_url} alt={churchBranding.short_name} className="w-8 h-8 rounded-full object-cover" />
+          <span className="text-slate-50 font-bold">{churchBranding.short_name} CRM</span>
         </div>
         <button onClick={() => { setSearchOpen(true); setSearchQuery(""); setSearchResults([]); }} className="p-2 text-slate-50 hover:text-white">
           <Search className="w-5 h-5" />
@@ -313,9 +350,9 @@ export default function Layout({ children, currentPageName }) {
           <div className="bg-slate-800 text-slate-50 p-6 border-b border-white/10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img src="/logo.png" alt="CFC Logo" className="w-10 h-10 rounded-full object-cover shadow-lg" />
+                <img src={churchBranding.logo_url} alt={churchBranding.short_name} className="w-10 h-10 rounded-full object-cover shadow-lg" />
                 <div>
-                  <h1 className="font-bold text-lg leading-tight">CFC CASA</h1>
+                  <h1 className="font-bold text-lg leading-tight">{churchBranding.short_name}</h1>
                   <p className="text-xs text-slate-400">Sistema de Gestión</p>
                 </div>
               </div>

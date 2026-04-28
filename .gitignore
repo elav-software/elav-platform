@@ -37,6 +37,9 @@ yarn-error.log*
 Documentacion/
 supabase/
 
+# notas locales
+TODO.txt
+
 # vercel
 .vercel
 
