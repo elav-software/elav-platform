@@ -46,7 +46,7 @@ import {
 const AREA_PORTAL_SECTIONS = {
   'Consolidación': {
     key: 'consolidacion',
-    title: 'Materiales de Consolidación',
+    title: 'Registrar Visitante',
     description: 'Anotar datos de nuevos visitantes',
     icon: UserPlus,
     color: 'from-orange-500 to-orange-600',
@@ -54,7 +54,7 @@ const AREA_PORTAL_SECTIONS = {
   },
   'Intercesión': {
     key: 'intercesion',
-    title: 'Materiales de Intercesión',
+    title: 'Pedidos de Oración',
     description: 'Ver y orar por los pedidos recibidos',
     icon: HandHeart,
     color: 'from-pink-500 to-pink-600',
@@ -339,7 +339,7 @@ function IntercesionView({ user, churchId, onBack }) {
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6">
         <ArrowLeft className="w-4 h-4" /> Volver al portal
       </button>
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Materiales de Intercesión</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-1">Pedidos de Oración</h2>
       <p className="text-sm text-gray-500 mb-6">Pedidos recibidos desde el sitio web y del CRM. Podés marcarlos como respondidos.</p>
 
       {/* Filtros */}
@@ -471,7 +471,7 @@ function AreaMaterialesView({ areaName, churchId, userId, onBack }) {
           <Icon className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gray-900">{areaConfig?.title ?? areaName}</h2>
+          <h2 className="text-xl font-bold text-gray-900">{areaConfig?.view ? `Materiales de ${areaName}` : (areaConfig?.title ?? areaName)}</h2>
           <p className="text-sm text-gray-500">Materiales y recursos del área</p>
         </div>
       </div>
