@@ -40,7 +40,7 @@ async function resolveChurchId(): Promise<string | null> {
     return data?.id ?? null;
   }
 
-  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal)\./, '');
+  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal|formulario)\./, '');
   const { data } = await supabase.from('churches').select('id').eq('custom_domain', rootDomain).eq('is_active', true).single();
   return data?.id ?? null;
 }
