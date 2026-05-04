@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { api, getMyChurchId } from "@crm/api/apiClient";
 import { supabase } from "@crm/api/supabaseClient";
 import { Card } from "@crm/components/ui/card";
@@ -10,61 +10,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@crm/components/ui/dialog";
 import { Label } from "@crm/components/ui/label";
 import { Textarea } from "@crm/components/ui/textarea";
-import PageHeader from "../components/shared/PageHeader";
-import EmptyState from "../components/shared/EmptyState";
 import StatCard from "../components/shared/StatCard";
-import { DollarSign, TrendingUp, TrendingDown, Search, Edit, Trash2, Users, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Search, Edit, Trash2, Users, Wallet, Plus, Minus } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 
 // ── INGRESOS ──────────────────────────────────────────────────
-const TYPE_COLORS = {
-  Tithe: "bg-indigo-100 text-indigo-700",
-  Offering: "bg-emerald-100 text-emerald-700",
-  Missions: "bg-blue-100 text-blue-700",
-  "Special Project": "bg-amber-100 text-amber-700",
-};
 const TYPE_LABELS = {
-  Tithe: "Diezmo",
-  Offering: "Ofrenda",
-  Missions: "Misiones",
-  "Special Project": "Proyecto Especial",
+  Tithe: "Diezmo", Offering: "Ofrenda", Missions: "Misiones", "Special Project": "Proyecto Especial",
 };
 const PAYMENT_LABELS = {
-  Cash: "Efectivo",
-  "Bank Transfer": "Transferencia",
-  Online: "En línea",
-  Check: "Cheque",
-  Other: "Otro",
+  Cash: "Efectivo", "Bank Transfer": "Transferencia", Online: "En línea", Check: "Cheque", Other: "Otro",
 };
-const DONATION_TYPES = ["Tithe", "Offering", "Missions", "Special Project"];
-const PAYMENT_METHODS = ["Cash", "Bank Transfer", "Online", "Check", "Other"];
+const DONATION_TYPES   = ["Tithe", "Offering", "Missions", "Special Project"];
+const PAYMENT_METHODS  = ["Cash", "Bank Transfer", "Online", "Check", "Other"];
 
 // ── EGRESOS ───────────────────────────────────────────────────
 const GASTO_CATEGORIAS = ["Servicios", "Alquiler", "Equipamiento", "Mantenimiento", "Misiones", "Personal", "Eventos", "Otro"];
-const GASTO_CATEGORIA_COLORS = {
-  Servicios:     "bg-blue-100 text-blue-700",
-  Alquiler:      "bg-violet-100 text-violet-700",
-  Equipamiento:  "bg-orange-100 text-orange-700",
-  Mantenimiento: "bg-yellow-100 text-yellow-700",
-  Misiones:      "bg-cyan-100 text-cyan-700",
-  Personal:      "bg-pink-100 text-pink-700",
-  Eventos:       "bg-purple-100 text-purple-700",
-  Otro:          "bg-slate-100 text-slate-600",
-};
-const METODOS_PAGO = ["Efectivo", "Transferencia", "Cheque", "Tarjeta", "Otro"];
+const METODOS_PAGO     = ["Efectivo", "Transferencia", "Cheque", "Tarjeta", "Otro"];
 
-const MONTHS_ES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-
-const EMPTY_DONATION = {
-  member_name: "", donation_type: "Tithe", amount: "",
-  date: "", payment_method: "Cash", notes: "",
-};
-const EMPTY_GASTO = {
-  descripcion: "", categoria: "Servicios", monto: "",
-  fecha: new Date().toISOString().slice(0, 10),
-  metodo_pago: "Efectivo", proveedor: "", notas: "",
-};
+const EMPTY_DONATION = { member_name: "", donation_type: "Tithe", amount: "", date: new Date().toISOString().slice(0,10), payment_method: "Cash", notes: "" };
+const EMPTY_GASTO    = { descripcion: "", categoria: "Servicios", monto: "", fecha: new Date().toISOString().slice(0,10), metodo_pago: "Efectivo", proveedor: "", notas: "" };
 
 const F = ({ label, name, type = "text", options, optionLabels, textarea, form, setForm }) => (
   <div>
@@ -74,9 +39,7 @@ const F = ({ label, name, type = "text", options, optionLabels, textarea, form, 
     ) : options ? (
       <Select value={form[name] || ""} onValueChange={v => setForm(f => ({ ...f, [name]: v }))}>
         <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {options.map((o, i) => <SelectItem key={o} value={o}>{optionLabels ? optionLabels[i] : o}</SelectItem>)}
-        </SelectContent>
+        <SelectContent>{options.map((o, i) => <SelectItem key={o} value={o}>{optionLabels ? optionLabels[i] : o}</SelectItem>)}</SelectContent>
       </Select>
     ) : (
       <Input type={type} value={form[name] || ""} onChange={e => setForm(f => ({ ...f, [name]: e.target.value }))} className="h-9 text-sm" />
@@ -84,29 +47,31 @@ const F = ({ label, name, type = "text", options, optionLabels, textarea, form, 
   </div>
 );
 
+const fmt = (n) => `$${(n || 0).toLocaleString("es-AR")}`;
+
 export default function Donations() {
-  const [tab, setTab] = useState("ingresos");
-
-  // ── Ingresos state ──
   const [donations, setDonations] = useState([]);
-  const [cellSubs, setCellSubs] = useState([]);
-  const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(EMPTY_DONATION);
-  const [saving, setSaving] = useState(false);
+  const [cellSubs,  setCellSubs]  = useState([]);
+  const [gastos,    setGastos]    = useState([]);
+  const [loading,   setLoading]   = useState(true);
 
-  // ── Egresos state ──
-  const [gastos, setGastos] = useState([]);
-  const [gastoSearch, setGastoSearch] = useState("");
-  const [gastoFilterCat, setGastoFilterCat] = useState("all");
-  const [gastoModalOpen, setGastoModalOpen] = useState(false);
-  const [editingGasto, setEditingGasto] = useState(null);
-  const [gastoForm, setGastoForm] = useState(EMPTY_GASTO);
-  const [gastoSaving, setGastoSaving] = useState(false);
+  // Filtros
+  const [search,      setSearch]      = useState("");
+  const [filterTipo,  setFilterTipo]  = useState("all");  // all | Ingreso | Egreso
+  const [filterCat,   setFilterCat]   = useState("all");
+  const [filterMonth, setFilterMonth] = useState("");     // YYYY-MM
 
-  const [loading, setLoading] = useState(true);
+  // Modal ingreso
+  const [ingresoModal,   setIngresoModal]   = useState(false);
+  const [editingIngreso, setEditingIngreso] = useState(null);
+  const [ingresoForm,    setIngresoForm]    = useState(EMPTY_DONATION);
+  const [ingresoSaving,  setIngresoSaving]  = useState(false);
+
+  // Modal egreso
+  const [egresoModal,   setEgresoModal]   = useState(false);
+  const [editingEgreso, setEditingEgreso] = useState(null);
+  const [egresoForm,    setEgresoForm]    = useState(EMPTY_GASTO);
+  const [egresoSaving,  setEgresoSaving]  = useState(false);
 
   const load = async () => {
     const [donationData, gastoData] = await Promise.all([
@@ -127,423 +92,335 @@ export default function Donations() {
     }
     setLoading(false);
   };
-
   useEffect(() => { load(); }, []);
 
-  // ── Ingresos handlers ──
-  const openAdd = () => { setEditing(null); setForm(EMPTY_DONATION); setModalOpen(true); };
-  const openEdit = (d) => { setEditing(d); setForm({ ...EMPTY_DONATION, ...d, amount: String(d.amount || "") }); setModalOpen(true); };
-  const handleSave = async () => {
-    setSaving(true);
-    const payload = { ...form, amount: parseFloat(form.amount) || 0 };
-    if (editing) await api.entities.Donation.update(editing.id, payload);
+  // ── Ledger unificado ──────────────────────────────────────
+  const ledger = useMemo(() => {
+    const entries = [];
+
+    donations.forEach(d => entries.push({
+      id: `don-${d.id}`, rawId: d.id, source: "donation",
+      tipo: "Ingreso",
+      fecha: d.date || d.created_at?.slice(0, 10) || "",
+      categoria: TYPE_LABELS[d.donation_type] || d.donation_type || "—",
+      descripcion: d.member_name || "Anónimo",
+      monto: d.amount || 0,
+      metodo: PAYMENT_LABELS[d.payment_method] || d.payment_method || "",
+      notas: d.notes || "",
+      raw: d,
+    }));
+
+    cellSubs.forEach(s => {
+      const lider = s.personas;
+      const nombre = lider ? `${lider.nombre} ${lider.apellido}` : "Líder";
+      const celula = lider?.grupo_celula ? ` · ${lider.grupo_celula}` : "";
+      entries.push({
+        id: `cell-${s.id}`, rawId: s.id, source: "cell",
+        tipo: "Ingreso",
+        fecha: s.report_date || "",
+        categoria: "Ofrenda Célula",
+        descripcion: `${nombre}${celula}`,
+        monto: s.offering_amount || 0,
+        metodo: "", notas: "", raw: s,
+      });
+    });
+
+    gastos.forEach(g => entries.push({
+      id: `gas-${g.id}`, rawId: g.id, source: "gasto",
+      tipo: "Egreso",
+      fecha: g.fecha || "",
+      categoria: g.categoria || "Otro",
+      descripcion: g.descripcion + (g.proveedor ? ` · ${g.proveedor}` : ""),
+      monto: g.monto || 0,
+      metodo: g.metodo_pago || "",
+      notas: g.notas || "",
+      raw: g,
+    }));
+
+    return entries.sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
+  }, [donations, cellSubs, gastos]);
+
+  // ── Filtros aplicados ─────────────────────────────────────
+  const filtered = useMemo(() => ledger.filter(e => {
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      e.descripcion.toLowerCase().includes(q) ||
+      e.categoria.toLowerCase().includes(q) ||
+      e.notas.toLowerCase().includes(q);
+    const matchTipo  = filterTipo  === "all" || e.tipo === filterTipo;
+    const matchCat   = filterCat   === "all" || e.categoria === filterCat;
+    const matchMonth = !filterMonth || e.fecha.startsWith(filterMonth);
+    return matchSearch && matchTipo && matchCat && matchMonth;
+  }), [ledger, search, filterTipo, filterCat, filterMonth]);
+
+  // ── Stats ─────────────────────────────────────────────────
+  const now        = new Date();
+  const monthStart = startOfMonth(now);
+  const monthEnd   = endOfMonth(now);
+  const inCurrentMonth = (e) => e.fecha && isWithinInterval(parseISO(e.fecha), { start: monthStart, end: monthEnd });
+
+  const ingresosMonth  = ledger.filter(e => e.tipo === "Ingreso" && inCurrentMonth(e)).reduce((s, e) => s + e.monto, 0);
+  const egresosMonth   = ledger.filter(e => e.tipo === "Egreso"  && inCurrentMonth(e)).reduce((s, e) => s + e.monto, 0);
+  const ingresosTotal  = ledger.filter(e => e.tipo === "Ingreso").reduce((s, e) => s + e.monto, 0);
+  const egresosTotal   = ledger.filter(e => e.tipo === "Egreso") .reduce((s, e) => s + e.monto, 0);
+  const balanceMes     = ingresosMonth - egresosMonth;
+  const balanceTotal   = ingresosTotal - egresosTotal;
+
+  // Opciones dinámicas de categoría y mes para los filtros
+  const allCats     = useMemo(() => [...new Set(ledger.map(e => e.categoria))].sort(), [ledger]);
+  const monthOptions = useMemo(() => [...new Set(ledger.map(e => e.fecha?.slice(0, 7)).filter(Boolean))].sort().reverse(), [ledger]);
+
+  // ── Handlers ingreso ──────────────────────────────────────
+  const openAddIngreso  = () => { setEditingIngreso(null); setIngresoForm(EMPTY_DONATION); setIngresoModal(true); };
+  const openEditIngreso = (raw) => { setEditingIngreso(raw); setIngresoForm({ ...EMPTY_DONATION, ...raw, amount: String(raw.amount || "") }); setIngresoModal(true); };
+  const handleSaveIngreso = async () => {
+    setIngresoSaving(true);
+    const payload = { ...ingresoForm, amount: parseFloat(ingresoForm.amount) || 0 };
+    if (editingIngreso) await api.entities.Donation.update(editingIngreso.id, payload);
     else await api.entities.Donation.create(payload);
-    await load(); setModalOpen(false); setSaving(false);
+    await load(); setIngresoModal(false); setIngresoSaving(false);
   };
-  const handleDelete = async (id) => {
-    if (!confirm("¿Eliminar este registro?")) return;
+  const handleDeleteIngreso = async (id) => {
+    if (!confirm("¿Eliminar este ingreso?")) return;
     await api.entities.Donation.delete(id);
     setDonations(prev => prev.filter(d => d.id !== id));
   };
 
-  // ── Egresos handlers ──
-  const openAddGasto = () => { setEditingGasto(null); setGastoForm(EMPTY_GASTO); setGastoModalOpen(true); };
-  const openEditGasto = (g) => { setEditingGasto(g); setGastoForm({ ...EMPTY_GASTO, ...g, monto: String(g.monto || "") }); setGastoModalOpen(true); };
-  const handleSaveGasto = async () => {
-    setGastoSaving(true);
-    const payload = { ...gastoForm, monto: parseFloat(gastoForm.monto) || 0 };
-    if (editingGasto) await api.entities.Gasto.update(editingGasto.id, payload);
+  // ── Handlers egreso ───────────────────────────────────────
+  const openAddEgreso  = () => { setEditingEgreso(null); setEgresoForm(EMPTY_GASTO); setEgresoModal(true); };
+  const openEditEgreso = (raw) => { setEditingEgreso(raw); setEgresoForm({ ...EMPTY_GASTO, ...raw, monto: String(raw.monto || "") }); setEgresoModal(true); };
+  const handleSaveEgreso = async () => {
+    setEgresoSaving(true);
+    const payload = { ...egresoForm, monto: parseFloat(egresoForm.monto) || 0 };
+    if (editingEgreso) await api.entities.Gasto.update(editingEgreso.id, payload);
     else await api.entities.Gasto.create(payload);
-    await load(); setGastoModalOpen(false); setGastoSaving(false);
+    await load(); setEgresoModal(false); setEgresoSaving(false);
   };
-  const handleDeleteGasto = async (id) => {
+  const handleDeleteEgreso = async (id) => {
     if (!confirm("¿Eliminar este egreso?")) return;
     await api.entities.Gasto.delete(id);
     setGastos(prev => prev.filter(g => g.id !== id));
   };
 
-  // ── Cálculos ──
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
-  const inMonth = (item, field) =>
-    item[field] && isWithinInterval(parseISO(item[field]), { start: monthStart, end: monthEnd });
-
-  const totalIngresosMonth =
-    donations.filter(d => inMonth(d, "date")).reduce((s, d) => s + (d.amount || 0), 0) +
-    cellSubs.filter(s => inMonth(s, "report_date")).reduce((s, r) => s + (r.offering_amount || 0), 0);
-  const tithesMonth = donations.filter(d => inMonth(d, "date") && d.donation_type === "Tithe").reduce((s, d) => s + (d.amount || 0), 0);
-  const offeringsMonth =
-    donations.filter(d => inMonth(d, "date") && d.donation_type === "Offering").reduce((s, d) => s + (d.amount || 0), 0) +
-    cellSubs.filter(s => inMonth(s, "report_date")).reduce((s, r) => s + (r.offering_amount || 0), 0);
-  const totalIngresosAll =
-    donations.reduce((s, d) => s + (d.amount || 0), 0) +
-    cellSubs.reduce((s, r) => s + (r.offering_amount || 0), 0);
-
-  const totalEgresosMonth = gastos.filter(g => inMonth(g, "fecha")).reduce((s, g) => s + (g.monto || 0), 0);
-  const totalEgresosAll = gastos.reduce((s, g) => s + (g.monto || 0), 0);
-  const balanceMes = totalIngresosMonth - totalEgresosMonth;
-
-  const monthlyData = MONTHS_ES.map((month, idx) => {
-    const year = now.getFullYear();
-    const ingresos =
-      donations.filter(d => d.date && new Date(d.date).getFullYear() === year && new Date(d.date).getMonth() === idx)
-        .reduce((s, d) => s + (d.amount || 0), 0) +
-      cellSubs.filter(s => s.report_date && new Date(s.report_date).getFullYear() === year && new Date(s.report_date).getMonth() === idx)
-        .reduce((s, r) => s + (r.offering_amount || 0), 0);
-    const egresos = gastos
-      .filter(g => g.fecha && new Date(g.fecha).getFullYear() === year && new Date(g.fecha).getMonth() === idx)
-      .reduce((s, g) => s + (g.monto || 0), 0);
-    return { month, ingresos, egresos };
-  });
-
-  const filteredDonations = donations.filter(d => {
-    const q = search.toLowerCase();
-    return (!q || d.member_name?.toLowerCase().includes(q)) &&
-           (filterType === "all" || d.donation_type === filterType);
-  });
-  const filteredGastos = gastos.filter(g => {
-    const q = gastoSearch.toLowerCase();
-    return (!q || g.descripcion?.toLowerCase().includes(q) || g.proveedor?.toLowerCase().includes(q)) &&
-           (gastoFilterCat === "all" || g.categoria === gastoFilterCat);
-  });
-
-  const giverMap = {};
-  donations.forEach(d => { if (d.member_name) giverMap[d.member_name] = (giverMap[d.member_name] || 0) + (d.amount || 0); });
-  const topGivers = Object.entries(giverMap).sort(([, a], [, b]) => b - a).slice(0, 5);
-
-  const addLabel = tab === "ingresos" ? "Registrar ingreso" : tab === "egresos" ? "Agregar egreso" : undefined;
-  const onAdd = tab === "ingresos" ? openAdd : tab === "egresos" ? openAddGasto : undefined;
-
+  // ── Render ────────────────────────────────────────────────
   return (
     <div>
-      <PageHeader title="Finanzas" subtitle="Libro contable de la iglesia" onAdd={onAdd} addLabel={addLabel} />
-
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit mb-6">
-        {[
-          { id: "ingresos", label: "Ingresos" },
-          { id: "egresos", label: "Egresos" },
-          { id: "balance", label: "Balance" },
-        ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === t.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
-            }`}>
-            {t.label}
-          </button>
-        ))}
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Finanzas</h1>
+        <p className="text-sm text-slate-500 mt-1">Libro contable de la iglesia</p>
       </div>
 
-      {/* ─── TAB INGRESOS ─────────────────────────────────────── */}
-      {tab === "ingresos" && (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard title="Total Este Mes"    value={`$${totalIngresosMonth.toLocaleString()}`} icon={DollarSign}  color="amber" />
-            <StatCard title="Diezmos Este Mes"  value={`$${tithesMonth.toLocaleString()}`}        icon={TrendingUp}  color="indigo" />
-            <StatCard title="Ofrendas Este Mes" value={`$${offeringsMonth.toLocaleString()}`}     icon={TrendingUp}  color="green" />
-            <StatCard title="Total General"     value={`$${totalIngresosAll.toLocaleString()}`}   icon={DollarSign}  color="purple" />
-          </div>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard title="Ingresos del Mes"  value={fmt(ingresosMonth)} icon={TrendingUp}   color="green" />
+        <StatCard title="Egresos del Mes"   value={fmt(egresosMonth)}  icon={TrendingDown} color="rose"  />
+        <StatCard
+          title={balanceMes >= 0 ? "Superávit del Mes" : "Déficit del Mes"}
+          value={fmt(Math.abs(balanceMes))}
+          icon={Wallet}
+          color={balanceMes >= 0 ? "green" : "rose"}
+        />
+        <StatCard
+          title={balanceTotal >= 0 ? "Balance Acumulado" : "Déficit Acumulado"}
+          value={fmt(Math.abs(balanceTotal))}
+          icon={DollarSign}
+          color={balanceTotal >= 0 ? "amber" : "rose"}
+        />
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <Card className="p-6 border-0 shadow-sm col-span-1 lg:col-span-2">
-              <h3 className="font-semibold text-slate-800 mb-4">Ingresos Mensuales — {now.getFullYear()}</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={monthlyData} barSize={28}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}
-                    formatter={v => [`$${v.toLocaleString()}`, "Ingresos"]} />
-                  <Bar dataKey="ingresos" fill="#d4a843" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-            <Card className="p-6 border-0 shadow-sm">
-              <h3 className="font-semibold text-slate-800 mb-4">Mayores Donantes</h3>
-              {topGivers.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-6">Sin datos aún</p>
-              ) : topGivers.map(([name, total], i) => (
-                <div key={name} className="flex items-center gap-2 mb-3">
-                  <span className="text-sm font-bold text-slate-400 w-5">{i + 1}</span>
-                  <p className="text-sm font-medium text-slate-800 flex-1 truncate">{name}</p>
-                  <span className="text-sm font-semibold text-amber-600">${total.toLocaleString()}</span>
-                </div>
-              ))}
-            </Card>
-          </div>
+      {/* Botones de acción */}
+      <div className="flex gap-3 mb-6">
+        <Button onClick={openAddIngreso} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2">
+          <Plus className="w-4 h-4" /> Registrar Ingreso
+        </Button>
+        <Button onClick={openAddEgreso} className="bg-rose-600 hover:bg-rose-700 text-white font-semibold gap-2">
+          <Minus className="w-4 h-4" /> Agregar Egreso
+        </Button>
+      </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input placeholder="Buscar por miembro..." className="pl-9 h-10" value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-48 h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                {DONATION_TYPES.map(t => <SelectItem key={t} value={t}>{TYPE_LABELS[t]}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Barra de filtros */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input placeholder="Buscar por concepto, categoría..." className="pl-9 h-10" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <Select value={filterTipo} onValueChange={setFilterTipo}>
+          <SelectTrigger className="w-40 h-10"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="Ingreso">Ingresos</SelectItem>
+            <SelectItem value="Egreso">Egresos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterCat} onValueChange={setFilterCat}>
+          <SelectTrigger className="w-44 h-10"><SelectValue placeholder="Categoría" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las categorías</SelectItem>
+            {allCats.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterMonth} onValueChange={setFilterMonth}>
+          <SelectTrigger className="w-40 h-10"><SelectValue placeholder="Mes" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Todos los meses</SelectItem>
+            {monthOptions.map(m => {
+              const [y, mo] = m.split("-");
+              const label = new Date(Number(y), Number(mo) - 1).toLocaleString("es-AR", { month: "long", year: "numeric" });
+              return <SelectItem key={m} value={m}>{label}</SelectItem>;
+            })}
+          </SelectContent>
+        </Select>
+      </div>
 
-          {loading ? (
-            <div className="space-y-3">{Array(5).fill(0).map((_, i) => <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />)}</div>
-          ) : filteredDonations.length === 0 && cellSubs.length === 0 ? (
-            <Card className="border-0 shadow-sm">
-              <EmptyState icon={DollarSign} title="Sin ingresos registrados" description="Comenzá a registrar los ingresos." />
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {cellSubs.map(s => {
-                const lider = s.personas;
-                const nombre = lider ? `${lider.nombre} ${lider.apellido}` : "Líder";
-                const celula = lider?.grupo_celula ? ` · ${lider.grupo_celula}` : "";
-                return (
-                  <Card key={`cell-${s.id}`} className="p-4 border-0 shadow-sm flex items-center justify-between bg-emerald-50/50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                        <Users className="w-4 h-4 text-emerald-600" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-slate-900">{nombre}</p>
-                          <Badge className="text-xs bg-emerald-100 text-emerald-700">Ofrenda Célula{celula}</Badge>
+      {/* Tabla ledger */}
+      {loading ? (
+        <div className="space-y-2">{Array(6).fill(0).map((_, i) => <div key={i} className="h-14 rounded-xl bg-slate-100 animate-pulse" />)}</div>
+      ) : filtered.length === 0 ? (
+        <Card className="border-0 shadow-sm p-12 text-center">
+          <DollarSign className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500 font-medium">Sin movimientos</p>
+          <p className="text-slate-400 text-sm mt-1">Registrá el primer ingreso o egreso.</p>
+        </Card>
+      ) : (
+        <Card className="border-0 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Fecha</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tipo</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Categoría</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Concepto</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Método</th>
+                  <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Monto</th>
+                  <th className="py-3 px-4 w-16"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filtered.map(e => (
+                  <tr key={e.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
+                      {e.fecha ? format(parseISO(e.fecha), "d MMM yyyy") : "—"}
+                    </td>
+                    <td className="py-3 px-4">
+                      {e.tipo === "Ingreso" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                          <TrendingUp className="w-3 h-3" /> Ingreso
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                          <TrendingDown className="w-3 h-3" /> Egreso
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant="outline" className="text-xs font-normal">{e.categoria}</Badge>
+                    </td>
+                    <td className="py-3 px-4 text-slate-800 max-w-xs">
+                      <p className="truncate">{e.descripcion}</p>
+                      {e.notas && <p className="text-xs text-slate-400 truncate mt-0.5">{e.notas}</p>}
+                    </td>
+                    <td className="py-3 px-4 text-slate-500 hidden md:table-cell whitespace-nowrap">{e.metodo || "—"}</td>
+                    <td className={`py-3 px-4 text-right font-bold whitespace-nowrap ${e.tipo === "Ingreso" ? "text-emerald-600" : "text-rose-600"}`}>
+                      {e.tipo === "Ingreso" ? "+" : "-"}{fmt(e.monto)}
+                    </td>
+                    <td className="py-3 px-4">
+                      {e.source !== "cell" && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                          <button
+                            onClick={() => e.source === "donation" ? openEditIngreso(e.raw) : openEditEgreso(e.raw)}
+                            className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-700">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => e.source === "donation" ? handleDeleteIngreso(e.rawId) : handleDeleteEgreso(e.rawId)}
+                            className="p-1.5 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-600">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {s.report_date ? format(parseISO(s.report_date), "d MMM yyyy") : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="font-bold text-lg text-slate-900">${(s.offering_amount || 0).toLocaleString()}</span>
-                  </Card>
-                );
-              })}
-              {filteredDonations.map(d => (
-                <Card key={d.id} className="p-4 border-0 shadow-sm flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                      <DollarSign className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-slate-900">{d.member_name || "Anónimo"}</p>
-                        <Badge className={`text-xs ${TYPE_COLORS[d.donation_type] || "bg-slate-100 text-slate-600"}`}>
-                          {TYPE_LABELS[d.donation_type] || d.donation_type}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {PAYMENT_LABELS[d.payment_method] || d.payment_method}
-                        {d.date ? ` · ${format(parseISO(d.date), "d MMM yyyy")}` : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-lg text-slate-900">${(d.amount || 0).toLocaleString()}</span>
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(d)} className="h-8 w-8 p-0">
-                      <Edit className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(d.id)} className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ─── TAB EGRESOS ──────────────────────────────────────── */}
-      {tab === "egresos" && (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            <StatCard title="Egresos Este Mes" value={`$${totalEgresosMonth.toLocaleString()}`}    icon={TrendingDown} color="rose" />
-            <StatCard title="Total Acumulado"   value={`$${totalEgresosAll.toLocaleString()}`}     icon={TrendingDown} color="rose" />
-            <StatCard title={balanceMes >= 0 ? "Superávit del Mes" : "Déficit del Mes"}
-              value={`$${Math.abs(balanceMes).toLocaleString()}`}
-              icon={Wallet}
-              color={balanceMes >= 0 ? "green" : "rose"} />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input placeholder="Buscar por descripción o proveedor..." className="pl-9 h-10"
-                value={gastoSearch} onChange={e => setGastoSearch(e.target.value)} />
-            </div>
-            <Select value={gastoFilterCat} onValueChange={setGastoFilterCat}>
-              <SelectTrigger className="w-full sm:w-52 h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las categorías</SelectItem>
-                {GASTO_CATEGORIAS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">{Array(5).fill(0).map((_, i) => <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />)}</div>
-          ) : filteredGastos.length === 0 ? (
-            <Card className="border-0 shadow-sm">
-              <EmptyState icon={TrendingDown} title="Sin egresos registrados"
-                description="Registrá los gastos de la iglesia."
-                onAction={openAddGasto} actionLabel="Agregar egreso" />
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filteredGastos.map(g => (
-                <Card key={g.id} className="p-4 border-0 shadow-sm flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center flex-shrink-0">
-                      <TrendingDown className="w-4 h-4 text-rose-500" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-slate-900">{g.descripcion}</p>
-                        <Badge className={`text-xs ${GASTO_CATEGORIA_COLORS[g.categoria] || "bg-slate-100 text-slate-600"}`}>
-                          {g.categoria}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {g.metodo_pago}
-                        {g.proveedor ? ` · ${g.proveedor}` : ""}
-                        {g.fecha ? ` · ${format(parseISO(g.fecha), "d MMM yyyy")}` : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-lg text-rose-600">-${(g.monto || 0).toLocaleString()}</span>
-                    <Button variant="ghost" size="sm" onClick={() => openEditGasto(g)} className="h-8 w-8 p-0">
-                      <Edit className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteGasto(g.id)} className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ─── TAB BALANCE ──────────────────────────────────────── */}
-      {tab === "balance" && (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard title="Ingresos del Mes"  value={`$${totalIngresosMonth.toLocaleString()}`}         icon={TrendingUp}   color="green" />
-            <StatCard title="Egresos del Mes"   value={`$${totalEgresosMonth.toLocaleString()}`}          icon={TrendingDown} color="rose" />
-            <StatCard title={balanceMes >= 0 ? "Superávit" : "Déficit"}
-              value={`$${Math.abs(balanceMes).toLocaleString()}`}
-              icon={Wallet}
-              color={balanceMes >= 0 ? "green" : "rose"} />
-            <StatCard title="Balance Acumulado" value={`$${(totalIngresosAll - totalEgresosAll).toLocaleString()}`} icon={DollarSign} color="amber" />
-          </div>
-
-          <Card className="p-6 border-0 shadow-sm mb-6">
-            <h3 className="font-semibold text-slate-800 mb-4">Ingresos vs Egresos — {now.getFullYear()}</h3>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={monthlyData} barSize={16} barCategoryGap="35%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}
-                  formatter={(v, name) => [`$${v.toLocaleString()}`, name === "ingresos" ? "Ingresos" : "Egresos"]} />
-                <Legend formatter={v => v === "ingresos" ? "Ingresos" : "Egresos"} />
-                <Bar dataKey="ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="egresos"  fill="#f43f5e" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          <Card className="p-6 border-0 shadow-sm">
-            <h3 className="font-semibold text-slate-800 mb-4">Detalle mensual — {now.getFullYear()}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left py-2 px-1 text-slate-500 font-medium">Mes</th>
-                    <th className="text-right py-2 px-1 text-slate-500 font-medium">Ingresos</th>
-                    <th className="text-right py-2 px-1 text-slate-500 font-medium">Egresos</th>
-                    <th className="text-right py-2 px-1 text-slate-500 font-medium">Balance</th>
+                      )}
+                      {e.source === "cell" && (
+                        <div className="flex justify-end">
+                          <span title="Ofrenda de célula — solo lectura">
+                            <Users className="w-3.5 h-3.5 text-slate-300" />
+                          </span>
+                        </div>
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {monthlyData.map(({ month, ingresos, egresos }) => {
-                    const bal = ingresos - egresos;
-                    return (
-                      <tr key={month} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                        <td className="py-2.5 px-1 font-medium text-slate-700">{month}</td>
-                        <td className="py-2.5 px-1 text-right text-emerald-600">${ingresos.toLocaleString()}</td>
-                        <td className="py-2.5 px-1 text-right text-rose-500">
-                          {egresos > 0 ? `-$${egresos.toLocaleString()}` : "—"}
-                        </td>
-                        <td className={`py-2.5 px-1 text-right font-semibold ${bal >= 0 ? "text-slate-900" : "text-rose-600"}`}>
-                          {bal < 0 ? "-" : ""}${Math.abs(bal).toLocaleString()}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </>
+                ))}
+              </tbody>
+              {/* Totales del filtro aplicado */}
+              {filtered.length > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-slate-200 bg-slate-50">
+                    <td colSpan={5} className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      {filtered.length} movimiento{filtered.length !== 1 ? "s" : ""}
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-900">
+                      {(() => {
+                        const ing = filtered.filter(e => e.tipo === "Ingreso").reduce((s, e) => s + e.monto, 0);
+                        const egr = filtered.filter(e => e.tipo === "Egreso") .reduce((s, e) => s + e.monto, 0);
+                        const bal = ing - egr;
+                        return <span className={bal >= 0 ? "text-emerald-700" : "text-rose-700"}>{bal >= 0 ? "+" : ""}{fmt(bal)}</span>;
+                      })()}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </Card>
       )}
 
-      {/* ─── MODAL INGRESO ────────────────────────────────────── */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      {/* ── Modal Ingreso ──────────────────────────────────── */}
+      <Dialog open={ingresoModal} onOpenChange={setIngresoModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editing ? "Editar ingreso" : "Registrar ingreso"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingIngreso ? "Editar ingreso" : "Registrar ingreso"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <F label="Nombre del Miembro" name="member_name" form={form} setForm={setForm} />
-            <F label="Tipo" name="donation_type"
-              options={DONATION_TYPES} optionLabels={DONATION_TYPES.map(t => TYPE_LABELS[t])}
-              form={form} setForm={setForm} />
-            <F label="Monto *" name="amount" type="number" form={form} setForm={setForm} />
-            <F label="Fecha"   name="date"   type="date"   form={form} setForm={setForm} />
-            <F label="Método de Pago" name="payment_method"
-              options={PAYMENT_METHODS} optionLabels={PAYMENT_METHODS.map(p => PAYMENT_LABELS[p])}
-              form={form} setForm={setForm} />
+            <F label="Nombre del Miembro" name="member_name"   form={ingresoForm} setForm={setIngresoForm} />
+            <F label="Tipo"               name="donation_type" form={ingresoForm} setForm={setIngresoForm}
+              options={DONATION_TYPES} optionLabels={DONATION_TYPES.map(t => TYPE_LABELS[t])} />
+            <F label="Monto *" name="amount" type="number" form={ingresoForm} setForm={setIngresoForm} />
+            <F label="Fecha"   name="date"   type="date"   form={ingresoForm} setForm={setIngresoForm} />
+            <F label="Método de Pago" name="payment_method" form={ingresoForm} setForm={setIngresoForm}
+              options={PAYMENT_METHODS} optionLabels={PAYMENT_METHODS.map(p => PAYMENT_LABELS[p])} />
           </div>
-          <F label="Notas" name="notes" textarea form={form} setForm={setForm} />
+          <F label="Notas" name="notes" textarea form={ingresoForm} setForm={setIngresoForm} />
           <div className="flex gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => setModalOpen(false)} className="flex-1">Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving || !form.amount}
-              className="flex-1 bg-[#d4a843] hover:bg-[#c49a3a] text-[#1e293b] font-semibold">
-              {saving ? "Guardando..." : editing ? "Guardar cambios" : "Registrar ingreso"}
+            <Button variant="outline" onClick={() => setIngresoModal(false)} className="flex-1">Cancelar</Button>
+            <Button onClick={handleSaveIngreso} disabled={ingresoSaving || !ingresoForm.amount}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+              {ingresoSaving ? "Guardando..." : editingIngreso ? "Guardar cambios" : "Registrar ingreso"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* ─── MODAL EGRESO ─────────────────────────────────────── */}
-      <Dialog open={gastoModalOpen} onOpenChange={setGastoModalOpen}>
+      {/* ── Modal Egreso ───────────────────────────────────── */}
+      <Dialog open={egresoModal} onOpenChange={setEgresoModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editingGasto ? "Editar egreso" : "Agregar egreso"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingEgreso ? "Editar egreso" : "Agregar egreso"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
             <div className="sm:col-span-2">
-              <F label="Descripción *" name="descripcion" form={gastoForm} setForm={setGastoForm} />
+              <F label="Descripción *" name="descripcion" form={egresoForm} setForm={setEgresoForm} />
             </div>
-            <F label="Categoría" name="categoria"
-              options={GASTO_CATEGORIAS}
-              form={gastoForm} setForm={setGastoForm} />
-            <F label="Monto *" name="monto" type="number" form={gastoForm} setForm={setGastoForm} />
-            <F label="Fecha"   name="fecha" type="date"   form={gastoForm} setForm={setGastoForm} />
-            <F label="Método de Pago" name="metodo_pago"
-              options={METODOS_PAGO}
-              form={gastoForm} setForm={setGastoForm} />
+            <F label="Categoría"     name="categoria"   form={egresoForm} setForm={setEgresoForm} options={GASTO_CATEGORIAS} />
+            <F label="Monto *"       name="monto"       type="number" form={egresoForm} setForm={setEgresoForm} />
+            <F label="Fecha"         name="fecha"       type="date"   form={egresoForm} setForm={setEgresoForm} />
+            <F label="Método de Pago" name="metodo_pago" form={egresoForm} setForm={setEgresoForm} options={METODOS_PAGO} />
             <div className="sm:col-span-2">
-              <F label="Proveedor / Destinatario" name="proveedor" form={gastoForm} setForm={setGastoForm} />
+              <F label="Proveedor / Destinatario" name="proveedor" form={egresoForm} setForm={setEgresoForm} />
             </div>
           </div>
-          <F label="Notas" name="notas" textarea form={gastoForm} setForm={setGastoForm} />
+          <F label="Notas" name="notas" textarea form={egresoForm} setForm={setEgresoForm} />
           <div className="flex gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => setGastoModalOpen(false)} className="flex-1">Cancelar</Button>
-            <Button onClick={handleSaveGasto} disabled={gastoSaving || !gastoForm.monto || !gastoForm.descripcion}
+            <Button variant="outline" onClick={() => setEgresoModal(false)} className="flex-1">Cancelar</Button>
+            <Button onClick={handleSaveEgreso} disabled={egresoSaving || !egresoForm.monto || !egresoForm.descripcion}
               className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold">
-              {gastoSaving ? "Guardando..." : editingGasto ? "Guardar cambios" : "Agregar egreso"}
+              {egresoSaving ? "Guardando..." : editingEgreso ? "Guardar cambios" : "Agregar egreso"}
             </Button>
           </div>
         </DialogContent>
