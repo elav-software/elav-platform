@@ -24,7 +24,7 @@ const navItems = [
   { name: "Área de Servicios", icon: Church, page: "ServiceAreas", adminOnly: false },
 { name: "Eventos", icon: Calendar, page: "Events", adminOnly: false },
 { name: "Peticiones de Oración", icon: HandHeart, page: "PrayerRequests", adminOnly: false },
-{ name: "Tesorería", icon: DollarSign, page: "Donations", adminOnly: false },
+{ name: "Finanzas", icon: DollarSign, page: "Donations", adminOnly: false },
 { name: "Métricas", icon: BarChart3, page: "Demographics", adminOnly: false },
 { name: "Comunicación", icon: MessageSquare, page: "Communication", adminOnly: false },
 { name: "Líderes y Células", icon: Crown, page: "Leaders", adminOnly: false },
