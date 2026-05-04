@@ -32,9 +32,13 @@ const STATUS_LABELS = {
 
 const STATUSES = ["Pending", "Contacted", "Follow-up Scheduled", "Completed", "No Response"];
 
+const ESTADO_CIVIL_OPTIONS = ["Soltero/a", "Casado/a", "Divorciado/a", "Viudo/a", "En pareja"];
+
 const EMPTY_FORM = {
-  name: "", phone: "", whatsapp: "", email: "",
-  visit_date: "", invited_by: "", follow_up_status: "Pending", notes: ""
+  name: "", phone: "", email: "",
+  barrio: "", edad: "", estado_civil: "",
+  visit_date: new Date().toISOString().slice(0, 10),
+  invited_by: "crm:manual", follow_up_status: "Pending", notes: ""
 };
 
 const F = ({ label, name, type = "text", options, optionLabels, textarea, form, setForm }) => (
@@ -82,8 +86,9 @@ export default function Visitors() {
 
   const handleSave = async () => {
     setSaving(true);
-    if (editing) await api.entities.Visitor.update(editing.id, form);
-    else await api.entities.Visitor.create(form);
+    const payload = { ...form, edad: form.edad ? Number(form.edad) : null };
+    if (editing) await api.entities.Visitor.update(editing.id, payload);
+    else await api.entities.Visitor.create(payload);
     await load();
     setModalOpen(false);
     setSaving(false);
@@ -109,7 +114,7 @@ export default function Visitors() {
 
   return (
     <div>
-      <PageHeader title="Visitantes" subtitle={`${visitors.length} visitantes en total`} onAdd={() => window.open('https://www.cfccasanova.com/connect/portal/login', '_blank')} addLabel="Registrar Visitante" />
+      <PageHeader title="Visitantes" subtitle={`${visitors.length} visitantes en total`} onAdd={openAdd} addLabel="Agregar Visitante" />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
@@ -184,24 +189,33 @@ export default function Visitors() {
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editing ? "Editar Visitante" : "Registrar Nuevo Visitante"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "Editar Visitante" : "Agregar Visitante"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <F label="Nombre *" name="name" form={form} setForm={setForm} />
-            <F label="Teléfono" name="phone" form={form} setForm={setForm} />
-            <F label="WhatsApp" name="whatsapp" form={form} setForm={setForm} />
-            <F label="Correo Electrónico" name="email" type="email" form={form} setForm={setForm} />
-            <F label="Fecha de Visita" name="visit_date" type="date" form={form} setForm={setForm} />
-            <F label="Invitado Por" name="invited_by" form={form} setForm={setForm} />
-            <F label="Estado de Seguimiento" name="follow_up_status"
-              options={STATUSES}
-              optionLabels={STATUSES.map(s => STATUS_LABELS[s])} form={form} setForm={setForm} />
+            <div className="sm:col-span-2">
+              <F label="Nombre y Apellido *" name="name" form={form} setForm={setForm} />
+            </div>
+            <F label="WhatsApp / Teléfono" name="phone" form={form} setForm={setForm} />
+            <F label="Barrio / Localidad" name="barrio" form={form} setForm={setForm} />
+            <F label="Edad" name="edad" type="number" form={form} setForm={setForm} />
+            <F label="Estado Civil" name="estado_civil"
+              options={ESTADO_CIVIL_OPTIONS}
+              form={form} setForm={setForm} />
+            {editing && (
+              <>
+                <F label="Correo Electrónico" name="email" type="email" form={form} setForm={setForm} />
+                <F label="Fecha de Visita" name="visit_date" type="date" form={form} setForm={setForm} />
+                <F label="Estado de Seguimiento" name="follow_up_status"
+                  options={STATUSES}
+                  optionLabels={STATUSES.map(s => STATUS_LABELS[s])} form={form} setForm={setForm} />
+              </>
+            )}
           </div>
           <F label="Notas" name="notes" textarea form={form} setForm={setForm} />
           <div className="flex gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setModalOpen(false)} className="flex-1">Cancelar</Button>
             <Button onClick={handleSave} disabled={saving || !form.name}
               className="flex-1 bg-[#d4a843] hover:bg-[#c49a3a] text-[#1e293b] font-semibold">
-              {saving ? "Guardando..." : editing ? "Guardar Cambios" : "Registrar Visitante"}
+              {saving ? "Guardando..." : editing ? "Guardar Cambios" : "Agregar Visitante"}
             </Button>
           </div>
         </DialogContent>

@@ -40,6 +40,7 @@ export default function Layout({ children, currentPageName }) {
   const [loaded, setLoaded] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [pendingLeadersCount, setPendingLeadersCount] = useState(0);
+  const [pendingMembersCount, setPendingMembersCount] = useState(0);
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [newVisitorsCount, setNewVisitorsCount] = useState(0);
   const [churches, setChurches] = useState([]);
@@ -139,6 +140,7 @@ export default function Layout({ children, currentPageName }) {
           }
           await loadChurchBranding(activeChurchId);
           loadPendingLeaders();
+          loadPendingMembers();
           loadPendingReports();
           loadNewVisitors();
         } else if (u.role !== 'admin') {
@@ -155,6 +157,7 @@ export default function Layout({ children, currentPageName }) {
             .maybeSingle();
           if (cu?.church_id) await loadChurchBranding(cu.church_id);
           loadPendingLeaders();
+          loadPendingMembers();
           loadPendingReports();
           loadNewVisitors();
         }
@@ -181,6 +184,21 @@ export default function Layout({ children, currentPageName }) {
       setPendingLeadersCount(count || 0);
     } catch (err) {
       console.error("Error cargando líderes pendientes:", err);
+    }
+  };
+
+  const loadPendingMembers = async () => {
+    try {
+      const churchId = await getMyChurchId();
+      const { count } = await supabase
+        .from('personas')
+        .select('*', { count: 'exact', head: true })
+        .eq('church_id', churchId)
+        .neq('rol', 'Líder')
+        .eq('estado_aprobacion', 'pendiente');
+      setPendingMembersCount(count || 0);
+    } catch (err) {
+      console.error("Error cargando miembros pendientes:", err);
     }
   };
 
@@ -395,9 +413,10 @@ export default function Layout({ children, currentPageName }) {
           <nav className="bg-slate-700 text-slate-50 px-3 py-4 flex-1 overflow-y-auto space-y-1">
             {visibleNavItems.map((item) => {
               const isActive = currentPageName === item.page;
-              const badge = 
+              const badge =
                 (item.page === "CellSubmissions" && pendingReportsCount > 0) ? pendingReportsCount :
                 (item.page === "Visitors" && newVisitorsCount > 0) ? newVisitorsCount :
+                (item.page === "Members" && pendingMembersCount > 0) ? pendingMembersCount :
                 null;
               return (
                 <Link

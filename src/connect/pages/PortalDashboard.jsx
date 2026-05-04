@@ -684,6 +684,7 @@ export default function PortalDashboard() {
   });
   const [stats, setStats] = useState({ recentReports: 0, cellMembers: 0, prayerRequests: 0 });
   const [cellPortalMembers, setCellPortalMembers] = useState([]);
+  const [pendingWebVisitors, setPendingWebVisitors] = useState(0);
 
   const redirect = (path) => { window.location.href = path; };
 
@@ -755,6 +756,9 @@ export default function PortalDashboard() {
       if (areas.some(a => a === 'Intercesión')) {
         await loadNewPrayers(cid);
       }
+      if (areas.some(a => a === 'Consolidación') || isApprovedLider) {
+        await loadPendingWebVisitors(cid);
+      }
 
     } catch (err) {
       console.error("Error verificando usuario:", err);
@@ -763,6 +767,18 @@ export default function PortalDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPendingWebVisitors = async (cid) => {
+    try {
+      const { count } = await supabase
+        .from('visitors')
+        .select('*', { count: 'exact', head: true })
+        .eq('church_id', cid)
+        .eq('invited_by', 'web:soy-nuevo')
+        .eq('follow_up_status', 'Pending');
+      setPendingWebVisitors(count || 0);
+    } catch (err) { console.error('Error cargando visitantes web pendientes:', err); }
   };
 
   const loadNewPrayers = async (cid) => {
@@ -940,7 +956,10 @@ export default function PortalDashboard() {
     { title: "Accesos de Célula", description: "Dar acceso al portal a tus miembros de servicio", icon: ShieldCheck, href: null, action: () => setActiveView('accesos-celula'), color: "from-teal-500 to-teal-600", badge: cellPortalMembers.length > 0 ? `${cellPortalMembers.length} miembro${cellPortalMembers.length > 1 ? 's' : ''}` : null },
     ...userPortalAreas.map(area => {
       const section = AREA_PORTAL_SECTIONS[area];
-      const badge = area === 'Intercesión' && newPrayers > 0 ? `${newPrayers} activo${newPrayers > 1 ? 's' : ''}` : null;
+      const badge =
+        area === 'Intercesión' && newPrayers > 0 ? `${newPrayers} activo${newPrayers > 1 ? 's' : ''}` :
+        area === 'Consolidación' && pendingWebVisitors > 0 ? `${pendingWebVisitors} nuevo${pendingWebVisitors > 1 ? 's' : ''}` :
+        null;
       // Si el área tiene vista especial definida (consolidacion/intercesion), usarla;
       // si no, usar la vista genérica de materiales del área.
       const viewTarget = section.view ?? `area:${area}`;
@@ -1154,7 +1173,7 @@ export default function PortalDashboard() {
         {/* ── VISTA INICIO LÍDER ── */}
         {activeView === 'home' && isLider && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between">
                   <div><p className="text-sm text-gray-600">Reportes (30 días)</p><p className="text-3xl font-bold text-gray-900 mt-1">{stats.recentReports}</p></div>
@@ -1171,6 +1190,18 @@ export default function PortalDashboard() {
                 <div className="flex items-center justify-between">
                   <div><p className="text-sm text-gray-600">Pedidos activos</p><p className="text-3xl font-bold text-gray-900 mt-1">{stats.prayerRequests}</p></div>
                   <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center"><Heart className="w-6 h-6 text-red-600" /></div>
+                </div>
+              </div>
+              <div className={`bg-white rounded-xl p-6 shadow-sm border ${pendingWebVisitors > 0 ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Visitantes web</p>
+                    <p className={`text-3xl font-bold mt-1 ${pendingWebVisitors > 0 ? 'text-orange-600' : 'text-gray-900'}`}>{pendingWebVisitors}</p>
+                    {pendingWebVisitors > 0 && <p className="text-xs text-orange-500 mt-0.5">sin contactar</p>}
+                  </div>
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${pendingWebVisitors > 0 ? 'bg-orange-100' : 'bg-orange-50'}`}>
+                    <UserPlus className={`w-6 h-6 ${pendingWebVisitors > 0 ? 'text-orange-600' : 'text-orange-400'}`} />
+                  </div>
                 </div>
               </div>
             </div>
