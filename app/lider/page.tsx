@@ -43,7 +43,8 @@ async function resolveChurchId(): Promise<string | null> {
   }
 
   // Producción: strip www. y subdominios (censo.) para obtener el dominio raíz
-  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal|formulario)\./, '');
+  const parts = hostname.split('.');
+  const rootDomain = parts.length > 2 ? parts.slice(-2).join('.') : hostname;
   const { data } = await supabase.from('churches').select('id').eq('custom_domain', rootDomain).eq('is_active', true).single();
   return data?.id ?? null;
 }

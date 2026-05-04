@@ -41,9 +41,8 @@ async function getChurchId() {
   } else {
     // Producción: resolver directamente por dominio
     // Strip www. y subdominios conocidos (crm., censo.) para obtener el dominio raíz
-    const rootDomain = hostname
-      .replace(/^www\./, '')
-      .replace(/^(crm|censo|portal)\./, '');
+    const parts = hostname.split('.');
+    const rootDomain = parts.length > 2 ? parts.slice(-2).join('.') : hostname;
     result = await supabase
       .from('churches')
       .select('id')

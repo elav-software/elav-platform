@@ -5,9 +5,9 @@ const contentSecurityPolicy = [
   // Next.js requiere 'unsafe-inline' y 'unsafe-eval' para su runtime
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in",
-  // Supabase REST + Realtime WebSocket
-  "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.tile.openstreetmap.org",
+  // Supabase REST + Realtime WebSocket + Nominatim geocoding
+  "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://nominatim.openstreetmap.org",
   "font-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -29,7 +29,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Path aliases (@crm/*, @connect/*) are resolved automatically from tsconfig.json paths.
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
