@@ -59,7 +59,7 @@ export default function Donations() {
   const [search,      setSearch]      = useState("");
   const [filterTipo,  setFilterTipo]  = useState("all");  // all | Ingreso | Egreso
   const [filterCat,   setFilterCat]   = useState("all");
-  const [filterMonth, setFilterMonth] = useState("");     // YYYY-MM
+  const [filterMonth, setFilterMonth] = useState("all");
 
   // Modal ingreso
   const [ingresoModal,   setIngresoModal]   = useState(false);
@@ -149,7 +149,7 @@ export default function Donations() {
       e.notas.toLowerCase().includes(q);
     const matchTipo  = filterTipo  === "all" || e.tipo === filterTipo;
     const matchCat   = filterCat   === "all" || e.categoria === filterCat;
-    const matchMonth = !filterMonth || e.fecha.startsWith(filterMonth);
+    const matchMonth = filterMonth === "all" || e.fecha.startsWith(filterMonth);
     return matchSearch && matchTipo && matchCat && matchMonth;
   }), [ledger, search, filterTipo, filterCat, filterMonth]);
 
@@ -263,7 +263,7 @@ export default function Donations() {
         <Select value={filterMonth} onValueChange={setFilterMonth}>
           <SelectTrigger className="w-40 h-10"><SelectValue placeholder="Mes" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos los meses</SelectItem>
+            <SelectItem value="all">Todos los meses</SelectItem>
             {monthOptions.map(m => {
               const [y, mo] = m.split("-");
               const label = new Date(Number(y), Number(mo) - 1).toLocaleString("es-AR", { month: "long", year: "numeric" });
