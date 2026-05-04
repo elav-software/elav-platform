@@ -28,7 +28,7 @@ const PAYMENT_METHODS  = ["Cash", "Bank Transfer", "Online", "Check", "Other"];
 const GASTO_CATEGORIAS = ["Servicios", "Alquiler", "Equipamiento", "Mantenimiento", "Misiones", "Personal", "Eventos", "Otro"];
 const METODOS_PAGO     = ["Efectivo", "Transferencia", "Cheque", "Tarjeta", "Otro"];
 
-const EMPTY_DONATION = { member_id: null, external_name: "", donation_type: "Tithe", amount: "", date: new Date().toISOString().slice(0,10), payment_method: "Cash", notes: "" };
+const EMPTY_DONATION = { description: "", member_id: null, external_name: "", donation_type: "Offering", amount: "", date: new Date().toISOString().slice(0,10), payment_method: "Cash", notes: "" };
 const EMPTY_GASTO    = { descripcion: "", categoria: "Servicios", monto: "", fecha: new Date().toISOString().slice(0,10), metodo_pago: "Efectivo", proveedor: "", notas: "" };
 
 const F = ({ label, name, type = "text", options, optionLabels, textarea, form, setForm }) => (
@@ -67,6 +67,7 @@ export default function Donations() {
   const [editingIngreso, setEditingIngreso] = useState(null);
   const [ingresoForm,    setIngresoForm]    = useState(EMPTY_DONATION);
   const [ingresoSaving,  setIngresoSaving]  = useState(false);
+  const [showDonante,    setShowDonante]    = useState(false);
 
   // Modal egreso
   const [egresoModal,   setEgresoModal]   = useState(false);
@@ -118,14 +119,16 @@ export default function Donations() {
     const entries = [];
 
     donations.forEach(d => {
-      const p = d.personas; // join con personas via member_id
+      const p = d.personas;
       const memberName = p ? `${p.nombre} ${p.apellido}`.trim() : null;
+      const donante = memberName || d.external_name || null;
       entries.push({
         id: `don-${d.id}`, rawId: d.id, source: "donation",
         tipo: "Ingreso",
         fecha: d.date || d.created_at?.slice(0, 10) || "",
         categoria: TYPE_LABELS[d.donation_type] || d.donation_type || "—",
-        descripcion: memberName || d.external_name || "Anónimo",
+        descripcion: d.description || d.notes || "Sin descripción",
+        donante,
         monto: d.amount || 0,
         metodo: PAYMENT_LABELS[d.payment_method] || d.payment_method || "",
         notas: d.notes || "",
@@ -194,10 +197,16 @@ export default function Donations() {
   const monthOptions = useMemo(() => [...new Set(ledger.map(e => e.fecha?.slice(0, 7)).filter(Boolean))].sort().reverse(), [ledger]);
 
   // ── Handlers ingreso ──────────────────────────────────────
-  const openAddIngreso  = () => { setEditingIngreso(null); setIngresoForm(EMPTY_DONATION); setIngresoModal(true); };
+  const openAddIngreso  = () => {
+    setEditingIngreso(null);
+    setIngresoForm(EMPTY_DONATION);
+    setShowDonante(false);
+    setIngresoModal(true);
+  };
   const openEditIngreso = (raw) => {
     setEditingIngreso(raw);
     setIngresoForm({ ...EMPTY_DONATION, ...raw, member_id: raw.member_id || null, external_name: raw.external_name || "", amount: String(raw.amount || "") });
+    setShowDonante(!!(raw.member_id || raw.external_name));
     setIngresoModal(true);
   };
   const handleSaveIngreso = async () => {
@@ -206,8 +215,8 @@ export default function Donations() {
     const payload = {
       ...rest,
       amount: parseFloat(ingresoForm.amount) || 0,
-      member_id: member_id || null,
-      external_name: (!member_id && external_name?.trim()) ? external_name.trim() : null,
+      member_id: showDonante ? (member_id || null) : null,
+      external_name: (showDonante && !member_id && external_name?.trim()) ? external_name.trim() : null,
     };
     if (editingIngreso) await api.entities.Donation.update(editingIngreso.id, payload);
     else await api.entities.Donation.create(payload);
@@ -352,7 +361,10 @@ export default function Donations() {
                     </td>
                     <td className="py-3 px-4 text-slate-800 max-w-xs">
                       <p className="truncate">{e.descripcion}</p>
-                      {e.notas && <p className="text-xs text-slate-400 truncate mt-0.5">{e.notas}</p>}
+                      {e.donante
+                        ? <p className="text-xs text-slate-400 truncate mt-0.5">{e.donante}</p>
+                        : e.notas && <p className="text-xs text-slate-400 truncate mt-0.5">{e.notas}</p>
+                      }
                     </td>
                     <td className="py-3 px-4 text-slate-500 hidden md:table-cell whitespace-nowrap">{e.metodo || "—"}</td>
                     <td className={`py-3 px-4 text-right font-bold whitespace-nowrap ${e.tipo === "Ingreso" ? "text-emerald-600" : "text-rose-600"}`}>
@@ -413,50 +425,78 @@ export default function Donations() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editingIngreso ? "Editar ingreso" : "Registrar ingreso"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            {/* Selector donante: miembro registrado o nombre libre */}
             <div className="sm:col-span-2">
-              <Label className="text-xs font-medium text-slate-600 mb-1 block">Donante</Label>
-              <Select
-                value={ingresoForm.member_id || "external"}
-                onValueChange={v => {
-                  if (v === "external") setIngresoForm(f => ({ ...f, member_id: null }));
-                  else setIngresoForm(f => ({ ...f, member_id: v, external_name: "" }));
-                }}
-              >
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="external">Externo / nombre libre</SelectItem>
-                  {members.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.nombre} {m.apellido}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium text-slate-600 mb-1 block">Descripción *</Label>
+              <Input
+                placeholder="Ej: Ofrenda del domingo, Diezmo enero..."
+                value={ingresoForm.description}
+                onChange={e => setIngresoForm(f => ({ ...f, description: e.target.value }))}
+                className="h-9 text-sm"
+              />
             </div>
-            {/* Nombre libre — solo visible cuando no hay miembro seleccionado */}
-            {!ingresoForm.member_id && (
-              <div className="sm:col-span-2">
-                <Label className="text-xs font-medium text-slate-600 mb-1 block">Nombre *</Label>
-                <Input
-                  placeholder="Nombre del donante..."
-                  value={ingresoForm.external_name}
-                  onChange={e => setIngresoForm(f => ({ ...f, external_name: e.target.value }))}
-                  className="h-9 text-sm"
-                />
-              </div>
-            )}
             <F label="Tipo" name="donation_type" form={ingresoForm} setForm={setIngresoForm}
               options={DONATION_TYPES} optionLabels={DONATION_TYPES.map(t => TYPE_LABELS[t])} />
             <F label="Monto *" name="amount" type="number" form={ingresoForm} setForm={setIngresoForm} />
             <F label="Fecha"   name="date"   type="date"   form={ingresoForm} setForm={setIngresoForm} />
             <F label="Método de Pago" name="payment_method" form={ingresoForm} setForm={setIngresoForm}
               options={PAYMENT_METHODS} optionLabels={PAYMENT_METHODS.map(p => PAYMENT_LABELS[p])} />
+            <div className="sm:col-span-2">
+              <F label="Notas" name="notes" textarea form={ingresoForm} setForm={setIngresoForm} />
+            </div>
+
+            {/* Toggle donante */}
+            <div className="sm:col-span-2 border-t pt-3">
+              <button
+                type="button"
+                onClick={() => setShowDonante(v => !v)}
+                className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                <span className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${showDonante ? "bg-emerald-600 border-emerald-600" : "border-slate-300"}`}>
+                  {showDonante && <span className="text-white text-xs leading-none">✓</span>}
+                </span>
+                Asignar donante (opcional)
+              </button>
+            </div>
+
+            {showDonante && (
+              <>
+                <div className="sm:col-span-2">
+                  <Label className="text-xs font-medium text-slate-600 mb-1 block">Miembro registrado</Label>
+                  <Select
+                    value={ingresoForm.member_id || "none"}
+                    onValueChange={v => {
+                      if (v === "none") setIngresoForm(f => ({ ...f, member_id: null }));
+                      else setIngresoForm(f => ({ ...f, member_id: v, external_name: "" }));
+                    }}
+                  >
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Seleccionar miembro..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Sin miembro registrado —</SelectItem>
+                      {members.map(m => (
+                        <SelectItem key={m.id} value={m.id}>{m.nombre} {m.apellido}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {!ingresoForm.member_id && (
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs font-medium text-slate-600 mb-1 block">O nombre libre</Label>
+                    <Input
+                      placeholder="Nombre del donante..."
+                      value={ingresoForm.external_name}
+                      onChange={e => setIngresoForm(f => ({ ...f, external_name: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
-          <F label="Notas" name="notes" textarea form={ingresoForm} setForm={setIngresoForm} />
           <div className="flex gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setIngresoModal(false)} className="flex-1">Cancelar</Button>
             <Button
               onClick={handleSaveIngreso}
-              disabled={ingresoSaving || !ingresoForm.amount || (!ingresoForm.member_id && !ingresoForm.external_name?.trim())}
+              disabled={ingresoSaving || !ingresoForm.amount || !ingresoForm.description?.trim()}
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
               {ingresoSaving ? "Guardando..." : editingIngreso ? "Guardar cambios" : "Registrar ingreso"}
             </Button>
