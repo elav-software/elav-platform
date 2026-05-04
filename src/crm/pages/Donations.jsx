@@ -28,7 +28,7 @@ const PAYMENT_METHODS  = ["Cash", "Bank Transfer", "Online", "Check", "Other"];
 const GASTO_CATEGORIAS = ["Servicios", "Alquiler", "Equipamiento", "Mantenimiento", "Misiones", "Personal", "Eventos", "Otro"];
 const METODOS_PAGO     = ["Efectivo", "Transferencia", "Cheque", "Tarjeta", "Otro"];
 
-const EMPTY_DONATION = { member_name: "", donation_type: "Tithe", amount: "", date: new Date().toISOString().slice(0,10), payment_method: "Cash", notes: "" };
+const EMPTY_DONATION = { member_id: null, external_name: "", donation_type: "Tithe", amount: "", date: new Date().toISOString().slice(0,10), payment_method: "Cash", notes: "" };
 const EMPTY_GASTO    = { descripcion: "", categoria: "Servicios", monto: "", fecha: new Date().toISOString().slice(0,10), metodo_pago: "Efectivo", proveedor: "", notas: "" };
 
 const F = ({ label, name, type = "text", options, optionLabels, textarea, form, setForm }) => (
@@ -53,6 +53,7 @@ export default function Donations() {
   const [donations, setDonations] = useState([]);
   const [cellSubs,  setCellSubs]  = useState([]);
   const [gastos,    setGastos]    = useState([]);
+  const [members,   setMembers]   = useState([]);
   const [loading,   setLoading]   = useState(true);
 
   // Filtros
@@ -74,22 +75,40 @@ export default function Donations() {
   const [egresoSaving,  setEgresoSaving]  = useState(false);
 
   const load = async () => {
-    const [donationData, gastoData] = await Promise.all([
-      api.entities.Donation.list("-date", 500),
-      api.entities.Gasto.list("-fecha", 500),
-    ]);
-    setDonations(donationData);
-    setGastos(gastoData);
     const churchId = await getMyChurchId();
-    if (churchId) {
-      const { data: subs } = await supabase
-        .from("leader_cell_submissions")
-        .select("id, report_date, offering_amount, personas!leader_id(nombre, apellido, grupo_celula)")
-        .eq("church_id", churchId)
-        .gt("offering_amount", 0)
-        .order("report_date", { ascending: false });
-      setCellSubs(subs || []);
-    }
+    const empty = { data: [] };
+
+    const [gastoData, donResult, membersResult, subsResult] = await Promise.all([
+      api.entities.Gasto.list("-fecha", 500),
+      churchId
+        ? supabase
+            .from("donations")
+            .select("*, personas!member_id(id, nombre, apellido)")
+            .eq("church_id", churchId)
+            .order("date", { ascending: false })
+            .limit(500)
+        : empty,
+      churchId
+        ? supabase
+            .from("personas")
+            .select("id, nombre, apellido")
+            .eq("church_id", churchId)
+            .order("apellido", { ascending: true })
+        : empty,
+      churchId
+        ? supabase
+            .from("leader_cell_submissions")
+            .select("id, report_date, offering_amount, personas!leader_id(nombre, apellido, grupo_celula)")
+            .eq("church_id", churchId)
+            .gt("offering_amount", 0)
+            .order("report_date", { ascending: false })
+        : empty,
+    ]);
+
+    setGastos(gastoData);
+    setDonations(donResult.data || []);
+    setMembers(membersResult.data || []);
+    setCellSubs(subsResult.data || []);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -98,17 +117,21 @@ export default function Donations() {
   const ledger = useMemo(() => {
     const entries = [];
 
-    donations.forEach(d => entries.push({
-      id: `don-${d.id}`, rawId: d.id, source: "donation",
-      tipo: "Ingreso",
-      fecha: d.date || d.created_at?.slice(0, 10) || "",
-      categoria: TYPE_LABELS[d.donation_type] || d.donation_type || "—",
-      descripcion: d.member_name || "Anónimo",
-      monto: d.amount || 0,
-      metodo: PAYMENT_LABELS[d.payment_method] || d.payment_method || "",
-      notas: d.notes || "",
-      raw: d,
-    }));
+    donations.forEach(d => {
+      const p = d.personas; // join con personas via member_id
+      const memberName = p ? `${p.nombre} ${p.apellido}`.trim() : null;
+      entries.push({
+        id: `don-${d.id}`, rawId: d.id, source: "donation",
+        tipo: "Ingreso",
+        fecha: d.date || d.created_at?.slice(0, 10) || "",
+        categoria: TYPE_LABELS[d.donation_type] || d.donation_type || "—",
+        descripcion: memberName || d.external_name || "Anónimo",
+        monto: d.amount || 0,
+        metodo: PAYMENT_LABELS[d.payment_method] || d.payment_method || "",
+        notas: d.notes || "",
+        raw: d,
+      });
+    });
 
     cellSubs.forEach(s => {
       const lider = s.personas;
@@ -172,10 +195,20 @@ export default function Donations() {
 
   // ── Handlers ingreso ──────────────────────────────────────
   const openAddIngreso  = () => { setEditingIngreso(null); setIngresoForm(EMPTY_DONATION); setIngresoModal(true); };
-  const openEditIngreso = (raw) => { setEditingIngreso(raw); setIngresoForm({ ...EMPTY_DONATION, ...raw, amount: String(raw.amount || "") }); setIngresoModal(true); };
+  const openEditIngreso = (raw) => {
+    setEditingIngreso(raw);
+    setIngresoForm({ ...EMPTY_DONATION, ...raw, member_id: raw.member_id || null, external_name: raw.external_name || "", amount: String(raw.amount || "") });
+    setIngresoModal(true);
+  };
   const handleSaveIngreso = async () => {
     setIngresoSaving(true);
-    const payload = { ...ingresoForm, amount: parseFloat(ingresoForm.amount) || 0 };
+    const { member_id, external_name, ...rest } = ingresoForm;
+    const payload = {
+      ...rest,
+      amount: parseFloat(ingresoForm.amount) || 0,
+      member_id: member_id || null,
+      external_name: (!member_id && external_name?.trim()) ? external_name.trim() : null,
+    };
     if (editingIngreso) await api.entities.Donation.update(editingIngreso.id, payload);
     else await api.entities.Donation.create(payload);
     await load(); setIngresoModal(false); setIngresoSaving(false);
@@ -380,8 +413,38 @@ export default function Donations() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editingIngreso ? "Editar ingreso" : "Registrar ingreso"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <F label="Nombre del Miembro" name="member_name"   form={ingresoForm} setForm={setIngresoForm} />
-            <F label="Tipo"               name="donation_type" form={ingresoForm} setForm={setIngresoForm}
+            {/* Selector donante: miembro registrado o nombre libre */}
+            <div className="sm:col-span-2">
+              <Label className="text-xs font-medium text-slate-600 mb-1 block">Donante</Label>
+              <Select
+                value={ingresoForm.member_id || "external"}
+                onValueChange={v => {
+                  if (v === "external") setIngresoForm(f => ({ ...f, member_id: null }));
+                  else setIngresoForm(f => ({ ...f, member_id: v, external_name: "" }));
+                }}
+              >
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="external">Externo / nombre libre</SelectItem>
+                  {members.map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.nombre} {m.apellido}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Nombre libre — solo visible cuando no hay miembro seleccionado */}
+            {!ingresoForm.member_id && (
+              <div className="sm:col-span-2">
+                <Label className="text-xs font-medium text-slate-600 mb-1 block">Nombre *</Label>
+                <Input
+                  placeholder="Nombre del donante..."
+                  value={ingresoForm.external_name}
+                  onChange={e => setIngresoForm(f => ({ ...f, external_name: e.target.value }))}
+                  className="h-9 text-sm"
+                />
+              </div>
+            )}
+            <F label="Tipo" name="donation_type" form={ingresoForm} setForm={setIngresoForm}
               options={DONATION_TYPES} optionLabels={DONATION_TYPES.map(t => TYPE_LABELS[t])} />
             <F label="Monto *" name="amount" type="number" form={ingresoForm} setForm={setIngresoForm} />
             <F label="Fecha"   name="date"   type="date"   form={ingresoForm} setForm={setIngresoForm} />
@@ -391,7 +454,9 @@ export default function Donations() {
           <F label="Notas" name="notes" textarea form={ingresoForm} setForm={setIngresoForm} />
           <div className="flex gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setIngresoModal(false)} className="flex-1">Cancelar</Button>
-            <Button onClick={handleSaveIngreso} disabled={ingresoSaving || !ingresoForm.amount}
+            <Button
+              onClick={handleSaveIngreso}
+              disabled={ingresoSaving || !ingresoForm.amount || (!ingresoForm.member_id && !ingresoForm.external_name?.trim())}
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
               {ingresoSaving ? "Guardando..." : editingIngreso ? "Guardar cambios" : "Registrar ingreso"}
             </Button>
