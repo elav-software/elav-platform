@@ -43,7 +43,7 @@ async function resolveChurchId(): Promise<string | null> {
   }
 
   // Producción: strip www. y subdominios (censo.) para obtener el dominio raíz
-  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal)\./, '');
+  const rootDomain = hostname.replace(/^www\./, '').replace(/^(crm|censo|portal|formulario)\./, '');
   const { data } = await supabase.from('churches').select('id').eq('custom_domain', rootDomain).eq('is_active', true).single();
   return data?.id ?? null;
 }
@@ -185,21 +185,21 @@ export default function Home() {
       }
     }
 
-    // Subir foto a Supabase Storage
+    // Subir foto via API route (usa service_role, bypassa RLS)
     let fotoUrl = "";
-    if (fotoFile) {
-      const ext = fotoFile.name.split(".").pop();
-      const path = `${churchId ?? "sin-iglesia"}/${Date.now()}.${ext}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("leader-photos")
-        .upload(path, fotoFile, { upsert: true });
-      if (uploadError) {
-        toast.error("Error al subir la foto");
+    if (fotoFile && churchId) {
+      const fd = new FormData();
+      fd.append("file", fotoFile);
+      fd.append("churchId", churchId);
+      const res = await fetch("/api/upload-leader-photo", { method: "POST", body: fd });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: "Error desconocido" }));
+        toast.error(error ?? "Error al subir la foto");
         setLoading(false);
         return;
       }
-      const { data: urlData } = supabase.storage.from("leader-photos").getPublicUrl(uploadData.path);
-      fotoUrl = urlData.publicUrl;
+      const { url } = await res.json();
+      fotoUrl = url;
     }
 
     const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
