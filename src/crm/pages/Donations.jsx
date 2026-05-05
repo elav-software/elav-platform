@@ -7,7 +7,7 @@ import { Badge } from "@crm/components/ui/badge";
 import { Button } from "@crm/components/ui/button";
 import { Input } from "@crm/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@crm/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@crm/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@crm/components/ui/dialog";
 import { Label } from "@crm/components/ui/label";
 import { Textarea } from "@crm/components/ui/textarea";
 import StatCard from "../components/shared/StatCard";
@@ -423,7 +423,10 @@ export default function Donations() {
       {/* ── Modal Ingreso ──────────────────────────────────── */}
       <Dialog open={ingresoModal} onOpenChange={setIngresoModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editingIngreso ? "Editar ingreso" : "Registrar ingreso"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editingIngreso ? "Editar ingreso" : "Registrar ingreso"}</DialogTitle>
+            <DialogDescription>Completá los campos para registrar el movimiento de ingreso.</DialogDescription>
+          </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
             <div className="sm:col-span-2">
               <Label className="text-xs font-medium text-slate-600 mb-1 block">Descripción *</Label>
@@ -507,7 +510,10 @@ export default function Donations() {
       {/* ── Modal Egreso ───────────────────────────────────── */}
       <Dialog open={egresoModal} onOpenChange={setEgresoModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editingEgreso ? "Editar egreso" : "Agregar egreso"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editingEgreso ? "Editar egreso" : "Agregar egreso"}</DialogTitle>
+            <DialogDescription>Completá los campos para registrar el movimiento de egreso.</DialogDescription>
+          </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
             <div className="sm:col-span-2">
               <F label="Descripción *" name="descripcion" form={egresoForm} setForm={setEgresoForm} />
