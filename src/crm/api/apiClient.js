@@ -318,6 +318,7 @@ export const api = {
     Member:        makeMemberEntity(),
     Visitor:       makeEntity("visitors"),
     Donation:      makeEntity("donations"),
+    Gasto:         makeEntity("gastos"),
     Event:         makeEntity("events"),
     Attendance:    makeEntity("event_attendance"),
     Leader:        makeEntity("leaders"),
