@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
+const CHURCH_ADDRESS  = "Av. Brig. Gral. Juan Manuel de Rosas 7840, B1765 Isidro Casanova, Provincia de Buenos Aires, Argentina";
+const CHURCH_LOCALIDAD = "Isidro Casanova";
+
 const LOCALIDADES_BUENOS_AIRES = [
   "Adrogué", "Almirante Brown", "Avellaneda", "Banfield", "Barracas",
   "Beccar", "Berazategui", "Bernal", "Burzaco", "Caballito",
@@ -96,6 +99,16 @@ export default function Home() {
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [countdown, setCountdown] = useState(15);
+  const [reunionEnIglesia, setReunionEnIglesia] = useState(false);
+
+  const toggleReunionEnIglesia = (checked: boolean) => {
+    setReunionEnIglesia(checked);
+    setForm(f => ({
+      ...f,
+      lugar_reunion: checked ? CHURCH_ADDRESS : "",
+      lugar_reunion_localidad: checked ? CHURCH_LOCALIDAD : "",
+    }));
+  };
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -639,13 +652,42 @@ export default function Home() {
                         })}
                       </select>
                     </div>
+                    <div className="md:col-span-2 mb-1">
+                      <label
+                        className="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer select-none transition-colors duration-200"
+                        style={{ borderColor: reunionEnIglesia ? "#2563eb" : "#e2e8f0", backgroundColor: reunionEnIglesia ? "#eff6ff" : "#f8fafc" }}
+                        onClick={() => toggleReunionEnIglesia(!reunionEnIglesia)}
+                      >
+                        <div className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${reunionEnIglesia ? "bg-blue-600 border-blue-600" : "border-slate-300 bg-white"}`}>
+                          {reunionEnIglesia && (
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-slate-700">¿La célula se reúne en la iglesia?</span>
+                      </label>
+                    </div>
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Dirección de la Célula</label>
-                      <input className={inputClasses} value={form.lugar_reunion} onChange={set("lugar_reunion")} placeholder="Ej: Av. San Martín 1234" />
+                      <input
+                        className={inputClasses}
+                        value={form.lugar_reunion}
+                        onChange={set("lugar_reunion")}
+                        placeholder="Ej: Av. San Martín 1234"
+                        readOnly={reunionEnIglesia}
+                        style={reunionEnIglesia ? { backgroundColor: "#f1f5f9", color: "#64748b", cursor: "not-allowed" } : {}}
+                      />
                     </div>
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Localidad / Barrio de la Célula</label>
-                      <select className={selectClasses} value={form.lugar_reunion_localidad} onChange={set("lugar_reunion_localidad")}>
+                      <select
+                        className={selectClasses}
+                        value={form.lugar_reunion_localidad}
+                        onChange={set("lugar_reunion_localidad")}
+                        disabled={reunionEnIglesia}
+                        style={reunionEnIglesia ? { backgroundColor: "#f1f5f9", color: "#64748b", cursor: "not-allowed", opacity: 1 } : {}}
+                      >
                         <option value="">Seleccionar localidad...</option>
                         {LOCALIDADES_BUENOS_AIRES.map(loc => (
                           <option key={loc} value={loc}>{loc}</option>
