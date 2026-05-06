@@ -1,21 +1,24 @@
 ﻿"use client";
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@crm/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@crm/components/ui/dialog";
 import { Button } from "@crm/components/ui/button";
 import { Input } from "@crm/components/ui/input";
 import { Label } from "@crm/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@crm/components/ui/select";
+import { Switch } from "@crm/components/ui/switch";
 import { Textarea } from "@crm/components/ui/textarea";
 import { api } from "@crm/api/apiClient";
 import { supabase, crmToSupabase } from "@crm/api/supabaseClient";
 import { MapPin, Loader2 } from "lucide-react";
+
+const CHURCH_ADDRESS = "Av. Brig. Gral. Juan Manuel de Rosas 7840, B1765 Isidro Casanova, Provincia de Buenos Aires, Argentina";
 
 const DAYS = [
   { en: "Monday", es: "Lunes" }, { en: "Tuesday", es: "Martes" }, { en: "Wednesday", es: "Miércoles" },
   { en: "Thursday", es: "Jueves" }, { en: "Friday", es: "Viernes" }, { en: "Saturday", es: "Sábado" }, { en: "Sunday", es: "Domingo" }
 ];
 
-const EMPTY = { full_name: "", phone: "", email: "", cell_name: "", meeting_day: "", meeting_time: "", meeting_location: "", district: "", notes: "", latitude: "", longitude: "", member_id: "" };
+const EMPTY = { full_name: "", phone: "", email: "", cell_name: "", meeting_day: "", meeting_time: "", meeting_location: "", district: "", notes: "", latitude: "", longitude: "", member_id: "", meets_at_church: false };
 
 export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
   const [form, setForm] = useState(EMPTY);
@@ -27,9 +30,8 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
   useEffect(() => {
     if (open) {
       if (editing) {
-        // Reemplazar null por "" para evitar inputs controlados con null
         const sanitized = Object.fromEntries(
-          Object.entries(editing).map(([k, v]) => [k, v ?? ""])
+          Object.entries(editing).map(([k, v]) => [k, typeof v === "boolean" ? v : (v ?? "")])
         );
         setForm({ ...EMPTY, ...sanitized, latitude: editing.latitude ?? "", longitude: editing.longitude ?? "" });
       } else {
@@ -41,6 +43,14 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
   const setVal = (field) => (value) => setForm(f => ({ ...f, [field]: value }));
+
+  const toggleChurchLocation = (checked) => {
+    setForm(f => ({
+      ...f,
+      meets_at_church: checked,
+      meeting_location: checked ? CHURCH_ADDRESS : "",
+    }));
+  };
 
   const geocodeLocation = async () => {
     if (!form.meeting_location) return;
@@ -73,6 +83,7 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
         district: form.district || undefined,
         notes: form.notes || undefined,
         member_id: form.member_id || undefined,
+        meets_at_church: form.meets_at_church ?? false,
         latitude: form.latitude !== "" && form.latitude !== undefined ? Number(form.latitude) : undefined,
         longitude: form.longitude !== "" && form.longitude !== undefined ? Number(form.longitude) : undefined,
       };
@@ -141,6 +152,7 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editing?.id ? "Editar Líder" : "Agregar Líder"}</DialogTitle>
+          <DialogDescription>Datos del líder y su célula.</DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
@@ -190,12 +202,22 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
         </div>
 
         <div className="mt-2">
-          <Label className="text-xs font-medium text-slate-600 mb-1 block">Lugar de reunión</Label>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-xs font-medium text-slate-600">Lugar de reunión</Label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-xs text-slate-500">¿Se realiza en la iglesia?</span>
+              <Switch
+                checked={!!form.meets_at_church}
+                onCheckedChange={toggleChurchLocation}
+              />
+            </label>
+          </div>
           <div className="flex gap-2">
             <Input
               value={form.meeting_location}
               onChange={set("meeting_location")}
-              className="h-9 text-sm flex-1"
+              readOnly={!!form.meets_at_church}
+              className={`h-9 text-sm flex-1 ${form.meets_at_church ? "bg-slate-50 text-slate-500 cursor-not-allowed" : ""}`}
               placeholder="Ej: Av. San Martín 1234"
             />
             <Button
@@ -211,7 +233,7 @@ export default function LeaderFormModal({ open, onClose, onSaved, editing }) {
           </div>
           {form.latitude && form.longitude ? (
             <p className="text-xs text-emerald-600 mt-1">
-              📍 Coordenadas: {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)}
+              Coordenadas: {Number(form.latitude).toFixed(4)}, {Number(form.longitude).toFixed(4)}
             </p>
           ) : (
             <p className="text-xs text-slate-400 mt-1">
