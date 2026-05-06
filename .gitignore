@@ -44,6 +44,11 @@ supabase/
 # notas locales
 TODO.txt
 
+# Claude Code — instrucciones y memoria local, no exponer en el repo
+.claude/
+CLAUDE.md
+AGENTS.md
+
 # vercel
 .vercel
 

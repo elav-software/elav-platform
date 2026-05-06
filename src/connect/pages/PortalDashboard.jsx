@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
 import { 
@@ -660,6 +660,126 @@ function CelularAccessView({ leader, onBack }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Vista de eventos de la iglesia (desde la landing vía API proxy con caché)
+// ─────────────────────────────────────────────────────────────────────────────
+const EVENT_TYPE_CONFIG = {
+  general:  { label: "General",   color: "bg-blue-100 text-blue-700" },
+  special:  { label: "Especial",  color: "bg-purple-100 text-purple-700" },
+  youth:    { label: "Jóvenes",   color: "bg-orange-100 text-orange-700" },
+  worship:  { label: "Adoración", color: "bg-pink-100 text-pink-700" },
+  missions: { label: "Misiones",  color: "bg-green-100 text-green-700" },
+  training: { label: "Formación", color: "bg-amber-100 text-amber-700" },
+};
+
+function EventosView({ churchId, onBack }) {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/church-events?church_id=${churchId}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        const now = new Date();
+        const upcoming = (Array.isArray(data) ? data : [])
+          .filter(e => new Date(e.ends_at || e.starts_at) >= now)
+          .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+        setEvents(upcoming);
+      })
+      .catch(() => setFetchError(true))
+      .finally(() => setLoading(false));
+  }, [churchId]);
+
+  const grouped = useMemo(() => {
+    const groups = {};
+    events.forEach(e => {
+      const key = new Date(e.starts_at).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(e);
+    });
+    return groups;
+  }, [events]);
+
+  const formatDateRange = (starts, ends) => {
+    const s = new Date(starts);
+    if (!ends) return s.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+    const e = new Date(ends);
+    if (s.toDateString() === e.toDateString())
+      return s.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+    const dayS = s.toLocaleDateString("es-AR", { day: "numeric" });
+    const dayE = e.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+    return `${dayS} al ${dayE}`;
+  };
+
+  const formatTime = (starts) => {
+    const s = new Date(starts);
+    if (s.getHours() === 0 && s.getMinutes() === 0) return null;
+    return s.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6">
+        <ArrowLeft className="w-4 h-4" /> Volver al portal
+      </button>
+      <h2 className="text-xl font-bold text-gray-900 mb-1">Próximos Eventos</h2>
+      <p className="text-sm text-gray-500 mb-6">Actividades y eventos de la iglesia</p>
+
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+        </div>
+      ) : fetchError || events.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+          <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">{fetchError ? "No se pudieron cargar los eventos." : "No hay eventos próximos."}</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {Object.entries(grouped).map(([month, monthEvents]) => (
+            <div key={month}>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 capitalize">{month}</h3>
+              <ul className="space-y-3">
+                {monthEvents.map(e => {
+                  const typeConf = EVENT_TYPE_CONFIG[e.type] ?? { label: e.type, color: "bg-gray-100 text-gray-600" };
+                  const time = formatTime(e.starts_at);
+                  return (
+                    <li key={e.id} className="bg-white rounded-2xl border border-gray-200 p-5">
+                      <div className="flex items-start justify-between gap-3 mb-1">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900">{e.title}</p>
+                          <p className="text-sm text-blue-600 font-medium mt-0.5 capitalize">
+                            {formatDateRange(e.starts_at, e.ends_at)}
+                            {time && ` · ${time} hs`}
+                          </p>
+                        </div>
+                        <span className={`flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${typeConf.color}`}>
+                          {typeConf.label}
+                        </span>
+                      </div>
+                      {e.description && <p className="text-sm text-gray-600 mt-2">{e.description}</p>}
+                      <div className="flex items-center justify-between gap-2 mt-3">
+                        {e.location && <p className="text-xs text-gray-400">📍 {e.location}</p>}
+                        {e.contact_url && (
+                          <a href={e.contact_url} target="_blank" rel="noreferrer"
+                            className="text-xs font-semibold text-green-600 hover:text-green-700">
+                            💬 Más info
+                          </a>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Dashboard principal
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PortalDashboard() {
@@ -950,6 +1070,7 @@ export default function PortalDashboard() {
 
   const leaderMenuItems = [
     { title: "Cargar Reporte", description: "Reportar asistencia, ofrendas y testimonios", icon: FileText, href: "/connect/portal/reportes", color: "from-blue-500 to-blue-600", badge: stats.recentReports > 0 ? `${stats.recentReports} este mes` : null },
+    { title: "Eventos", description: "Próximas actividades de la iglesia", icon: Calendar, href: null, action: () => setActiveView("eventos"), color: "from-sky-500 to-sky-600" },
     { title: "Materiales", description: "Accede a recursos y capacitaciones", icon: BookOpen, href: "/connect/portal/materiales", color: "from-purple-500 to-purple-600", badge: unreadMaterials > 0 ? `${unreadMaterials} nuevo${unreadMaterials > 1 ? 's' : ''}` : null, badgeNew: unreadMaterials > 0 },
     { title: "Mis Miembros", description: "Lista de miembros de tu célula", icon: Users, href: "/connect/portal/miembros", color: "from-green-500 to-green-600", badge: stats.cellMembers > 0 ? `${stats.cellMembers} personas` : null },
 
@@ -1131,6 +1252,11 @@ export default function PortalDashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
 
+        {/* ── VISTA EVENTOS ── */}
+        {activeView === "eventos" && (
+          <EventosView churchId={churchId} onBack={() => setActiveView("home")} />
+        )}
+
         {/* ── VISTA ÁREA ACTIVA ── */}
         {activeView === 'consolidacion' && (
           <ConsolidacionView
@@ -1233,6 +1359,18 @@ export default function PortalDashboard() {
           <div className="max-w-2xl mx-auto">
             <p className="text-sm text-gray-500 mb-6">Accesos disponibles para tu área de servicio:</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Eventos — siempre visible para todos */}
+              <button onClick={() => setActiveView("eventos")}
+                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-200 text-left group">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-sky-500 to-sky-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <Calendar className="w-7 h-7 text-white" />
+                  </div>
+                  <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Eventos</h3>
+                <p className="text-sm text-gray-600">Próximas actividades de la iglesia</p>
+              </button>
               {userPortalAreas.flatMap(area => {
                 const section = AREA_PORTAL_SECTIONS[area];
                 const areaBadge = area === 'Intercesión' && newPrayers > 0 ? `${newPrayers} activo${newPrayers > 1 ? 's' : ''}` : null;
