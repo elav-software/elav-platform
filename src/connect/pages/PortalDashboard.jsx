@@ -660,45 +660,70 @@ function CelularAccessView({ leader, onBack }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Vista de eventos de la iglesia (desde la landing vía API proxy con caché)
+// Vista de eventos — calendario mensual con dots en días con eventos
 // ─────────────────────────────────────────────────────────────────────────────
 const EVENT_TYPE_CONFIG = {
-  general:  { label: "General",   color: "bg-blue-100 text-blue-700" },
-  special:  { label: "Especial",  color: "bg-purple-100 text-purple-700" },
-  youth:    { label: "Jóvenes",   color: "bg-orange-100 text-orange-700" },
-  worship:  { label: "Adoración", color: "bg-pink-100 text-pink-700" },
-  missions: { label: "Misiones",  color: "bg-green-100 text-green-700" },
-  training: { label: "Formación", color: "bg-amber-100 text-amber-700" },
+  general:  { label: "General",   color: "bg-blue-100 text-blue-700",   dot: "bg-blue-500" },
+  special:  { label: "Especial",  color: "bg-purple-100 text-purple-700", dot: "bg-purple-500" },
+  youth:    { label: "Jóvenes",   color: "bg-orange-100 text-orange-700", dot: "bg-orange-500" },
+  worship:  { label: "Adoración", color: "bg-pink-100 text-pink-700",   dot: "bg-pink-500" },
+  missions: { label: "Misiones",  color: "bg-green-100 text-green-700", dot: "bg-green-500" },
+  training: { label: "Formación", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
 };
+const DAY_NAMES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 function EventosView({ churchId, onBack }) {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [allEvents, setAllEvents] = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [fetchError, setFetchError] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const d = new Date(); d.setDate(1); return d;
+  });
+  const [selectedDay, setSelectedDay] = useState(null);
 
   useEffect(() => {
     fetch(`/api/church-events?church_id=${churchId}`)
       .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        const now = new Date();
-        const upcoming = (Array.isArray(data) ? data : [])
-          .filter(e => new Date(e.ends_at || e.starts_at) >= now)
-          .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-        setEvents(upcoming);
-      })
+      .then(data => setAllEvents(Array.isArray(data) ? data : []))
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, [churchId]);
 
-  const grouped = useMemo(() => {
-    const groups = {};
-    events.forEach(e => {
-      const key = new Date(e.starts_at).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(e);
+  // Días del grid del mes (null = celda vacía de relleno)
+  const calendarDays = useMemo(() => {
+    const y = currentMonth.getFullYear();
+    const m = currentMonth.getMonth();
+    const first = new Date(y, m, 1);
+    const last  = new Date(y, m + 1, 0);
+    // Semana empieza en lunes: lunes=0 … domingo=6
+    const startOffset = (first.getDay() + 6) % 7;
+    const days = Array(startOffset).fill(null);
+    for (let d = 1; d <= last.getDate(); d++) days.push(new Date(y, m, d));
+    return days;
+  }, [currentMonth]);
+
+  // Eventos que caen en un día (incluyendo eventos multi-día)
+  const eventsForDate = (date) => {
+    if (!date) return [];
+    const d = date.getTime();
+    return allEvents.filter(e => {
+      const s = new Date(e.starts_at); s.setHours(0, 0, 0, 0);
+      const en = new Date(e.ends_at || e.starts_at); en.setHours(23, 59, 59, 999);
+      return d >= s.getTime() && d <= en.getTime();
     });
-    return groups;
-  }, [events]);
+  };
+
+  const isSameDay = (a, b) =>
+    a && b && a.getDate() === b.getDate() &&
+    a.getMonth() === b.getMonth() &&
+    a.getFullYear() === b.getFullYear();
+
+  const isToday = (date) => date && isSameDay(date, new Date());
+
+  const prevMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+
+  const monthLabel = currentMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 
   const formatDateRange = (starts, ends) => {
     const s = new Date(starts);
@@ -706,9 +731,7 @@ function EventosView({ churchId, onBack }) {
     const e = new Date(ends);
     if (s.toDateString() === e.toDateString())
       return s.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
-    const dayS = s.toLocaleDateString("es-AR", { day: "numeric" });
-    const dayE = e.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
-    return `${dayS} al ${dayE}`;
+    return `${s.toLocaleDateString("es-AR", { day: "numeric" })} al ${e.toLocaleDateString("es-AR", { day: "numeric", month: "long" })}`;
   };
 
   const formatTime = (starts) => {
@@ -717,63 +740,168 @@ function EventosView({ churchId, onBack }) {
     return s.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
   };
 
+  // Próximos eventos globales (cuando no hay día seleccionado)
+  const upcomingEvents = useMemo(() => {
+    const now = new Date();
+    return [...allEvents]
+      .filter(e => new Date(e.ends_at || e.starts_at) >= now)
+      .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  }, [allEvents]);
+
+  const selectedEvents = selectedDay ? eventsForDate(selectedDay) : [];
+
+  const EventCard = ({ e }) => {
+    const typeConf = EVENT_TYPE_CONFIG[e.type] ?? { label: e.type, color: "bg-gray-100 text-gray-600" };
+    const time = formatTime(e.starts_at);
+    return (
+      <li className="bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900">{e.title}</p>
+            <p className="text-sm text-red-600 font-medium mt-0.5 capitalize">
+              {formatDateRange(e.starts_at, e.ends_at)}{time && ` · ${time} hs`}
+            </p>
+          </div>
+          <span className={`flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${typeConf.color}`}>
+            {typeConf.label}
+          </span>
+        </div>
+        {e.description && <p className="text-sm text-gray-600 mt-2">{e.description}</p>}
+        <div className="flex items-center justify-between gap-2 mt-3">
+          {e.location && <p className="text-xs text-gray-400">📍 {e.location}</p>}
+          {e.contact_url && (
+            <a href={e.contact_url} target="_blank" rel="noreferrer"
+              className="text-xs font-semibold text-green-600 hover:text-green-700">
+              💬 Más info
+            </a>
+          )}
+        </div>
+      </li>
+    );
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6">
         <ArrowLeft className="w-4 h-4" /> Volver al portal
       </button>
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Próximos Eventos</h2>
-      <p className="text-sm text-gray-500 mb-6">Actividades y eventos de la iglesia</p>
+      <h2 className="text-xl font-bold text-gray-900 mb-1">Eventos</h2>
+      <p className="text-sm text-gray-500 mb-5">Actividades y eventos de la iglesia</p>
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="w-6 h-6 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-4 border-red-600/30 border-t-red-600 rounded-full animate-spin" />
         </div>
-      ) : fetchError || events.length === 0 ? (
+      ) : fetchError ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
           <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">{fetchError ? "No se pudieron cargar los eventos." : "No hay eventos próximos."}</p>
+          <p className="text-gray-500 text-sm">No se pudieron cargar los eventos.</p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {Object.entries(grouped).map(([month, monthEvents]) => (
-            <div key={month}>
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 capitalize">{month}</h3>
-              <ul className="space-y-3">
-                {monthEvents.map(e => {
-                  const typeConf = EVENT_TYPE_CONFIG[e.type] ?? { label: e.type, color: "bg-gray-100 text-gray-600" };
-                  const time = formatTime(e.starts_at);
-                  return (
-                    <li key={e.id} className="bg-white rounded-2xl border border-gray-200 p-5">
-                      <div className="flex items-start justify-between gap-3 mb-1">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900">{e.title}</p>
-                          <p className="text-sm text-blue-600 font-medium mt-0.5 capitalize">
-                            {formatDateRange(e.starts_at, e.ends_at)}
-                            {time && ` · ${time} hs`}
-                          </p>
-                        </div>
-                        <span className={`flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${typeConf.color}`}>
-                          {typeConf.label}
+        <>
+          {/* ── Calendario ── */}
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6 shadow-sm">
+            {/* Navegación de mes — fondo rojo */}
+            <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-red-600 to-red-700">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span className="font-bold text-white capitalize tracking-wide">{monthLabel}</span>
+              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Cabecera de días */}
+            <div className="grid grid-cols-7 bg-red-50 border-b border-red-100">
+              {DAY_NAMES.map(d => (
+                <div key={d} className="py-2 text-center text-[11px] font-bold text-red-400 uppercase tracking-wide">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Grid de días */}
+            <div className="grid grid-cols-7">
+              {calendarDays.map((date, i) => {
+                const dayEvents = date ? eventsForDate(date) : [];
+                const selected  = isSameDay(date, selectedDay);
+                const today     = isToday(date);
+                const hasEv     = dayEvents.length > 0;
+
+                return (
+                  <button
+                    key={i}
+                    disabled={!date}
+                    onClick={() => {
+                      if (!date) return;
+                      setSelectedDay(isSameDay(date, selectedDay) ? null : date);
+                    }}
+                    className={`relative flex flex-col items-center pt-2 pb-3 min-h-[52px] transition-colors
+                      ${!date ? "cursor-default" : "hover:bg-red-50 cursor-pointer"}
+                      ${selected ? "bg-red-50" : ""}
+                      ${i % 7 !== 6 ? "border-r border-gray-50" : ""}
+                      ${i < calendarDays.length - 7 ? "border-b border-gray-50" : ""}
+                    `}
+                  >
+                    {date && (
+                      <>
+                        <span className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full transition-colors
+                          ${selected ? "bg-red-600 text-white font-bold" : today ? "bg-red-100 text-red-700 font-bold" : "text-gray-700"}
+                        `}>
+                          {date.getDate()}
                         </span>
-                      </div>
-                      {e.description && <p className="text-sm text-gray-600 mt-2">{e.description}</p>}
-                      <div className="flex items-center justify-between gap-2 mt-3">
-                        {e.location && <p className="text-xs text-gray-400">📍 {e.location}</p>}
-                        {e.contact_url && (
-                          <a href={e.contact_url} target="_blank" rel="noreferrer"
-                            className="text-xs font-semibold text-green-600 hover:text-green-700">
-                            💬 Más info
-                          </a>
+                        {/* Dots de eventos (máx 3) */}
+                        {hasEv && (
+                          <div className="flex gap-0.5 mt-1">
+                            {dayEvents.slice(0, 3).map((e, j) => {
+                              const dotColor = (EVENT_TYPE_CONFIG[e.type] ?? { dot: "bg-red-500" }).dot;
+                              return <span key={j} className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />;
+                            })}
+                          </div>
                         )}
-                      </div>
-                    </li>
-                  );
-                })}
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Panel inferior: eventos del día seleccionado o próximos ── */}
+          {selectedDay ? (
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 capitalize">
+                {selectedDay.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
+              </p>
+              {selectedEvents.length === 0 ? (
+                <div className="text-center py-8 bg-white rounded-2xl border border-gray-200">
+                  <p className="text-gray-400 text-sm">Sin eventos este día.</p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {selectedEvents.map(e => <EventCard key={e.id} e={e} />)}
+                </ul>
+              )}
+            </div>
+          ) : upcomingEvents.length === 0 ? (
+            <div className="text-center py-8 bg-white rounded-2xl border border-gray-200">
+              <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">No hay eventos próximos.</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Próximos eventos</p>
+              <ul className="space-y-3">
+                {upcomingEvents.map(e => <EventCard key={e.id} e={e} />)}
               </ul>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
