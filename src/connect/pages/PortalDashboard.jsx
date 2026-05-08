@@ -758,7 +758,7 @@ function EventosView({ churchId, onBack }) {
         <div className="flex items-start justify-between gap-3 mb-1">
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900">{e.title}</p>
-            <p className="text-sm text-sky-600 font-medium mt-0.5 capitalize">
+            <p className="text-sm text-red-600 font-medium mt-0.5 capitalize">
               {formatDateRange(e.starts_at, e.ends_at)}{time && ` · ${time} hs`}
             </p>
           </div>
@@ -790,7 +790,7 @@ function EventosView({ churchId, onBack }) {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="w-6 h-6 border-4 border-sky-600/30 border-t-sky-600 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-4 border-red-600/30 border-t-red-600 rounded-full animate-spin" />
         </div>
       ) : fetchError ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
@@ -800,16 +800,16 @@ function EventosView({ churchId, onBack }) {
       ) : (
         <>
           {/* ── Calendario ── */}
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
-            {/* Navegación de mes */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6 shadow-sm">
+            {/* Navegación de mes — fondo rojo */}
+            <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-red-600 to-red-700">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <span className="font-semibold text-gray-900 capitalize text-sm">{monthLabel}</span>
-              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+              <span className="font-bold text-white capitalize tracking-wide">{monthLabel}</span>
+              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -817,9 +817,9 @@ function EventosView({ churchId, onBack }) {
             </div>
 
             {/* Cabecera de días */}
-            <div className="grid grid-cols-7 border-b border-gray-100">
+            <div className="grid grid-cols-7 bg-red-50 border-b border-red-100">
               {DAY_NAMES.map(d => (
-                <div key={d} className="py-2 text-center text-[11px] font-bold text-gray-400 uppercase tracking-wide">
+                <div key={d} className="py-2 text-center text-[11px] font-bold text-red-400 uppercase tracking-wide">
                   {d}
                 </div>
               ))}
@@ -842,16 +842,16 @@ function EventosView({ churchId, onBack }) {
                       setSelectedDay(isSameDay(date, selectedDay) ? null : date);
                     }}
                     className={`relative flex flex-col items-center pt-2 pb-3 min-h-[52px] transition-colors
-                      ${!date ? "cursor-default" : "hover:bg-gray-50 cursor-pointer"}
-                      ${selected ? "bg-sky-50" : ""}
+                      ${!date ? "cursor-default" : "hover:bg-red-50 cursor-pointer"}
+                      ${selected ? "bg-red-50" : ""}
                       ${i % 7 !== 6 ? "border-r border-gray-50" : ""}
                       ${i < calendarDays.length - 7 ? "border-b border-gray-50" : ""}
                     `}
                   >
                     {date && (
                       <>
-                        <span className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full
-                          ${selected ? "bg-sky-600 text-white" : today ? "bg-gray-900 text-white" : "text-gray-700"}
+                        <span className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full transition-colors
+                          ${selected ? "bg-red-600 text-white font-bold" : today ? "bg-red-100 text-red-700 font-bold" : "text-gray-700"}
                         `}>
                           {date.getDate()}
                         </span>
@@ -859,7 +859,7 @@ function EventosView({ churchId, onBack }) {
                         {hasEv && (
                           <div className="flex gap-0.5 mt-1">
                             {dayEvents.slice(0, 3).map((e, j) => {
-                              const dotColor = (EVENT_TYPE_CONFIG[e.type] ?? { dot: "bg-sky-500" }).dot;
+                              const dotColor = (EVENT_TYPE_CONFIG[e.type] ?? { dot: "bg-red-500" }).dot;
                               return <span key={j} className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />;
                             })}
                           </div>
