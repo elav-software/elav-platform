@@ -1,0 +1,33 @@
+name: Supabase keepalive
+
+# Evita que Supabase pause los proyectos por inactividad (se pausan a los 7 días)
+# Corre todos los días a las 12:00 UTC y hace una query mínima a cada DB
+
+on:
+  schedule:
+    - cron: "0 12 * * *"   # diario a las 12:00 UTC (09:00 Argentina)
+  workflow_dispatch:         # también se puede ejecutar manualmente desde GitHub
+
+jobs:
+  ping:
+    name: Ping Supabase (prod + dev)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping producción
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.PROD_SUPABASE_URL }}/rest/v1/churches?select=id&limit=1" \
+            -H "apikey: ${{ secrets.PROD_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.PROD_SUPABASE_ANON_KEY }}")
+          echo "Prod Supabase → HTTP $STATUS"
+          [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ] || exit 1
+
+      - name: Ping desarrollo
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.DEV_SUPABASE_URL }}/rest/v1/churches?select=id&limit=1" \
+            -H "apikey: ${{ secrets.DEV_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.DEV_SUPABASE_ANON_KEY }}")
+          echo "Dev Supabase → HTTP $STATUS"
+          [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ] || exit 1
