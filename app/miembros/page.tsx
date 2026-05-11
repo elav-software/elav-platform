@@ -87,6 +87,7 @@ export default function MiembrosPage() {
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [tieneCelula, setTieneCelula] = useState<boolean | null>(null);
+  const [quiereCelula, setQuiereCelula] = useState<boolean | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [countdown, setCountdown] = useState(15);
 
@@ -230,6 +231,7 @@ export default function MiembrosPage() {
       hijos: form.hijos || null,
       rol: "Miembro",
       lider_id: tieneCelula ? form.lider_id : null,
+      grupo_celula: (!tieneCelula && quiereCelula === true) ? "QUIERE CÉLULA" : null,
       foto_url: fotoUrl || null,
       area_servicio_actual: form.area_servicio_actual.length > 0 ? form.area_servicio_actual.join(", ") : null,
       ...(churchId ? { church_id: churchId } : {}),
@@ -480,7 +482,7 @@ export default function MiembrosPage() {
               </button>
               <button
                 type="button"
-                onClick={() => { setTieneCelula(false); setForm(f => ({ ...f, lider_id: "" })); }}
+                onClick={() => { setTieneCelula(false); setForm(f => ({ ...f, lider_id: "" })); setQuiereCelula(null); }}
                 className={`flex-1 py-3 rounded-lg border-2 font-semibold text-sm transition-all ${
                   tieneCelula === false
                     ? "bg-slate-700 text-white border-slate-700 shadow-md"
@@ -490,6 +492,36 @@ export default function MiembrosPage() {
                 No, no tengo célula
               </button>
             </div>
+
+            {tieneCelula === false && (
+              <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm font-semibold text-amber-800 mb-3">¿Querés que te contactemos para asignarte a una célula?</p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuiereCelula(true)}
+                    className={`flex-1 py-2 rounded-lg border-2 font-semibold text-sm transition-all ${
+                      quiereCelula === true
+                        ? "bg-amber-500 text-white border-amber-500 shadow-md"
+                        : "bg-white text-slate-600 border-slate-300 hover:border-amber-400"
+                    }`}
+                  >
+                    Sí, me interesa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuiereCelula(false)}
+                    className={`flex-1 py-2 rounded-lg border-2 font-semibold text-sm transition-all ${
+                      quiereCelula === false
+                        ? "bg-slate-600 text-white border-slate-600 shadow-md"
+                        : "bg-white text-slate-600 border-slate-300 hover:border-slate-500"
+                    }`}
+                  >
+                    No, por ahora no
+                  </button>
+                </div>
+              </div>
+            )}
 
             {tieneCelula === true && (
               <>

@@ -368,6 +368,19 @@ export default function LeaderApprovals() {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                 </div>
               </div>
+              <div className="flex justify-end -mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cap = s => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+                    setEditingLeader(p => ({ ...p, nombre: cap(p.nombre), apellido: cap(p.apellido) }));
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                  title="Convertir a mayúsculas/minúsculas correctas (Title Case)"
+                >
+                  Aa Corregir mayúsculas
+                </button>
+              </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Email (se usará para la invitación al portal)</label>
                 <input type="email" value={editingLeader.email} onChange={e => setEditingLeader(p => ({...p, email: e.target.value}))}
@@ -510,19 +523,19 @@ export default function LeaderApprovals() {
                 <div className="flex-1">
                   {/* Leader Info */}
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200">
-                      {leader.foto_url ? (
-                        <img 
-                          src={leader.foto_url} 
+                    <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200 relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl">
+                        {leader.nombre?.[0]}{leader.apellido?.[0]}
+                      </div>
+                      {leader.foto_url && (
+                        <img
+                          src={leader.foto_url}
                           alt={`${leader.nombre} ${leader.apellido}`}
-                          className="w-full h-full object-cover cursor-zoom-in"
+                          className="absolute inset-0 w-full h-full object-cover cursor-zoom-in"
                           onClick={() => setLightboxUrl(leader.foto_url)}
                           title="Ver foto"
+                          onError={e => { e.currentTarget.style.display = 'none'; }}
                         />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl">
-                          {leader.nombre?.[0]}{leader.apellido?.[0]}
-                        </div>
                       )}
                     </div>
                     <div>
