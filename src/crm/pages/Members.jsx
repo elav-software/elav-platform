@@ -612,9 +612,14 @@ export default function Members() {
                   </div>
                 ) : null; })()}
                 {/* Tags de célula y área */}
-                {((!m.small_group || !m.small_group.trim()) && m.member_status === "Member" && !m.lider_id || m.current_service_area) && (
+                {(((!m.small_group?.trim() || m.small_group === "QUIERE CÉLULA") && m.member_status === "Member" && !m.lider_id) || m.current_service_area) && (
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {(!m.small_group || !m.small_group.trim()) && m.member_status === "Member" && !m.lider_id && (
+                    {m.small_group === "QUIERE CÉLULA" && m.member_status === "Member" && !m.lider_id && (
+                      <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-semibold border border-amber-300">
+                        Sin célula · contactar
+                      </span>
+                    )}
+                    {!m.small_group?.trim() && m.member_status === "Member" && !m.lider_id && (
                       <span className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded-full text-[10px] font-semibold border border-orange-200">
                         Sin célula
                       </span>

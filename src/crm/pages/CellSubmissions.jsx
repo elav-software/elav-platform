@@ -97,6 +97,23 @@ export default function CellSubmissions() {
     setSelected(null);
   };
 
+  const markAllReviewed = async () => {
+    const toReview = reports.filter(r => r.status === "submitted" && !r._fromCrm);
+    if (toReview.length === 0) {
+      toast("No hay reportes nuevos pendientes de revisión");
+      return;
+    }
+    const ids = toReview.map(r => r.id);
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("leader_cell_submissions")
+      .update({ status: "reviewed", reviewed_at: now })
+      .in("id", ids);
+    if (error) { toast.error("Error: " + error.message); return; }
+    toast.success(`${ids.length} reporte(s) marcados como revisados`);
+    setReports(prev => prev.map(r => ids.includes(r.id) ? { ...r, status: "reviewed" } : r));
+  };
+
   const markReviewed = async (id) => {
     const { error } = await supabase
       .from("leader_cell_submissions")
@@ -149,7 +166,7 @@ export default function CellSubmissions() {
         {/* Lista */}
         <div className="flex-1 bg-white rounded-2xl border border-slate-200 overflow-hidden">
           {/* Filtros */}
-          <div className="flex gap-2 p-4 border-b border-slate-100">
+          <div className="flex gap-2 p-4 border-b border-slate-100 items-center">
             {["all", "submitted", "reviewed", "archived"].map(f => (
               <button
                 key={f}
@@ -161,6 +178,17 @@ export default function CellSubmissions() {
                 {f === "all" ? "Todos" : STATUS_LABEL[f]}
               </button>
             ))}
+            {pending > 0 && (
+              <div className="flex-1 flex justify-end">
+                <button
+                  onClick={markAllReviewed}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-1.5"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Revisar Todo ({pending})
+                </button>
+              </div>
+            )}
           </div>
 
           {loading ? (

@@ -114,6 +114,10 @@ export default function Home() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => setForm({ ...form, [field]: e.target.value });
 
+  const handleNameChange = (field: "nombre" | "apellido") => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => setForm(prev => ({ ...prev, [field]: e.target.value.replace(/\d/g, '') }));
+
   const handleCheckbox = (field: "area_servicio_actual" | "disponibilidad_horaria", value: string) => {
     setForm(prev => {
       const currentArray = prev[field];
@@ -139,6 +143,10 @@ export default function Home() {
   const validate = () => {
     if (!form.nombre || !form.apellido) {
       toast.error("Nombre y apellido son obligatorios");
+      return false;
+    }
+    if (/\d/.test(form.nombre) || /\d/.test(form.apellido)) {
+      toast.error("El nombre y apellido no pueden contener números");
       return false;
     }
     if (!form.email) {
@@ -400,11 +408,11 @@ export default function Home() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-2">
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Nombre *</label>
-                      <input className={inputClasses} value={form.nombre} onChange={set("nombre")} placeholder="Tu nombre" />
+                      <input className={inputClasses} value={form.nombre} onChange={handleNameChange("nombre")} placeholder="Tu nombre" />
                     </div>
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Apellido *</label>
-                      <input className={inputClasses} value={form.apellido} onChange={set("apellido")} placeholder="Tu apellido" />
+                      <input className={inputClasses} value={form.apellido} onChange={handleNameChange("apellido")} placeholder="Tu apellido" />
                     </div>
                     <div className={fieldGroupClasses}>
                       <label className={labelClasses}>Fecha de Nacimiento</label>
