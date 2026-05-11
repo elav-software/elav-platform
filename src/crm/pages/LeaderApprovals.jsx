@@ -31,6 +31,7 @@ export default function LeaderApprovals() {
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [editingLeader, setEditingLeader] = useState(null); // { id, nombre, apellido, email, telefono }
   const [editSaving, setEditSaving] = useState(false);
+  const [fixingCase, setFixingCase] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -311,6 +312,49 @@ export default function LeaderApprovals() {
     }
   };
 
+  const handleFixAllNames = async () => {
+    if (!confirm('¿Aplicar Title Case a todos los líderes? (Ej: "MARIA GOMEZ" → "Maria Gomez"). Esta acción modifica la base de datos.')) return;
+    setFixingCase(true);
+    try {
+      const churchId = await getMyChurchId();
+      const cap = s => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+
+      const { data: all, error: fetchError } = await supabase
+        .from('personas')
+        .select('id, nombre, apellido')
+        .eq('church_id', churchId)
+        .eq('rol', 'Líder');
+      if (fetchError) throw fetchError;
+
+      const toFix = (all || []).filter(l =>
+        (l.nombre && cap(l.nombre) !== l.nombre) ||
+        (l.apellido && cap(l.apellido) !== l.apellido)
+      );
+
+      if (toFix.length === 0) {
+        toast.success('Todos los nombres ya tienen el formato correcto');
+        return;
+      }
+
+      let updated = 0;
+      for (const l of toFix) {
+        const { error } = await supabase
+          .from('personas')
+          .update({ nombre: cap(l.nombre), apellido: cap(l.apellido) })
+          .eq('id', l.id)
+          .eq('church_id', churchId);
+        if (!error) updated++;
+      }
+      toast.success(`${updated} de ${toFix.length} nombre(s) corregido(s)`);
+      loadLeaders();
+    } catch (err) {
+      console.error(err);
+      toast.error('Error: ' + err.message);
+    } finally {
+      setFixingCase(false);
+    }
+  };
+
   const handleReject = async (leaderId, leaderName) => {
     if (!confirm(`¿Estás seguro de rechazar a ${leaderName}?`)) return;
     try {
@@ -433,6 +477,19 @@ export default function LeaderApprovals() {
             Aprobación de Líderes
           </h1>
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleFixAllNames}
+              disabled={fixingCase}
+              className="px-3 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+              title="Aplica Title Case a nombre y apellido de todos los líderes"
+            >
+              {fixingCase ? (
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="font-bold">Aa</span>
+              )}
+              Corregir mayúsculas
+            </button>
             {pendingLeaders.length > 0 && (
               <span className="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
