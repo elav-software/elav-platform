@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
 import { getCurrentChurchId, checkIsSuperadmin } from "@connect/api/apiClient";
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   FileText,
   Video,
   Link as LinkIcon,
-  Download,
+  ExternalLink,
   Eye,
   Search
 } from "lucide-react";
@@ -210,13 +210,13 @@ export default function PortalMateriales() {
                         onClick={async () => {
                           const { data } = await supabase.storage
                             .from('materiales')
-                            .createSignedUrl(material.file_path, 60 * 60); // 1h
+                            .createSignedUrl(material.file_path, 60 * 60);
                           if (data?.signedUrl) window.open(data.signedUrl, '_blank');
                         }}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
                       >
-                        <Download className="w-4 h-4" />
-                        Descargar
+                        <ExternalLink className="w-4 h-4" />
+                        Abrir
                       </button>
                     ) : (
                       <a
@@ -225,9 +225,9 @@ export default function PortalMateriales() {
                         rel="noopener noreferrer"
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
                       >
-                        <Eye className="w-4 h-4" />
-                      Ver
-                    </a>
+                        <ExternalLink className="w-4 h-4" />
+                        Abrir
+                      </a>
                     )}
                   </div>
                 </div>
