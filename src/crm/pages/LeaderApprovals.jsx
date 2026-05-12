@@ -317,7 +317,7 @@ export default function LeaderApprovals() {
     setFixingCase(true);
     try {
       const churchId = await getMyChurchId();
-      const cap = s => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+      const cap = s => s ? s.trim().toLowerCase().replace(/(^|\s)([^\s])/g, (_, sp, ch) => sp + ch.toUpperCase()) : s;
 
       const { data: all, error: fetchError } = await supabase
         .from('personas')
@@ -416,7 +416,7 @@ export default function LeaderApprovals() {
                 <button
                   type="button"
                   onClick={() => {
-                    const cap = s => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+                    const cap = s => s ? s.trim().toLowerCase().replace(/(^|\s)([^\s])/g, (_, sp, ch) => sp + ch.toUpperCase()) : s;
                     setEditingLeader(p => ({ ...p, nombre: cap(p.nombre), apellido: cap(p.apellido) }));
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
