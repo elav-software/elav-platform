@@ -215,14 +215,7 @@ export default function Home() {
           .ilike("apellido", form.apellido.trim())
           .limit(5);
         if (existing && existing.length > 0) {
-          // Sin DOB del usuario: no podemos distinguir → bloquear
-          if (!form.fecha_nacimiento) {
-            toast.error("Ya existe alguien con ese nombre. Completá tu fecha de nacimiento para verificar que no sea un duplicado.");
-            setLoading(false);
-            return;
-          }
-          // Con DOB: bloquear solo si algún registro coincide en DOB
-          // o si algún registro existente no tiene DOB (no podemos distinguirlos)
+          // Bloquear solo si algún registro coincide en DOB, o si el existente no tiene DOB
           const isDuplicate = existing.some(
             e => e.fecha_nacimiento === form.fecha_nacimiento || !e.fecha_nacimiento
           );
