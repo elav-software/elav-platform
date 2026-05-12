@@ -79,6 +79,29 @@ const INITIAL_FORM: FormData = {
 
 const STEPS = ["Datos Personales", "Iglesia y Líder", "Familia"];
 
+function resizeImage(file: File, maxPx = 1200, quality = 0.85): Promise<File> {
+  return new Promise(resolve => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const { width, height } = img;
+      if (width <= maxPx && height <= maxPx) { resolve(file); return; }
+      const ratio = Math.min(maxPx / width, maxPx / height);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(width  * ratio);
+      canvas.height = Math.round(height * ratio);
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        blob => resolve(blob ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }) : file),
+        'image/jpeg', quality
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
+
 export default function MiembrosPage() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
@@ -91,15 +114,16 @@ export default function MiembrosPage() {
   const [submitted, setSubmitted] = useState(false);
   const [countdown, setCountdown] = useState(15);
 
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       toast.error("La foto no puede superar 5MB");
       return;
     }
-    setFotoFile(file);
-    setFotoPreview(URL.createObjectURL(file));
+    const resized = await resizeImage(file);
+    setFotoFile(resized);
+    setFotoPreview(URL.createObjectURL(resized));
   };
 
   const handleCheckboxArea = (value: string) => {
