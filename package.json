@@ -76,6 +76,7 @@
     "autoprefixer": "^10.5.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "heic-convert": "^2.1.0",
     "postcss": "^8.5.13",
     "tailwindcss": "^4.2.4",
     "tailwindcss-animate": "^1.0.7",
