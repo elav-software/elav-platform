@@ -215,12 +215,18 @@ export default function Home() {
           .ilike("apellido", form.apellido.trim())
           .limit(5);
         if (existing && existing.length > 0) {
-          // Si hay fecha de nacimiento en ambos y coincide → duplicado seguro
-          // Si no hay DOB o no coincide → igual bloqueamos por nombre+apellido
-          const dobMatch = form.fecha_nacimiento
-            ? existing.some(e => e.fecha_nacimiento === form.fecha_nacimiento)
-            : false;
-          if (!form.fecha_nacimiento || dobMatch || existing.length >= 1) {
+          // Sin DOB del usuario: no podemos distinguir → bloquear
+          if (!form.fecha_nacimiento) {
+            toast.error("Ya existe alguien con ese nombre. Completá tu fecha de nacimiento para verificar que no sea un duplicado.");
+            setLoading(false);
+            return;
+          }
+          // Con DOB: bloquear solo si algún registro coincide en DOB
+          // o si algún registro existente no tiene DOB (no podemos distinguirlos)
+          const isDuplicate = existing.some(
+            e => e.fecha_nacimiento === form.fecha_nacimiento || !e.fecha_nacimiento
+          );
+          if (isDuplicate) {
             toast.error("Ya existe un registro con ese nombre y apellido. Si necesitás actualizar tus datos, contactate con el pastor.");
             setLoading(false);
             return;
