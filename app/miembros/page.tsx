@@ -111,6 +111,10 @@ export default function MiembrosPage() {
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [tieneCelula, setTieneCelula] = useState<boolean | null>(null);
   const [quiereCelula, setQuiereCelula] = useState<boolean | null>(null);
+  const [liderNoEnLista, setLiderNoEnLista] = useState(false);
+  const [liderManualNombre, setLiderManualNombre] = useState("");
+  const [liderManualApellido, setLiderManualApellido] = useState("");
+  const [liderManualTelefono, setLiderManualTelefono] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [countdown, setCountdown] = useState(15);
 
@@ -178,8 +182,13 @@ export default function MiembrosPage() {
       setStep(1);
       return false;
     }
-    if (tieneCelula && !form.lider_id) {
-      toast.error("Seleccioná tu líder");
+    if (tieneCelula && !form.lider_id && !liderNoEnLista) {
+      toast.error("Seleccioná tu líder o indicá que no está en la lista");
+      setStep(1);
+      return false;
+    }
+    if (tieneCelula && liderNoEnLista && (!liderManualNombre.trim() || !liderManualApellido.trim())) {
+      toast.error("Ingresá el nombre y apellido de tu líder");
       setStep(1);
       return false;
     }
@@ -219,21 +228,21 @@ export default function MiembrosPage() {
       }
     }
 
-    // Subir foto
+    // Subir foto via API route (usa service_role, bypassa RLS de storage)
     let fotoUrl = "";
-    if (fotoFile) {
-      const ext = fotoFile.name.split(".").pop();
-      const path = `${churchId ?? "public"}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("leader-photos")
-        .upload(path, fotoFile, { upsert: true });
-      if (uploadError) {
-        toast.error("Error al subir la foto");
+    if (fotoFile && churchId) {
+      const fd = new FormData();
+      fd.append("file", fotoFile);
+      fd.append("churchId", churchId);
+      const res = await fetch("/api/upload-leader-photo", { method: "POST", body: fd });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: "Error desconocido" }));
+        toast.error(error ?? "Error al subir la foto");
         setLoading(false);
         return;
       }
-      const { data: { publicUrl } } = supabase.storage.from("leader-photos").getPublicUrl(path);
-      fotoUrl = publicUrl;
+      const { url } = await res.json();
+      fotoUrl = url;
     }
 
     const cap = (s: string) => s ? s.trim().toLowerCase().replace(/(^|\s)([^\s])/g, (_, sp, ch) => sp + ch.toUpperCase()) : s;
@@ -254,8 +263,12 @@ export default function MiembrosPage() {
       conyuge: form.conyuge || null,
       hijos: form.hijos || null,
       rol: "Miembro",
-      lider_id: tieneCelula ? form.lider_id : null,
-      grupo_celula: (!tieneCelula && quiereCelula === true) ? "QUIERE CÉLULA" : null,
+      lider_id: (tieneCelula && !liderNoEnLista) ? form.lider_id : null,
+      grupo_celula: (!tieneCelula && quiereCelula === true)
+        ? "QUIERE CÉLULA"
+        : (tieneCelula && liderNoEnLista)
+        ? `LIDER_NC:${cap(liderManualNombre)}|${cap(liderManualApellido)}|${liderManualTelefono.trim()}`
+        : null,
       foto_url: fotoUrl || null,
       area_servicio_actual: form.area_servicio_actual.length > 0 ? form.area_servicio_actual.join(", ") : null,
       ...(churchId ? { church_id: churchId } : {}),
@@ -506,7 +519,7 @@ export default function MiembrosPage() {
               </button>
               <button
                 type="button"
-                onClick={() => { setTieneCelula(false); setForm(f => ({ ...f, lider_id: "" })); setQuiereCelula(null); }}
+                onClick={() => { setTieneCelula(false); setForm(f => ({ ...f, lider_id: "" })); setQuiereCelula(null); setLiderNoEnLista(false); setLiderManualNombre(""); setLiderManualApellido(""); setLiderManualTelefono(""); }}
                 className={`flex-1 py-3 rounded-lg border-2 font-semibold text-sm transition-all ${
                   tieneCelula === false
                     ? "bg-slate-700 text-white border-slate-700 shadow-md"
@@ -550,20 +563,70 @@ export default function MiembrosPage() {
             {tieneCelula === true && (
               <>
                 {sectionTitle("Tu Líder *")}
-                <div className={fieldGroupClasses}>
-                  <label className={labelClasses}>Seleccioná tu líder</label>
-                  <select className={inputClasses} value={form.lider_id} onChange={set("lider_id")}>
-                    <option value="">Buscar en la lista...</option>
-                    {lideres.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.apellido}, {l.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  {lideres.length === 0 && (
-                    <p className="text-sm text-slate-500 mt-2 italic">Cargando líderes disponibles...</p>
-                  )}
-                </div>
+                {!liderNoEnLista ? (
+                  <div className={fieldGroupClasses}>
+                    <label className={labelClasses}>Seleccioná tu líder</label>
+                    <select className={inputClasses} value={form.lider_id} onChange={set("lider_id")}>
+                      <option value="">Buscar en la lista...</option>
+                      {lideres.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.apellido}, {l.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    {lideres.length === 0 && (
+                      <p className="text-sm text-slate-500 mt-2 italic">Cargando líderes disponibles...</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setLiderNoEnLista(true); setForm(f => ({ ...f, lider_id: "" })); }}
+                      className="mt-2 text-sm text-blue-600 hover:text-blue-800 hover:underline text-left"
+                    >
+                      Mi líder no está en la lista →
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                    <p className="text-sm font-semibold text-blue-800 mb-3">Ingresá el nombre de tu líder</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className={fieldGroupClasses} style={{ marginBottom: 0 }}>
+                        <label className={labelClasses}>Nombre *</label>
+                        <input
+                          className={inputClasses}
+                          value={liderManualNombre}
+                          onChange={e => setLiderManualNombre(e.target.value)}
+                          placeholder="Nombre del líder"
+                        />
+                      </div>
+                      <div className={fieldGroupClasses} style={{ marginBottom: 0 }}>
+                        <label className={labelClasses}>Apellido *</label>
+                        <input
+                          className={inputClasses}
+                          value={liderManualApellido}
+                          onChange={e => setLiderManualApellido(e.target.value)}
+                          placeholder="Apellido del líder"
+                        />
+                      </div>
+                      <div className={`${fieldGroupClasses} md:col-span-2`} style={{ marginBottom: 0 }}>
+                        <label className={labelClasses}>Teléfono del líder</label>
+                        <input
+                          type="tel"
+                          className={inputClasses}
+                          value={liderManualTelefono}
+                          onChange={e => setLiderManualTelefono(e.target.value)}
+                          placeholder="Ej: 1123456789"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setLiderNoEnLista(false); setLiderManualNombre(""); setLiderManualApellido(""); setLiderManualTelefono(""); }}
+                      className="mt-3 text-xs text-slate-500 hover:text-slate-700 hover:underline"
+                    >
+                      ← Buscar en la lista
+                    </button>
+                  </div>
+                )}
               </>
             )}
 

@@ -32,6 +32,10 @@ export default function LeaderApprovals() {
   const [editingLeader, setEditingLeader] = useState(null); // { id, nombre, apellido, email, telefono }
   const [editSaving, setEditSaving] = useState(false);
   const [fixingCase, setFixingCase] = useState(false);
+  const [sinCargarMembers, setSinCargarMembers] = useState([]);
+  const [altaLiderMember, setAltaLiderMember] = useState(null);
+  const [altaLiderForm, setAltaLiderForm] = useState({ nombre: '', apellido: '', email: '', telefono: '' });
+  const [savingAlta, setSavingAlta] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -112,9 +116,19 @@ export default function LeaderApprovals() {
         .order('fecha_aprobacion', { ascending: false })
         .limit(10);
 
+      // Miembros cuyo líder no estaba cargado al registrarse
+      const { data: sinCargar } = await supabase
+        .from('personas')
+        .select('*')
+        .eq('church_id', churchId)
+        .eq('rol', 'Miembro')
+        .like('grupo_celula', 'LIDER_NC:%')
+        .order('created_at', { ascending: false });
+
       setPendingLeaders(pending || []);
       setApprovedLeaders(approved || []);
       setRejectedLeaders(rejected || []);
+      setSinCargarMembers(sinCargar || []);
     } catch (err) {
       console.error("Error cargando líderes:", err);
       toast.error("Error al cargar líderes");
@@ -355,6 +369,53 @@ export default function LeaderApprovals() {
     }
   };
 
+  const handleDarDeAlta = async () => {
+    if (!altaLiderMember) return;
+    setSavingAlta(true);
+    try {
+      const churchId = await getMyChurchId();
+      const cap = s => s ? s.trim().toLowerCase().replace(/(^|\s)([^\s])/g, (_, sp, ch) => sp + ch.toUpperCase()) : s;
+
+      const { data: newLeader, error: insertError } = await supabase
+        .from('personas')
+        .insert({
+          church_id: churchId,
+          nombre: cap(altaLiderForm.nombre),
+          apellido: cap(altaLiderForm.apellido),
+          email: altaLiderForm.email.trim() || null,
+          telefono: altaLiderForm.telefono.trim() || null,
+          rol: 'Líder',
+          estado_aprobacion: 'pendiente',
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      await supabase
+        .from('personas')
+        .update({ lider_id: newLeader.id, grupo_celula: null })
+        .eq('id', altaLiderMember.id)
+        .eq('church_id', churchId);
+
+      toast.success(`✅ Líder ${cap(altaLiderForm.nombre)} ${cap(altaLiderForm.apellido)} dado de alta — pendiente de aprobación`);
+      setAltaLiderMember(null);
+      loadLeaders();
+    } catch (err) {
+      console.error(err);
+      toast.error('Error: ' + err.message);
+    } finally {
+      setSavingAlta(false);
+    }
+  };
+
+  const openAltaModal = (member) => {
+    const raw = (member.grupo_celula || '').replace('LIDER_NC:', '');
+    const [nombre = '', apellido = '', telefono = ''] = raw.split('|');
+    setAltaLiderForm({ nombre, apellido, email: '', telefono });
+    setAltaLiderMember(member);
+  };
+
   const handleReject = async (leaderId, leaderName) => {
     if (!confirm(`¿Estás seguro de rechazar a ${leaderName}?`)) return;
     try {
@@ -444,6 +505,56 @@ export default function LeaderApprovals() {
               <button onClick={handleEditSave} disabled={editSaving}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
                 {editSaving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Dar de alta líder no cargado */}
+      {altaLiderMember && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Dar de alta como líder</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Mencionado por <span className="font-medium text-gray-800">{altaLiderMember.nombre} {altaLiderMember.apellido}</span>
+            </p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+                  <input value={altaLiderForm.nombre} onChange={e => setAltaLiderForm(p => ({...p, nombre: e.target.value}))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Apellido *</label>
+                  <input value={altaLiderForm.apellido} onChange={e => setAltaLiderForm(p => ({...p, apellido: e.target.value}))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                <input type="email" value={altaLiderForm.email} onChange={e => setAltaLiderForm(p => ({...p, email: e.target.value}))}
+                  placeholder="Para invitarlo al portal después"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
+                <input value={altaLiderForm.telefono} onChange={e => setAltaLiderForm(p => ({...p, telefono: e.target.value}))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                El líder quedará en estado <strong>pendiente</strong> y aparecerá en la pestaña de Aprobaciones para que lo revises y apruebes.
+              </p>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setAltaLiderMember(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button onClick={handleDarDeAlta} disabled={savingAlta || !altaLiderForm.nombre.trim() || !altaLiderForm.apellido.trim()}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-semibold hover:bg-amber-700 disabled:opacity-60">
+                {savingAlta ? 'Guardando...' : 'Dar de alta'}
               </button>
             </div>
           </div>
@@ -552,10 +663,86 @@ export default function LeaderApprovals() {
           <XCircle className="w-4 h-4" />
           Rechazados ({rejectedLeaders.length})
         </button>
+        <button
+          onClick={() => setFilter('sin_cargar')}
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+            filter === 'sin_cargar'
+              ? 'bg-amber-600 text-white'
+              : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <AlertCircle className="w-4 h-4" />
+          Líder no cargado ({sinCargarMembers.length})
+        </button>
       </div>
 
+      {/* Tab: Líder no cargado */}
+      {filter === 'sin_cargar' && (
+        sinCargarMembers.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Sin novedades</h3>
+            <p className="text-gray-600">Ningún miembro indicó que su líder no estaba en la lista.</p>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {sinCargarMembers.map(member => {
+              const raw = (member.grupo_celula || '').replace('LIDER_NC:', '');
+              const [lNombre = '', lApellido = '', lTelefono = ''] = raw.split('|');
+              return (
+                <div key={member.id} className="bg-white rounded-xl border border-amber-200 p-5 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-amber-200 relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white font-bold text-lg">
+                          {member.nombre?.[0]}{member.apellido?.[0]}
+                        </div>
+                        {member.foto_url && (
+                          <img src={member.foto_url} alt="" className="absolute inset-0 w-full h-full object-cover"
+                            onError={e => { e.currentTarget.style.display = 'none'; }} />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{member.nombre} {member.apellido}</p>
+                        <div className="flex items-center gap-3 text-sm text-gray-500 mt-0.5">
+                          {member.telefono && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{member.telefono}</span>}
+                          {member.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{member.email}</span>}
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full">
+                            <User className="w-3 h-3 text-amber-600" />
+                            <span className="text-xs font-medium text-amber-800">
+                              Líder: {lNombre} {lApellido}
+                            </span>
+                          </div>
+                          {lTelefono && (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full">
+                              <Phone className="w-3 h-3 text-amber-600" />
+                              <span className="text-xs font-medium text-amber-800">{lTelefono}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openAltaModal(member)}
+                      className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-semibold flex-shrink-0"
+                    >
+                      Dar de alta como líder
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      )}
+
       {/* Leaders List */}
-      {displayLeaders.length === 0 ? (
+      {filter !== 'sin_cargar' && (
+        displayLeaders.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <User className="w-8 h-8 text-gray-400" />
@@ -731,6 +918,7 @@ export default function LeaderApprovals() {
             </div>
           ))}
         </div>
+      )
       )}
     </div>
   );

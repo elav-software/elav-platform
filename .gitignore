@@ -41,8 +41,15 @@ yarn-error.log*
 Documentacion/
 supabase/
 
+# scripts de uso único / administración local
+scripts/
+
 # notas locales
 TODO.txt
+TODO_CRITICAL.txt
+SYNC_DEV_MIGRATION.sql
+VERIFY_DEV_SYNC.sql
+# schema.dbml NO está aquí — debe compartirse con el desarrollador
 
 # Claude Code — instrucciones y memoria local, no exponer en el repo
 .claude/
