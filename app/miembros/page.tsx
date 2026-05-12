@@ -212,7 +212,7 @@ export default function MiembrosPage() {
       fotoUrl = publicUrl;
     }
 
-    const cap = (s: string) => s ? s.trim().replace(/\b\w/g, c => c.toUpperCase()) : s;
+    const cap = (s: string) => s ? s.trim().toLowerCase().replace(/(^|\s)([^\s])/g, (_, sp, ch) => sp + ch.toUpperCase()) : s;
 
     const payload = {
       nombre: cap(form.nombre),
