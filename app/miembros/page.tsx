@@ -168,6 +168,11 @@ export default function MiembrosPage() {
       toast.error("Nombre y apellido son obligatorios");
       return false;
     }
+    if (!form.fecha_nacimiento) {
+      toast.error("La fecha de nacimiento es obligatoria");
+      setStep(0);
+      return false;
+    }
     if (!form.telefono) {
       toast.error("Ingresá un teléfono");
       return false;
@@ -214,10 +219,11 @@ export default function MiembrosPage() {
           .ilike("apellido", form.apellido.trim())
           .limit(5);
         if (existing && existing.length > 0) {
-          const dobMatch = form.fecha_nacimiento
-            ? existing.some(e => e.fecha_nacimiento === form.fecha_nacimiento)
-            : false;
-          if (!form.fecha_nacimiento || dobMatch || existing.length >= 1) {
+          // Bloquear solo si algún registro coincide en DOB, o si el existente no tiene DOB
+          const isDuplicate = existing.some(
+            e => e.fecha_nacimiento === form.fecha_nacimiento || !e.fecha_nacimiento
+          );
+          if (isDuplicate) {
             toast.error("Ya existe un registro con ese nombre y apellido. Si necesitás actualizar tus datos, contactate con tu líder.");
             setLoading(false);
             return;
@@ -432,7 +438,7 @@ export default function MiembrosPage() {
                 <input className={inputClasses} value={form.apellido} onChange={set("apellido")} placeholder="Tu apellido" />
               </div>
               <div className={fieldGroupClasses}>
-                <label className={labelClasses}>Fecha de Nacimiento</label>
+                <label className={labelClasses}>Fecha de Nacimiento *</label>
                 <input type="date" className={inputClasses} value={form.fecha_nacimiento} onChange={set("fecha_nacimiento")} />
               </div>
               <div className={fieldGroupClasses}>
