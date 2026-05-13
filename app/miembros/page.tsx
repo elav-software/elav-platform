@@ -163,9 +163,20 @@ export default function MiembrosPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => setForm({ ...form, [field]: e.target.value });
 
+  const handleNameChange = (field: "nombre" | "apellido") => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const cleaned = e.target.value.replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÄËÏÖÜçÇ'\s-]/g, '');
+    setForm(prev => ({ ...prev, [field]: cleaned }));
+  };
+
   const validate = () => {
     if (!form.nombre || !form.apellido) {
       toast.error("Nombre y apellido son obligatorios");
+      return false;
+    }
+    if (/--/.test(form.nombre) || /--/.test(form.apellido)) {
+      toast.error("El nombre y apellido no pueden tener guiones consecutivos");
       return false;
     }
     if (!form.fecha_nacimiento) {
@@ -431,11 +442,11 @@ export default function MiembrosPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className={fieldGroupClasses}>
                 <label className={labelClasses}>Nombre *</label>
-                <input className={inputClasses} value={form.nombre} onChange={set("nombre")} placeholder="Tu nombre" />
+                <input className={inputClasses} value={form.nombre} onChange={handleNameChange("nombre")} placeholder="Tu nombre" />
               </div>
               <div className={fieldGroupClasses}>
                 <label className={labelClasses}>Apellido *</label>
-                <input className={inputClasses} value={form.apellido} onChange={set("apellido")} placeholder="Tu apellido" />
+                <input className={inputClasses} value={form.apellido} onChange={handleNameChange("apellido")} placeholder="Tu apellido" />
               </div>
               <div className={fieldGroupClasses}>
                 <label className={labelClasses}>Fecha de Nacimiento *</label>

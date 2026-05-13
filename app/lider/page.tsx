@@ -139,7 +139,10 @@ export default function Home() {
 
   const handleNameChange = (field: "nombre" | "apellido") => (
     e: React.ChangeEvent<HTMLInputElement>
-  ) => setForm(prev => ({ ...prev, [field]: e.target.value.replace(/\d/g, '') }));
+  ) => {
+    const cleaned = e.target.value.replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÄËÏÖÜçÇ'\s-]/g, '');
+    setForm(prev => ({ ...prev, [field]: cleaned }));
+  };
 
   const handleCheckbox = (field: "area_servicio_actual" | "disponibilidad_horaria", value: string) => {
     setForm(prev => {
@@ -169,8 +172,8 @@ export default function Home() {
       toast.error("Nombre y apellido son obligatorios");
       return false;
     }
-    if (/\d/.test(form.nombre) || /\d/.test(form.apellido)) {
-      toast.error("El nombre y apellido no pueden contener números");
+    if (/--/.test(form.nombre) || /--/.test(form.apellido)) {
+      toast.error("El nombre y apellido no pueden tener guiones consecutivos");
       return false;
     }
     if (!form.email) {
