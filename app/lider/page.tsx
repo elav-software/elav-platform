@@ -282,7 +282,10 @@ export default function Home() {
       const interval = setInterval(() => {
         secs -= 1;
         setCountdown(secs);
-        if (secs <= 0) clearInterval(interval);
+        if (secs <= 0) {
+          clearInterval(interval);
+          window.location.replace("https://cfccasanova.com/");
+        }
       }, 1000);
     }
   };

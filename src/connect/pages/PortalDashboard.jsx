@@ -86,6 +86,7 @@ function ConsolidacionView({ leader, churchId, onBack }) {
   const [form, setForm] = useState({
     name: '', phone: '', email: '',
     visit_date: new Date().toISOString().slice(0, 10),
+    edad: '', estado_civil: '', barrio: '',
     invited_by: '', notes: ''
   });
   const [saving, setSaving] = useState(false);
@@ -151,13 +152,16 @@ function ConsolidacionView({ leader, churchId, onBack }) {
         whatsapp: null,
         email: form.email || null,
         visit_date: form.visit_date || null,
+        edad: form.edad ? parseInt(form.edad, 10) : null,
+        estado_civil: form.estado_civil || null,
+        barrio: form.barrio || null,
         invited_by: form.invited_by || `${leader.nombre} ${leader.apellido}`.trim(),
         notes: form.notes || null,
         follow_up_status: 'Pending',
         church_id: churchId,
       }]);
       if (error) throw error;
-      setForm({ name: '', phone: '', email: '', visit_date: new Date().toISOString().slice(0, 10), invited_by: '', notes: '' });
+      setForm({ name: '', phone: '', email: '', visit_date: new Date().toISOString().slice(0, 10), edad: '', estado_civil: '', barrio: '', invited_by: '', notes: '' });
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
       await loadRecent();
@@ -235,6 +239,28 @@ function ConsolidacionView({ leader, churchId, onBack }) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input type="email" value={form.email} onChange={setF('email')} placeholder="correo@ejemplo.com"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Edad</label>
+            <input type="number" min="1" max="120" value={form.edad} onChange={setF('edad')} placeholder="Ej: 28"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Estado civil</label>
+            <select value={form.estado_civil} onChange={setF('estado_civil')}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+              <option value="">Sin especificar</option>
+              <option value="Soltero/a">Soltero/a</option>
+              <option value="Casado/a">Casado/a</option>
+              <option value="Divorciado/a">Divorciado/a</option>
+              <option value="Viudo/a">Viudo/a</option>
+              <option value="En pareja">En pareja</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Barrio / Zona</label>
+            <input value={form.barrio} onChange={setF('barrio')} placeholder="Ej: Isidro Casanova"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
           </div>
           <div>
@@ -397,6 +423,7 @@ function IntercesionView({ user, churchId, onBack }) {
                   </button>
                 )}
               </div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Pedido de oración</p>
               <p className="text-sm text-gray-700 leading-relaxed">{p.request}</p>
               {(p.phone || p.email) && (
                 <div className="mt-2 flex flex-wrap gap-2">
