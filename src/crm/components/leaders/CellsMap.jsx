@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MapPin, Clock, Navigation, ExternalLink, Phone, Loader2 } from "lucide-react";
 import { api } from "@crm/api/apiClient";
+import toast from "react-hot-toast";
 import "leaflet/dist/leaflet.css";
 
 const DAY_ES = {
@@ -154,19 +155,30 @@ export default function CellsMap({ leaders, selectedLeader, onSelectLeader, onLe
     if (withoutCoords.length === 0) return;
     setGeocodingAll(true);
     let updated = 0;
+    let failed = 0;
     for (const leader of withoutCoords) {
       try {
-        // Combinar dirección + localidad (district) para mayor precisión
         const fullAddress = [leader.meeting_location, leader.district].filter(Boolean).join(', ');
+        if (!fullAddress.trim()) { failed++; continue; }
         const res = await api.functions.invoke('geocodeAddress', { address: fullAddress });
         if (res?.lat) {
           await api.entities.Leader.update(leader.id, { latitude: res.lat, longitude: res.lng });
           updated++;
+        } else {
+          failed++;
         }
-      } catch (_) { /* continuar con el siguiente */ }
+      } catch (_) { failed++; }
     }
     setGeocodingAll(false);
-    if (updated > 0 && onLeadersUpdated) onLeadersUpdated();
+    if (updated > 0) {
+      toast.success(`${updated} célula${updated !== 1 ? 's' : ''} geocodificada${updated !== 1 ? 's' : ''} correctamente`);
+      if (onLeadersUpdated) onLeadersUpdated();
+    } else {
+      toast.error(`No se pudo geocodificar ninguna dirección. Verificá que las direcciones sean correctas.`);
+    }
+    if (failed > 0 && updated > 0) {
+      toast(`${failed} dirección${failed !== 1 ? 'es' : ''} no se pudo${failed !== 1 ? 'ieron' : ''} geocodificar`, { icon: '⚠️' });
+    }
   };
 
   return (
