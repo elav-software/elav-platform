@@ -28,6 +28,7 @@ export default function LeaderApprovals() {
   const [invitingId, setInvitingId] = useState(null);
   const [invitingAll, setInvitingAll] = useState(false);
   const [invitedIds, setInvitedIds] = useState(new Set());
+  const [resettingId, setResettingId] = useState(null);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [editingLeader, setEditingLeader] = useState(null); // { id, nombre, apellido, email, telefono }
   const [editSaving, setEditSaving] = useState(false);
@@ -298,6 +299,28 @@ export default function LeaderApprovals() {
       toast.error("Error al enviar invitaciones");
     } finally {
       setInvitingAll(false);
+    }
+  };
+
+  const handleResetPassword = async (personaId, email) => {
+    if (!email) { toast.error("Este líder no tiene email registrado"); return; }
+    if (!confirm(`¿Enviar email de reseteo de contraseña a ${email}?`)) return;
+    setResettingId(personaId);
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/crm/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ email, redirectBase: window.location.origin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`🔑 Email de reseteo enviado a ${email}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al enviar reseteo de contraseña");
+    } finally {
+      setResettingId(null);
     }
   };
 
@@ -875,42 +898,45 @@ export default function LeaderApprovals() {
                       </p>
                     )}
                     {filter === 'aprobado' && (
-                      invitedIds.has(leader.id) ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium flex items-center gap-1.5">
-                            <CheckCircle className="w-3 h-3" />
-                            Invitación enviada
-                          </span>
+                      <div className="flex flex-col items-end gap-1">
+                        {invitedIds.has(leader.id) ? (
+                          <>
+                            <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                              <CheckCircle className="w-3 h-3" />
+                              Invitación enviada
+                            </span>
+                            <button
+                              onClick={() => handleInvite(leader.id, leader.email, `${leader.nombre} ${leader.apellido}`)}
+                              disabled={invitingId === leader.id}
+                              className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                            >
+                              Reenviar invitación
+                            </button>
+                          </>
+                        ) : (
                           <button
-                            onClick={() => handleInvite(
-                              leader.id,
-                              leader.email,
-                              `${leader.nombre} ${leader.apellido}`
-                            )}
+                            onClick={() => handleInvite(leader.id, leader.email, `${leader.nombre} ${leader.apellido}`)}
                             disabled={invitingId === leader.id}
-                            className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
                           >
-                            Reenviar
+                            {invitingId === leader.id ? (
+                              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Send className="w-3 h-3" />
+                            )}
+                            Invitar al Portal
                           </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleInvite(
-                            leader.id,
-                            leader.email,
-                            `${leader.nombre} ${leader.apellido}`
-                          )}
-                          disabled={invitingId === leader.id}
-                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
-                        >
-                          {invitingId === leader.id ? (
-                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Send className="w-3 h-3" />
-                          )}
-                          Invitar al Portal
-                        </button>
-                      )
+                        )}
+                        {leader.email && (
+                          <button
+                            onClick={() => handleResetPassword(leader.id, leader.email)}
+                            disabled={resettingId === leader.id}
+                            className="text-xs text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
+                          >
+                            {resettingId === leader.id ? "Enviando..." : "Resetear contraseña"}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
