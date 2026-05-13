@@ -12,6 +12,7 @@ import CellReportForm from "../components/leaders/CellReportForm";
 import CellReportsPanel from "../components/leaders/CellReportsPanel";
 import CellsMap from "../components/leaders/CellsMap";
 import { Users, Map, ChevronRight, UserPlus } from "lucide-react";
+import { supabase } from "@crm/api/supabaseClient";
 
 export default function Leaders() {
   const [leaders, setLeaders] = useState([]);
@@ -40,8 +41,26 @@ export default function Leaders() {
     // Load counts
     const mc = {}, rc = {};
     await Promise.all(data.map(async l => {
-      const members = await api.entities.CellMember.filter({ leader_id: l.id });
-      mc[l.id] = members.length;
+      // CRM cell_members table
+      const crmMembers = await api.entities.CellMember.filter({ leader_id: l.id });
+      const crmNames = new Set(crmMembers.map(m => m.member_name?.toLowerCase().trim()).filter(Boolean));
+
+      // Portal members: personas with lider_id = leader's persona id
+      let portalCount = 0;
+      if (l.member_id) {
+        const { data: personasData } = await supabase
+          .from('personas')
+          .select('id, nombre, apellido')
+          .eq('lider_id', l.member_id)
+          .eq('rol', 'Miembro');
+        // Deduplicate against CRM members by name
+        portalCount = (personasData || []).filter(p => {
+          const name = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase().trim();
+          return !crmNames.has(name);
+        }).length;
+      }
+
+      mc[l.id] = crmMembers.length + portalCount;
       const reports = await api.entities.CellReport.filter({ leader_id: l.id });
       rc[l.id] = reports.length;
     }));

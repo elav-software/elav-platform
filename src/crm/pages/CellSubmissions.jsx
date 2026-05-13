@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@crm/api/supabaseClient";
 import { getMyChurchId } from "@crm/api/apiClient";
-import { FileText, Users, DollarSign, Eye, CheckCircle, Clock, Archive, Trash2 } from "lucide-react";
+import { FileText, Users, DollarSign, Eye, CheckCircle, Clock, Archive, Trash2, UserCheck, UserX } from "lucide-react";
 import toast from "react-hot-toast";
 
 const STATUS_LABEL = { submitted: "Pendiente", reviewed: "Revisado", archived: "Archivado" };
@@ -13,10 +13,11 @@ const STATUS_COLOR = {
 };
 
 export default function CellSubmissions() {
-  const [reports, setReports]     = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [selected, setSelected]   = useState(null);
-  const [filter, setFilter]       = useState("all");
+  const [reports, setReports]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [selected, setSelected]     = useState(null);
+  const [filter, setFilter]         = useState("all");
+  const [attendanceDetail, setAttendanceDetail] = useState(null); // { members: [{name, presente}] }
 
   useEffect(() => { loadReports(); }, []);
 
@@ -95,6 +96,43 @@ export default function CellSubmissions() {
     toast.success("Reporte eliminado");
     setReports(prev => prev.filter(r => r.id !== report.id));
     setSelected(null);
+    setAttendanceDetail(null);
+  };
+
+  const loadAttendanceDetail = async (report) => {
+    setAttendanceDetail(null);
+    if (!report.leader_id || !report.report_date) return;
+    try {
+      // Personas de la célula
+      const { data: members } = await supabase
+        .from('personas')
+        .select('id, nombre, apellido')
+        .eq('lider_id', report.leader_id)
+        .in('rol', ['Miembro', 'Líder']);
+      if (!members?.length) return;
+
+      const ids = members.map(m => m.id);
+      const { data: att } = await supabase
+        .from('attendance')
+        .select('person_id, presente')
+        .in('person_id', ids)
+        .eq('fecha', report.report_date);
+
+      const attMap = {};
+      (att || []).forEach(a => { attMap[a.person_id] = a.presente; });
+
+      // Solo mostrar si hay al menos un registro de asistencia guardado
+      const hasData = (att || []).length > 0;
+      if (!hasData) return;
+
+      setAttendanceDetail(members.map(m => ({
+        id: m.id,
+        name: `${m.nombre} ${m.apellido}`.trim(),
+        presente: attMap[m.id] ?? null, // null = sin dato
+      })));
+    } catch (err) {
+      console.warn('Error cargando asistencia:', err);
+    }
   };
 
   const markAllReviewed = async () => {
@@ -207,7 +245,7 @@ export default function CellSubmissions() {
                 return (
                   <button
                     key={report.id}
-                    onClick={() => setSelected(report)}
+                    onClick={() => { setSelected(report); loadAttendanceDetail(report); }}
                     className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors ${selected?.id === report.id ? "bg-slate-50" : ""}`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -258,6 +296,31 @@ export default function CellSubmissions() {
                 </div>
               ))}
             </div>
+
+            {/* Asistencia individual */}
+            {attendanceDetail && attendanceDetail.length > 0 && (
+              <div>
+                <p className="text-xs text-slate-500 mb-2">Asistencia individual</p>
+                <div className="space-y-1.5">
+                  {attendanceDetail.map(m => (
+                    <div key={m.id} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg ${
+                      m.presente ? 'bg-green-50' : 'bg-rose-50'
+                    }`}>
+                      {m.presente
+                        ? <UserCheck className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        : <UserX className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                      }
+                      <span className={`text-sm font-medium ${m.presente ? 'text-green-800' : 'text-rose-600'}`}>
+                        {m.name}
+                      </span>
+                      <span className="ml-auto text-xs font-semibold">
+                        {m.presente ? '✓' : '✗'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {selected.testimonies && (
               <div>
