@@ -3,6 +3,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@connect/api/supabaseClient";
 
+const REQUIREMENTS = [
+  { label: "Al menos 8 caracteres",    test: (p) => p.length >= 8 },
+  { label: "Al menos una mayúscula",   test: (p) => /[A-Z]/.test(p) },
+  { label: "Al menos una minúscula",   test: (p) => /[a-z]/.test(p) },
+  { label: "Al menos un número",       test: (p) => /[0-9]/.test(p) },
+];
+
 export default function PortalSetPassword() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -64,8 +71,9 @@ export default function PortalSetPassword() {
     e.preventDefault();
     setError("");
 
-    if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres");
+    const unmet = REQUIREMENTS.filter(r => !r.test(password));
+    if (unmet.length > 0) {
+      setError(`La contraseña no cumple: ${unmet.map(r => r.label.toLowerCase()).join(", ")}`);
       return;
     }
     if (password !== confirm) {
@@ -127,6 +135,19 @@ export default function PortalSetPassword() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
                 disabled={loading}
               />
+              {password.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {REQUIREMENTS.map((req) => {
+                    const met = req.test(password);
+                    return (
+                      <li key={req.label} className={`flex items-center gap-2 text-sm transition-colors ${met ? "text-green-600" : "text-gray-400"}`}>
+                        <span className="font-bold">{met ? "✓" : "○"}</span>
+                        <span className={met ? "line-through" : ""}>{req.label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -141,6 +162,11 @@ export default function PortalSetPassword() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
                 disabled={loading}
               />
+              {confirm.length > 0 && (
+                <p className={`mt-1 text-sm ${confirm === password ? "text-green-600" : "text-red-500"}`}>
+                  {confirm === password ? "✓ Las contraseñas coinciden" : "✗ Las contraseñas no coinciden"}
+                </p>
+              )}
             </div>
 
             <button
