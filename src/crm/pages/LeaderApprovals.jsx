@@ -27,7 +27,6 @@ export default function LeaderApprovals() {
   const [currentUser, setCurrentUser] = useState(null);
   const [invitingId, setInvitingId] = useState(null);
   const [invitingAll, setInvitingAll] = useState(false);
-  const [invitedIds, setInvitedIds] = useState(new Set());
   const [resettingId, setResettingId] = useState(null);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [editingLeader, setEditingLeader] = useState(null); // { id, nombre, apellido, email, telefono }
@@ -236,6 +235,12 @@ export default function LeaderApprovals() {
     return session?.access_token;
   };
 
+  const markAsInvited = async (personaId) => {
+    const now = new Date().toISOString();
+    await supabase.from('personas').update({ portal_invitado_at: now }).eq('id', personaId);
+    setApprovedLeaders(prev => prev.map(l => l.id === personaId ? { ...l, portal_invitado_at: now } : l));
+  };
+
   const handleInvite = async (personaId, email, fullName) => {
     if (!email) {
       toast.error("Este líder no tiene email registrado");
@@ -258,7 +263,7 @@ export default function LeaderApprovals() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setInvitedIds(prev => new Set([...prev, personaId]));
+      await markAsInvited(personaId);
       if (data.resent) {
         toast.success(`✉️ Email de acceso reenviado a ${email}`);
       } else {
@@ -292,8 +297,16 @@ export default function LeaderApprovals() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      const newIds = new Set(eligible.map(l => l.id));
-      setInvitedIds(prev => new Set([...prev, ...newIds]));
+      // Marcar como invitados en BD (todos los elegibles — invited + skipped ya estaban registrados)
+      const now = new Date().toISOString();
+      const failedSet = new Set(data.failedEmails || []);
+      const toMark = eligible.filter(l => !failedSet.has(l.email));
+      if (toMark.length > 0) {
+        await supabase.from('personas').update({ portal_invitado_at: now }).in('id', toMark.map(l => l.id));
+        setApprovedLeaders(prev => prev.map(l =>
+          toMark.find(m => m.id === l.id) ? { ...l, portal_invitado_at: now } : l
+        ));
+      }
       const parts = [];
       if (data.invited > 0) parts.push(`${data.invited} enviadas`);
       if (data.skipped > 0) parts.push(`${data.skipped} ya registrados`);
@@ -906,12 +919,15 @@ export default function LeaderApprovals() {
                     )}
                     {filter === 'aprobado' && (
                       <div className="flex flex-col items-end gap-1">
-                        {invitedIds.has(leader.id) ? (
+                        {leader.portal_invitado_at ? (
                           <>
                             <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium flex items-center gap-1.5">
                               <CheckCircle className="w-3 h-3" />
                               Invitación enviada
                             </span>
+                            <p className="text-[10px] text-gray-400">
+                              {new Date(leader.portal_invitado_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </p>
                             <button
                               onClick={() => handleInvite(leader.id, leader.email, `${leader.nombre} ${leader.apellido}`)}
                               disabled={invitingId === leader.id}
