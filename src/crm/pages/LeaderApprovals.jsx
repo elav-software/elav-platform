@@ -105,7 +105,7 @@ export default function LeaderApprovals() {
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'aprobado')
         .order('fecha_aprobacion', { ascending: false })
-        .limit(10);
+        .limit(500);
 
       // Líderes rechazados
       const { data: rejected } = await supabase
@@ -294,7 +294,13 @@ export default function LeaderApprovals() {
       if (!res.ok) throw new Error(data.error);
       const newIds = new Set(eligible.map(l => l.id));
       setInvitedIds(prev => new Set([...prev, ...newIds]));
-      toast.success(`✉️ Invitaciones enviadas: ${data.invited} nuevas, ${data.skipped} ya registrados`);
+      const parts = [];
+      if (data.invited > 0) parts.push(`${data.invited} enviadas`);
+      if (data.skipped > 0) parts.push(`${data.skipped} ya registrados`);
+      toast.success(`✉️ ${parts.join(', ')}`);
+      if (data.failed > 0) {
+        toast.error(`⚠️ ${data.failed} no se pudieron enviar (rate limit de Supabase). Reintentá en unos minutos.`, { duration: 8000 });
+      }
     } catch (err) {
       console.error(err);
       toast.error("Error al enviar invitaciones");
