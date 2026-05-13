@@ -1440,24 +1440,28 @@ export default function PortalDashboard() {
                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center"><Users className="w-6 h-6 text-green-600" /></div>
                 </div>
               </div>
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div><p className="text-sm text-gray-600">Pedidos activos</p><p className="text-3xl font-bold text-gray-900 mt-1">{stats.prayerRequests}</p></div>
-                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center"><Heart className="w-6 h-6 text-red-600" /></div>
-                </div>
-              </div>
-              <div className={`bg-white rounded-xl p-6 shadow-sm border ${pendingWebVisitors > 0 ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Visitantes web</p>
-                    <p className={`text-3xl font-bold mt-1 ${pendingWebVisitors > 0 ? 'text-orange-600' : 'text-gray-900'}`}>{pendingWebVisitors}</p>
-                    {pendingWebVisitors > 0 && <p className="text-xs text-orange-500 mt-0.5">sin contactar</p>}
-                  </div>
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${pendingWebVisitors > 0 ? 'bg-orange-100' : 'bg-orange-50'}`}>
-                    <UserPlus className={`w-6 h-6 ${pendingWebVisitors > 0 ? 'text-orange-600' : 'text-orange-400'}`} />
+              {userPortalAreas.includes('Intercesión') && (
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div><p className="text-sm text-gray-600">Pedidos activos</p><p className="text-3xl font-bold text-gray-900 mt-1">{stats.prayerRequests}</p></div>
+                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center"><Heart className="w-6 h-6 text-red-600" /></div>
                   </div>
                 </div>
-              </div>
+              )}
+              {userPortalAreas.includes('Consolidación') && (
+                <div className={`bg-white rounded-xl p-6 shadow-sm border ${pendingWebVisitors > 0 ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Visitantes web</p>
+                      <p className={`text-3xl font-bold mt-1 ${pendingWebVisitors > 0 ? 'text-orange-600' : 'text-gray-900'}`}>{pendingWebVisitors}</p>
+                      {pendingWebVisitors > 0 && <p className="text-xs text-orange-500 mt-0.5">sin contactar</p>}
+                    </div>
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${pendingWebVisitors > 0 ? 'bg-orange-100' : 'bg-orange-50'}`}>
+                      <UserPlus className={`w-6 h-6 ${pendingWebVisitors > 0 ? 'text-orange-600' : 'text-orange-400'}`} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {leaderMenuItems.map((item) => (
