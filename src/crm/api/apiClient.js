@@ -279,18 +279,36 @@ const functions = {
   async invoke(name, params = {}) {
     if (name === "geocodeAddress") {
       const address = params.address || "";
-      // Agregar contexto de Argentina si no está incluido para mejorar precisión
-      const queryStr = address.toLowerCase().includes("argentina")
-        ? address
-        : `${address}, Buenos Aires, Argentina`;
-      // Usar parámetros estructurados de Nominatim para mejor precisión
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryStr)}&format=json&limit=1&accept-language=es&countrycodes=ar&addressdetails=1`;
-      const res = await fetch(url, {
-        headers: { "User-Agent": "censo-iglesia-crm/1.0" },
-      });
-      const results = await res.json();
-      if (results.length === 0) return null;
-      return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+
+      const nominatim = async (q) => {
+        const query = q.toLowerCase().includes("argentina") ? q : `${q}, Argentina`;
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=es&countrycodes=ar`;
+        const res = await fetch(url, { headers: { "User-Agent": "censo-iglesia-crm/1.0" } });
+        const data = await res.json();
+        return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+      };
+
+      // Intento 1: dirección completa
+      const result = await nominatim(address);
+      if (result) return result;
+
+      // Intento 2: simplificar — quitar códigos postales (B1234), "Provincia de ...", "Argentina"
+      //            y quedar con [calle+número, localidad]
+      const parts = address.split(',').map(p => p.trim()).filter(p =>
+        p &&
+        !/^[A-Z]\d{4}/.test(p) &&            // elimina códigos postales tipo B1765
+        !/^provincia/i.test(p) &&
+        !/^argentina$/i.test(p)
+      );
+      // Deduplicar partes: quitar repetidas (case-insensitive)
+      const seen = new Set();
+      const unique = parts.filter(p => { const k = p.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+      if (unique.length >= 2) {
+        const simplified = `${unique[0]}, ${unique[unique.length - 1]}, Argentina`;
+        await new Promise(r => setTimeout(r, 1100)); // Nominatim rate limit
+        return await nominatim(simplified);
+      }
+      return null;
     }
 
     const { data: { session } } = await supabase.auth.getSession();
