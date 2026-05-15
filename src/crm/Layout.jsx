@@ -238,6 +238,12 @@ export default function Layout({ children, currentPageName }) {
     return () => window.removeEventListener('visitors-seen', handler);
   }, []);
 
+  useEffect(() => {
+    const handler = () => setPendingMembersCount(0);
+    window.addEventListener('members-seen', handler);
+    return () => window.removeEventListener('members-seen', handler);
+  }, []);
+
   // Ctrl+K abre la búsqueda global
   useEffect(() => {
     const onKey = (e) => {

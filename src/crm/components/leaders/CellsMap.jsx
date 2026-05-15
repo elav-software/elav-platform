@@ -168,6 +168,8 @@ export default function CellsMap({ leaders, selectedLeader, onSelectLeader, onLe
           failed++;
         }
       } catch (_) { failed++; }
+      // Nominatim acepta 1 req/seg — esperar entre líderes
+      await new Promise(r => setTimeout(r, 1200));
     }
     setGeocodingAll(false);
     if (updated > 0) {
