@@ -192,7 +192,7 @@ export default function Members() {
     if (data) setLideres(data);
   };
 
-  useEffect(() => { load(); loadLideres(); }, []);
+  useEffect(() => { load(); loadLideres(); window.dispatchEvent(new Event('members-seen')); }, []);
 
   // Leer ?buscar= de la URL (desde búsqueda global Ctrl+K)
   useEffect(() => {
