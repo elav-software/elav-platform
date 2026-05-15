@@ -199,19 +199,25 @@ export default function Donations() {
     return Array.from({ length: 12 }, (_, i) => {
       const d = subMonths(now, 11 - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleString("es-AR", { month: "short", year: "2-digit" });
+      // "may 2026" → legible en gráfico y en CSV
+      const labelCorto = d.toLocaleString("es-AR", { month: "short" }).replace(".", "");
+      const labelCompleto = d.toLocaleString("es-AR", { month: "long", year: "numeric" });
       const ingresos = ledger.filter(e => e.tipo === "Ingreso" && e.fecha?.startsWith(key)).reduce((s, e) => s + e.monto, 0);
       const egresos  = ledger.filter(e => e.tipo === "Egreso"  && e.fecha?.startsWith(key)).reduce((s, e) => s + e.monto, 0);
-      return { key, label, ingresos, egresos, balance: ingresos - egresos };
+      return { key, label: labelCorto, labelCompleto, ingresos, egresos, balance: ingresos - egresos };
     });
   }, [ledger]);
 
   const downloadCSV = () => {
-    const header = "Mes,Ingresos,Egresos,Balance\n";
-    const rows = historialMeses.map(m =>
-      `"${m.label}",${m.ingresos},${m.egresos},${m.balance}`
-    ).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+    // BOM para que Excel abra UTF-8 correctamente
+    const BOM = "﻿";
+    const header = "Mes;Ingresos;Egresos;Balance\n";
+    // Solo exportar meses con movimientos
+    const rows = historialMeses
+      .filter(m => m.ingresos > 0 || m.egresos > 0)
+      .map(m => `"${m.labelCompleto}";${m.ingresos};${m.egresos};${m.balance}`)
+      .join("\n");
+    const blob = new Blob([BOM + header + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `finanzas-${now.getFullYear()}.csv`; a.click();
