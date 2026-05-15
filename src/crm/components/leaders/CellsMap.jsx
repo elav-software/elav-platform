@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { MapPin, Clock, Navigation, ExternalLink, Phone, Loader2 } from "lucide-react";
 import { api } from "@crm/api/apiClient";
 import toast from "react-hot-toast";
+import * as Sentry from "@sentry/nextjs";
 import "leaflet/dist/leaflet.css";
 
 const DAY_ES = {
@@ -167,7 +168,11 @@ export default function CellsMap({ leaders, selectedLeader, onSelectLeader, onLe
         } else {
           failed++;
         }
-      } catch (_) { failed++; }
+      } catch (err) {
+        console.error(`[Geocoding] Error en "${leader.full_name}":`, err);
+        Sentry.captureException(err, { extra: { leader_id: leader.id, address: leader.meeting_location, district: leader.district } });
+        failed++;
+      }
       // Nominatim acepta 1 req/seg — esperar entre líderes
       await new Promise(r => setTimeout(r, 1200));
     }

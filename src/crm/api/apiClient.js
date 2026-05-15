@@ -283,9 +283,20 @@ const functions = {
       const nominatim = async (q) => {
         const query = q.toLowerCase().includes("argentina") ? q : `${q}, Argentina`;
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=es&countrycodes=ar`;
-        const res = await fetch(url, { headers: { "User-Agent": "censo-iglesia-crm/1.0" } });
-        const data = await res.json();
-        return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        try {
+          const res = await fetch(url, { headers: { "User-Agent": "censo-iglesia-crm/1.0" }, signal: controller.signal });
+          if (!res.ok) {
+            console.warn(`[Geocoding] Nominatim HTTP ${res.status} para: "${query}"`);
+            return null;
+          }
+          const data = await res.json();
+          console.log(`[Geocoding] "${query}" →`, data.length > 0 ? `lat=${data[0].lat}, lon=${data[0].lon}` : "sin resultados");
+          return data.length > 0 ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+        } finally {
+          clearTimeout(timeout);
+        }
       };
 
       // Intento 1: dirección completa
