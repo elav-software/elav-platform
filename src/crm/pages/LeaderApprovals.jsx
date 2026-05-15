@@ -87,43 +87,25 @@ export default function LeaderApprovals() {
     try {
       const churchId = await getMyChurchId();
 
-      // Líderes pendientes
-      const { data: pending } = await supabase
-        .from('personas')
-        .select('*')
-        .eq('church_id', churchId)
-        .eq('rol', 'Líder')
-        .eq('estado_aprobacion', 'pendiente')
-        .order('created_at', { ascending: false });
-
-      // Líderes aprobados
-      const { data: approved } = await supabase
-        .from('personas')
-        .select('*')
-        .eq('church_id', churchId)
-        .eq('rol', 'Líder')
-        .eq('estado_aprobacion', 'aprobado')
-        .order('fecha_aprobacion', { ascending: false })
-        .limit(500);
-
-      // Líderes rechazados
-      const { data: rejected } = await supabase
-        .from('personas')
-        .select('*')
-        .eq('church_id', churchId)
-        .eq('rol', 'Líder')
-        .eq('estado_aprobacion', 'rechazado')
-        .order('fecha_aprobacion', { ascending: false })
-        .limit(10);
-
-      // Miembros cuyo líder no estaba cargado al registrarse
-      const { data: sinCargar } = await supabase
-        .from('personas')
-        .select('*')
-        .eq('church_id', churchId)
-        .eq('rol', 'Miembro')
-        .like('grupo_celula', 'LIDER_NC:%')
-        .order('created_at', { ascending: false });
+      const [
+        { data: pending },
+        { data: approved },
+        { data: rejected },
+        { data: sinCargar },
+      ] = await Promise.all([
+        supabase.from('personas').select('*')
+          .eq('church_id', churchId).eq('rol', 'Líder').eq('estado_aprobacion', 'pendiente')
+          .order('created_at', { ascending: false }),
+        supabase.from('personas').select('*')
+          .eq('church_id', churchId).eq('rol', 'Líder').eq('estado_aprobacion', 'aprobado')
+          .order('fecha_aprobacion', { ascending: false }).limit(500),
+        supabase.from('personas').select('*')
+          .eq('church_id', churchId).eq('rol', 'Líder').eq('estado_aprobacion', 'rechazado')
+          .order('fecha_aprobacion', { ascending: false }).limit(10),
+        supabase.from('personas').select('*')
+          .eq('church_id', churchId).eq('rol', 'Miembro').like('grupo_celula', 'LIDER_NC:%')
+          .order('created_at', { ascending: false }),
+      ]);
 
       setPendingLeaders(pending || []);
       setApprovedLeaders(approved || []);
