@@ -1067,6 +1067,7 @@ export default function PortalDashboard() {
     } catch (err) { console.error('Error cargando pedidos activos:', err); }
   };
 
+  // Carga las últimas 5 notificaciones de eventos (leídas + no leídas) con flag isRead
   const loadEventNotifications = async (cid, userId) => {
     try {
       const { data: notifications } = await supabase
@@ -1076,30 +1077,18 @@ export default function PortalDashboard() {
         .eq('target', 'all')
         .or(`church_id.is.null,church_id.eq.${cid}`)
         .order('created_at', { ascending: false })
-        .limit(15);
+        .limit(5);
       if (!notifications?.length) return;
       const { data: reads } = await supabase
         .from('portal_notification_reads')
         .select('notification_id')
         .eq('user_id', userId);
       const readIds = new Set((reads || []).map(r => r.notification_id));
-      setEventNotifications(notifications.filter(n => !readIds.has(n.id)));
+      setEventNotifications(notifications.map(n => ({ ...n, type: 'event', isRead: readIds.has(n.id) })));
     } catch (err) { console.error('Error cargando notificaciones de eventos:', err); }
   };
 
-  const markEventNotificationsRead = async () => {
-    if (!eventNotifications.length) return;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const rows = eventNotifications.map(n => ({ user_id: session.user.id, notification_id: n.id }));
-      await supabase
-        .from('portal_notification_reads')
-        .upsert(rows, { onConflict: 'user_id,notification_id', ignoreDuplicates: true });
-      setEventNotifications([]);
-    } catch (err) { console.error('Error marcando notificaciones leídas:', err); }
-  };
-
+  // Carga las últimas 5 notificaciones de materiales de área (leídas + no leídas)
   const loadAreaMaterialNotifications = async (cid, userId, areas) => {
     if (!areas?.length) return;
     try {
@@ -1110,28 +1099,28 @@ export default function PortalDashboard() {
         .eq('church_id', cid)
         .in('target', areas)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(5);
       if (!notifications?.length) return;
       const { data: reads } = await supabase
         .from('portal_notification_reads')
         .select('notification_id')
         .eq('user_id', userId);
       const readIds = new Set((reads || []).map(r => r.notification_id));
-      setMaterialNotifications(notifications.filter(n => !readIds.has(n.id)));
+      setMaterialNotifications(notifications.map(n => ({ ...n, type: 'material', isRead: readIds.has(n.id) })));
     } catch (err) { console.error('Error cargando notificaciones de materiales:', err); }
   };
 
-  const markMaterialNotificationsRead = async () => {
-    if (!materialNotifications.length) return;
+  // Marca una sola notificación como leída al hacer clic
+  const markOneRead = async (notifId) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const rows = materialNotifications.map(n => ({ user_id: session.user.id, notification_id: n.id }));
-      await supabase
-        .from('portal_notification_reads')
-        .upsert(rows, { onConflict: 'user_id,notification_id', ignoreDuplicates: true });
-      setMaterialNotifications([]);
-    } catch (err) { console.error('Error marcando notif materiales leídas:', err); }
+      await supabase.from('portal_notification_reads')
+        .upsert([{ user_id: session.user.id, notification_id: notifId }],
+          { onConflict: 'user_id,notification_id', ignoreDuplicates: true });
+      setEventNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
+      setMaterialNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
+    } catch (err) { console.error('Error marcando notificación leída:', err); }
   };
 
   const loadUnreadCount = async (cid, userId) => {
@@ -1285,117 +1274,111 @@ export default function PortalDashboard() {
             {(isLider || isServicio) && (
               <div className="relative" ref={bellRef}>
                 <button
-                  onClick={() => {
-                    const opening = !bellOpen;
-                    setBellOpen(o => !o);
-                    if (opening && eventNotifications.length > 0) markEventNotificationsRead();
-                    if (opening && materialNotifications.length > 0) markMaterialNotificationsRead();
-                  }}
+                  onClick={() => setBellOpen(o => !o)}
                   className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
                   title="Notificaciones"
                 >
                   <Bell className="w-5 h-5 text-gray-700" />
-                  {(unreadMaterials + eventNotifications.length + materialNotifications.length) > 0 && (
+                  {(unreadMaterials + eventNotifications.filter(n => !n.isRead).length + materialNotifications.filter(n => !n.isRead).length) > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                      {unreadMaterials + eventNotifications.length + materialNotifications.length}
+                      {unreadMaterials + eventNotifications.filter(n => !n.isRead).length + materialNotifications.filter(n => !n.isRead).length}
                     </span>
                   )}
                 </button>
-                {bellOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                      <span className="font-semibold text-gray-900 text-sm">Notificaciones</span>
-                      {(unreadMaterials + eventNotifications.length + materialNotifications.length) > 0 && <span className="text-xs text-red-600 font-medium">{unreadMaterials + eventNotifications.length + materialNotifications.length} pendientes</span>}
-                    </div>
-                    {/* Eventos nuevos — para todos los usuarios del portal */}
-                    {eventNotifications.map(n => (
-                      <div key={n.id} className="px-4 py-3 flex items-start gap-3 border-b border-gray-100 bg-blue-50/50">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Calendar className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{n.title}</p>
-                          {n.body && <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{n.body}</p>}
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {new Date(n.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </p>
-                        </div>
-                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2" />
+                {bellOpen && (() => {
+                  const unreadCount = eventNotifications.filter(n => !n.isRead).length + materialNotifications.filter(n => !n.isRead).length + unreadMaterials;
+                  // Lista unificada: eventos + materiales de área (últimas 5 en total), ordenadas por fecha
+                  const allNotifs = [...eventNotifications, ...materialNotifications]
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                    .slice(0, 5);
+                  const hasAnything = allNotifs.length > 0 || (isLider && unreadList.length > 0) || newPrayers > 0;
+                  return (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <span className="font-semibold text-gray-900 text-sm">Notificaciones</span>
+                        {unreadCount > 0 && <span className="text-xs text-red-600 font-medium">{unreadCount} sin leer</span>}
                       </div>
-                    ))}
-                    {/* Materiales de área — para miembros de servicio */}
-                    {materialNotifications.map(n => {
-                      const section = AREA_PORTAL_SECTIONS[n.target];
-                      return (
-                        <button key={n.id}
-                          onClick={() => { setBellOpen(false); setActiveView(`area:${n.target}`); }}
-                          className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3 border-b border-gray-100">
-                          <div className={`w-8 h-8 bg-gradient-to-br ${section?.color ?? 'from-orange-400 to-orange-500'} rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                            <BookOpen className="w-4 h-4 text-white" />
+
+                      {/* Pedidos de oración — solo intercesores */}
+                      {newPrayers > 0 && (
+                        <button onClick={() => { setBellOpen(false); setActiveView('intercesion'); }}
+                          className="w-full text-left px-4 py-3 hover:bg-pink-50 transition-colors flex items-start gap-3 border-b border-gray-100">
+                          <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <HandHeart className="w-4 h-4 text-pink-600" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{n.title}</p>
-                            {n.body && <p className="text-xs text-gray-600 mt-0.5">{n.body}</p>}
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {new Date(n.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-                            </p>
+                            <p className="text-sm font-medium text-gray-900">Pedidos de Oración</p>
+                            <p className="text-xs text-pink-600 font-medium mt-0.5">{newPrayers} activo{newPrayers > 1 ? 's' : ''}</p>
                           </div>
-                          <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-2" />
                         </button>
-                      );
-                    })}
-                    {/* Pedidos de oración activos — para intercesores */}
-                    {newPrayers > 0 && (
-                      <button onClick={() => { setBellOpen(false); setActiveView('intercesion'); }}
-                        className="w-full text-left px-4 py-3 hover:bg-pink-50 transition-colors flex items-start gap-3 border-b border-gray-100">
-                        <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <HandHeart className="w-4 h-4 text-pink-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">Pedidos de Oración</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            <span className="text-pink-600 font-medium">{newPrayers} pedido{newPrayers > 1 ? 's' : ''} activo{newPrayers > 1 ? 's' : ''}</span> esperando intercesión
-                          </p>
-                        </div>
-                        <span className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0 mt-2" />
-                      </button>
-                    )}
-                    {/* Materiales no leídos — para líderes */}
-                    {unreadList.length === 0 && eventNotifications.length === 0 && materialNotifications.length === 0 ? (
-                      <div className="px-4 py-6 text-center text-sm text-gray-500">Todo al día, no hay novedades.</div>
-                    ) : isLider && unreadList.length === 0 ? (
-                      <div className="px-4 py-4 text-center text-sm text-gray-500">No hay materiales nuevos.</div>
-                    ) : isLider ? (
-                      <ul>
-                        {unreadList.map(m => (
-                          <li key={m.id}>
-                            <button onClick={() => { setBellOpen(false); redirect("/connect/portal/materiales"); }}
-                              className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors flex items-start gap-3 border-b border-gray-50 last:border-0">
-                              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <BookOpen className="w-4 h-4 text-purple-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{m.title}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  {m.category && <span className="text-purple-600">{m.category} · </span>}
-                                  Nuevo material disponible
-                                </p>
-                              </div>
-                              <span className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-2" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    {isLider && (
-                      <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
-                        <button onClick={() => { setBellOpen(false); redirect("/connect/portal/materiales"); }} className="text-xs text-purple-600 font-medium hover:text-purple-700 w-full text-center py-1">
-                          Ver todos los materiales →
+                      )}
+
+                      {/* Historial de notificaciones — eventos + materiales de área */}
+                      {allNotifs.map(n => {
+                        const isEvent = n.type === 'event';
+                        const section = !isEvent ? AREA_PORTAL_SECTIONS[n.target] : null;
+                        return (
+                          <button key={n.id}
+                            onClick={() => {
+                              if (!n.isRead) markOneRead(n.id);
+                              setBellOpen(false);
+                              if (isEvent) setActiveView('eventos');
+                              else setActiveView(`area:${n.target}`);
+                            }}
+                            className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-3 border-b border-gray-100 ${n.isRead ? 'opacity-60' : ''}`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                              isEvent ? 'bg-blue-100' : `bg-gradient-to-br ${section?.color ?? 'from-orange-400 to-orange-500'}`
+                            }`}>
+                              {isEvent
+                                ? <Calendar className="w-4 h-4 text-blue-600" />
+                                : <BookOpen className="w-4 h-4 text-white" />
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm truncate ${n.isRead ? 'font-normal text-gray-600' : 'font-semibold text-gray-900'}`}>{n.title}</p>
+                              {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{n.body}</p>}
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {new Date(n.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                                {!isEvent && section && <span className="ml-1 text-gray-400">· {n.target}</span>}
+                              </p>
+                            </div>
+                            {!n.isRead && <span className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-2" />}
+                          </button>
+                        );
+                      })}
+
+                      {/* Materiales de liderazgo no leídos — solo líderes */}
+                      {isLider && unreadList.slice(0, 3).map(m => (
+                        <button key={m.id}
+                          onClick={() => { setBellOpen(false); redirect("/connect/portal/materiales"); }}
+                          className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors flex items-start gap-3 border-b border-gray-100"
+                        >
+                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <BookOpen className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{m.title}</p>
+                            <p className="text-xs text-purple-600 mt-0.5">{m.category ?? 'Material nuevo'}</p>
+                          </div>
+                          <span className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-2" />
                         </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      ))}
+
+                      {!hasAnything && (
+                        <div className="px-4 py-6 text-center text-sm text-gray-500">Todo al día, no hay novedades.</div>
+                      )}
+
+                      {isLider && (
+                        <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                          <button onClick={() => { setBellOpen(false); redirect("/connect/portal/materiales"); }} className="text-xs text-purple-600 font-medium hover:text-purple-700 w-full text-center py-1">
+                            Ver todos los materiales →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
