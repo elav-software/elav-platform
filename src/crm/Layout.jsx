@@ -139,10 +139,7 @@ export default function Layout({ children, currentPageName }) {
             activeChurchId = first;
           }
           await loadChurchBranding(activeChurchId);
-          loadPendingLeaders();
-          loadPendingMembers();
-          loadPendingReports();
-          loadNewVisitors();
+          loadAllBadges();
         } else if (u.role !== 'admin') {
           setAccessDenied(true);
         } else {
@@ -156,10 +153,7 @@ export default function Layout({ children, currentPageName }) {
             .limit(1)
             .maybeSingle();
           if (cu?.church_id) await loadChurchBranding(cu.church_id);
-          loadPendingLeaders();
-          loadPendingMembers();
-          loadPendingReports();
-          loadNewVisitors();
+          loadAllBadges();
         }
         setLoaded(true);
       } catch (err) {
@@ -180,7 +174,6 @@ export default function Layout({ children, currentPageName }) {
         .eq('church_id', churchId)
         .eq('rol', 'Líder')
         .eq('estado_aprobacion', 'pendiente');
-      
       setPendingLeadersCount(count || 0);
     } catch (err) {
       console.error("Error cargando líderes pendientes:", err);
@@ -234,6 +227,13 @@ export default function Layout({ children, currentPageName }) {
       console.error("Error cargando visitantes nuevos:", err);
     }
   };
+
+  const loadAllBadges = () => Promise.all([
+    loadPendingLeaders(),
+    loadPendingMembers(),
+    loadPendingReports(),
+    loadNewVisitors(),
+  ]);
 
   useEffect(() => {
     const handler = () => setNewVisitorsCount(0);

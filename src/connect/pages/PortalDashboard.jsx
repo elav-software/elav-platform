@@ -1021,19 +1021,15 @@ export default function PortalDashboard() {
       }
 
       setUser(persona);
-      if (persona.rol === 'Líder' || persona.rol === 'Pastor') {
-        await loadStats(persona.id, userEmail);
-        await loadCellPortalMembers(persona.id, cid);
-      }
-      await loadUnreadCount(cid, session.user.id);
-      await loadEventNotifications(cid, session.user.id);
-      await loadAreaMaterialNotifications(cid, session.user.id, areas.filter(a => AREA_PORTAL_SECTIONS[a]));
-      if (areas.some(a => a === 'Intercesión')) {
-        await loadNewPrayers(cid);
-      }
-      if (areas.some(a => a === 'Consolidación') || isApprovedLider) {
-        await loadPendingWebVisitors(cid);
-      }
+      const portalAreas = areas.filter(a => AREA_PORTAL_SECTIONS[a]);
+      await Promise.all([
+        ...(isApprovedLider ? [loadStats(persona.id, userEmail), loadCellPortalMembers(persona.id, cid)] : []),
+        loadUnreadCount(cid, session.user.id),
+        loadEventNotifications(cid, session.user.id),
+        loadAreaMaterialNotifications(cid, session.user.id, portalAreas),
+        ...(areas.some(a => a === 'Intercesión') ? [loadNewPrayers(cid)] : []),
+        ...(areas.some(a => a === 'Consolidación') || isApprovedLider ? [loadPendingWebVisitors(cid)] : []),
+      ]);
 
     } catch (err) {
       console.error("Error verificando usuario:", err);
@@ -1160,23 +1156,22 @@ export default function PortalDashboard() {
     } catch (err) { console.error('Error cargando miembros con áreas portal:', err); }
   };
 
-  const loadStats = async (leaderId, leaderEmail) => {    try {
+  const loadStats = async (leaderId, leaderEmail) => {
+    try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const { count: reportsCount } = await supabase
-        .from('leader_cell_submissions')
-        .select('*', { count: 'exact', head: true })
-        .eq('leader_id', leaderId)
-        .gte('report_date', thirtyDaysAgo.toISOString().split('T')[0]);
-      const { count: membersCount } = await supabase
-        .from('personas')
-        .select('*', { count: 'exact', head: true })
-        .eq('lider_id', leaderId);
-      const { count: prayersCount } = await supabase
-        .from('leader_prayer_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('leader_email', leaderEmail)
-        .eq('status', 'active');
+      const [
+        { count: reportsCount },
+        { count: membersCount },
+        { count: prayersCount },
+      ] = await Promise.all([
+        supabase.from('leader_cell_submissions').select('*', { count: 'exact', head: true })
+          .eq('leader_id', leaderId).gte('report_date', thirtyDaysAgo.toISOString().split('T')[0]),
+        supabase.from('personas').select('*', { count: 'exact', head: true })
+          .eq('lider_id', leaderId),
+        supabase.from('leader_prayer_requests').select('*', { count: 'exact', head: true })
+          .eq('leader_email', leaderEmail).eq('status', 'active'),
+      ]);
       setStats({ recentReports: reportsCount || 0, cellMembers: membersCount || 0, prayerRequests: prayersCount || 0 });
     } catch (err) { console.error("Error loading stats:", err); }
   };
