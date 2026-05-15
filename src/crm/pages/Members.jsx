@@ -40,9 +40,19 @@ const F = ({ label, name, type = "text", options, optionLabels, form, setForm })
 const MESES_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 function DateField({ label, name, form, setForm }) {
   const raw = form[name] || "";
-  const [yy = "", mm = "", dd = ""] = raw ? raw.split("-") : [];
-  const [localDay,  setLocalDay]  = React.useState(dd);
-  const [localYear, setLocalYear] = React.useState(yy);
+  const initParts = raw ? raw.split("-") : ["", "", ""];
+  const [localDay,   setLocalDay]   = React.useState(initParts[2] || "");
+  const [localMonth, setLocalMonth] = React.useState(initParts[1] || "");
+  const [localYear,  setLocalYear]  = React.useState(initParts[0] || "");
+
+  // Sincronizar estado local cuando se abre un miembro diferente para editar
+  React.useEffect(() => {
+    if (!raw) return;
+    const [yy = "", mm = "", dd = ""] = raw.split("-");
+    setLocalDay(dd);
+    setLocalMonth(mm);
+    setLocalYear(yy);
+  }, [raw]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const commit = (d, m, y) => {
     const valid = d && m && y && String(y).length === 4 && Number(d) >= 1 && Number(d) <= 31;
@@ -61,11 +71,11 @@ function DateField({ label, name, form, setForm }) {
         <Input
           type="number" placeholder="Día" min={1} max={31}
           value={localDay}
-          onChange={e => { setLocalDay(e.target.value); commit(e.target.value, mm, localYear); }}
+          onChange={e => { setLocalDay(e.target.value); commit(e.target.value, localMonth, localYear); }}
           className="h-9 text-sm w-16 text-center"
         />
         <span className="text-slate-300 select-none text-sm">/</span>
-        <Select value={mm || ""} onValueChange={v => { commit(localDay, v, localYear); }}>
+        <Select value={localMonth || ""} onValueChange={v => { setLocalMonth(v); commit(localDay, v, localYear); }}>
           <SelectTrigger className="h-9 text-sm flex-1 min-w-0">
             <SelectValue placeholder="Mes" />
           </SelectTrigger>
@@ -79,12 +89,12 @@ function DateField({ label, name, form, setForm }) {
         <Input
           type="number" placeholder="Año" min={1920} max={2030}
           value={localYear}
-          onChange={e => { setLocalYear(e.target.value); commit(localDay, mm, e.target.value); }}
+          onChange={e => { setLocalYear(e.target.value); commit(localDay, localMonth, e.target.value); }}
           className="h-9 text-sm w-20 text-center"
         />
       </div>
       {raw && (
-        <p className="text-[10px] text-slate-400 mt-0.5">{dd}/{mm}/{yy}</p>
+        <p className="text-[10px] text-slate-400 mt-0.5">{initParts[2]}/{initParts[1]}/{initParts[0]}</p>
       )}
     </div>
   );
