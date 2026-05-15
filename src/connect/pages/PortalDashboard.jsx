@@ -1282,7 +1282,7 @@ export default function PortalDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            {(isLider || (isServicio && newPrayers > 0) || eventNotifications.length > 0 || materialNotifications.length > 0) && (
+            {(isLider || isServicio) && (
               <div className="relative" ref={bellRef}>
                 <button
                   onClick={() => {
