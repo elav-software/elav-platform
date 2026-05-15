@@ -161,11 +161,12 @@ export default function CellsMap({ leaders, selectedLeader, onSelectLeader, onLe
       try {
         const fullAddress = [leader.meeting_location, leader.district].filter(Boolean).join(', ');
         if (!fullAddress.trim()) { failed++; continue; }
-        const res = await api.functions.invoke('geocodeAddress', { address: fullAddress });
+        const res = await api.functions.invoke('geocodeAddress', { address: fullAddress, district: leader.district });
         if (res?.lat) {
           await api.entities.Leader.update(leader.id, { latitude: res.lat, longitude: res.lng });
           updated++;
         } else {
+          console.warn(`[Geocoding] Sin resultado para "${leader.full_name}": ${fullAddress}`);
           failed++;
         }
       } catch (err) {
@@ -181,7 +182,11 @@ export default function CellsMap({ leaders, selectedLeader, onSelectLeader, onLe
       toast.success(`${updated} célula${updated !== 1 ? 's' : ''} geocodificada${updated !== 1 ? 's' : ''} correctamente`);
       if (onLeadersUpdated) onLeadersUpdated();
     } else {
-      toast.error(`No se pudo geocodificar ninguna dirección. Verificá que las direcciones sean correctas.`);
+      Sentry.captureMessage('Geocoding: ninguna dirección pudo resolverse', {
+        level: 'warning',
+        extra: { total: withoutCoords.length, addresses: withoutCoords.map(l => ({ name: l.full_name, address: l.meeting_location, district: l.district })) },
+      });
+      toast.error('No se pudo geocodificar ninguna dirección. Verificá que las direcciones sean correctas.');
     }
     if (failed > 0 && updated > 0) {
       toast(`${failed} dirección${failed !== 1 ? 'es' : ''} no se pudo${failed !== 1 ? 'ieron' : ''} geocodificar`, { icon: '⚠️' });
