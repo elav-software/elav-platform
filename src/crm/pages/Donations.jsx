@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@crm/components/ui/label";
 import { Textarea } from "@crm/components/ui/textarea";
 import StatCard from "../components/shared/StatCard";
-import { DollarSign, TrendingUp, TrendingDown, Search, Edit, Trash2, Users, Wallet, Plus, Minus } from "lucide-react";
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { DollarSign, TrendingUp, TrendingDown, Search, Edit, Trash2, Users, Wallet, Plus, Minus, Download, BarChart2 } from "lucide-react";
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, subMonths } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 // ── INGRESOS ──────────────────────────────────────────────────
 const TYPE_LABELS = {
@@ -55,6 +56,7 @@ export default function Donations() {
   const [gastos,    setGastos]    = useState([]);
   const [members,   setMembers]   = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const [showHistorial, setShowHistorial] = useState(false);
 
   // Filtros
   const [search,      setSearch]      = useState("");
@@ -192,6 +194,30 @@ export default function Donations() {
   const balanceMes     = ingresosMonth - egresosMonth;
   const balanceTotal   = ingresosTotal - egresosTotal;
 
+  // Historial últimos 12 meses
+  const historialMeses = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = subMonths(now, 11 - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleString("es-AR", { month: "short", year: "2-digit" });
+      const ingresos = ledger.filter(e => e.tipo === "Ingreso" && e.fecha?.startsWith(key)).reduce((s, e) => s + e.monto, 0);
+      const egresos  = ledger.filter(e => e.tipo === "Egreso"  && e.fecha?.startsWith(key)).reduce((s, e) => s + e.monto, 0);
+      return { key, label, ingresos, egresos, balance: ingresos - egresos };
+    });
+  }, [ledger]);
+
+  const downloadCSV = () => {
+    const header = "Mes,Ingresos,Egresos,Balance\n";
+    const rows = historialMeses.map(m =>
+      `"${m.label}",${m.ingresos},${m.egresos},${m.balance}`
+    ).join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `finanzas-${now.getFullYear()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Opciones dinámicas de categoría y mes para los filtros
   const allCats     = useMemo(() => [...new Set(ledger.map(e => e.categoria))].sort(), [ledger]);
   const monthOptions = useMemo(() => [...new Set(ledger.map(e => e.fecha?.slice(0, 7)).filter(Boolean))].sort().reverse(), [ledger]);
@@ -279,6 +305,62 @@ export default function Donations() {
         <Button onClick={openAddEgreso} className="bg-rose-600 hover:bg-rose-700 text-white font-semibold gap-2">
           <Minus className="w-4 h-4" /> Agregar Egreso
         </Button>
+      </div>
+
+      {/* Historial 12 meses */}
+      <div className="mb-6">
+        <button
+          onClick={() => setShowHistorial(v => !v)}
+          className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors mb-3"
+        >
+          <BarChart2 className="w-4 h-4" />
+          {showHistorial ? "Ocultar historial" : "Ver historial 12 meses"}
+        </button>
+        {showHistorial && (
+          <Card className="border-0 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-slate-800">Ingresos y Egresos — Últimos 12 meses</h3>
+              <button
+                onClick={downloadCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" /> Descargar CSV
+              </button>
+            </div>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={historialMeses} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 11 }} width={48} />
+                <Tooltip formatter={(v) => `$${v.toLocaleString("es-AR")}`} />
+                <Legend />
+                <Bar dataKey="ingresos" name="Ingresos" fill="#10b981" radius={[3,3,0,0]} />
+                <Bar dataKey="egresos"  name="Egresos"  fill="#f43f5e" radius={[3,3,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="text-left py-2 px-2 text-slate-500 font-semibold">Mes</th>
+                    <th className="text-right py-2 px-2 text-emerald-600 font-semibold">Ingresos</th>
+                    <th className="text-right py-2 px-2 text-rose-500 font-semibold">Egresos</th>
+                    <th className="text-right py-2 px-2 text-slate-600 font-semibold">Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {historialMeses.slice().reverse().map(m => (
+                    <tr key={m.key} className="hover:bg-slate-50">
+                      <td className="py-1.5 px-2 text-slate-600 capitalize">{m.label}</td>
+                      <td className="py-1.5 px-2 text-right text-emerald-700 font-medium">{fmt(m.ingresos)}</td>
+                      <td className="py-1.5 px-2 text-right text-rose-600 font-medium">{fmt(m.egresos)}</td>
+                      <td className={`py-1.5 px-2 text-right font-semibold ${m.balance >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{fmt(m.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Barra de filtros */}

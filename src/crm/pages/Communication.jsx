@@ -62,6 +62,7 @@ export default function Communication() {
     service_reminder: false,
     anniversary: false,
   });
+  const [showBirthdayPanel, setShowBirthdayPanel] = useState(false);
 
   useEffect(() => {
     api.entities.Member.list("-created_date", 500).then(setMembers);
@@ -85,6 +86,9 @@ export default function Communication() {
     const dob = parseISO(m.date_of_birth);
     return dob.getMonth() === now.getMonth() && dob.getDate() === now.getDate();
   });
+  const birthdayThisMonth = members
+    .filter(m => m.date_of_birth && parseISO(m.date_of_birth).getMonth() === now.getMonth())
+    .sort((a, b) => parseISO(a.date_of_birth).getDate() - parseISO(b.date_of_birth).getDate());
 
   const handleSend = async () => {
     if (!message.trim()) return;
@@ -284,7 +288,6 @@ export default function Communication() {
             <div className="space-y-3">
               {[
                 { label: "Total Miembros", value: members.length, icon: Users },
-                { label: "Cumpleaños Este Mes", value: members.filter(m => m.date_of_birth && parseISO(m.date_of_birth).getMonth() === now.getMonth()).length, icon: Cake },
                 { label: "Con WhatsApp", value: members.filter(m => m.whatsapp_number).length, icon: MessageSquare },
                 { label: "Con Correo", value: members.filter(m => m.email).length, icon: Mail },
               ].map(stat => (
@@ -296,6 +299,39 @@ export default function Communication() {
                   <span className="text-sm font-semibold text-slate-800">{stat.value}</span>
                 </div>
               ))}
+              <button
+                onClick={() => setShowBirthdayPanel(v => !v)}
+                className="flex items-center justify-between w-full hover:bg-rose-50 rounded-lg px-1 py-0.5 -mx-1 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  <Cake className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
+                  <span className="text-sm text-slate-600 group-hover:text-rose-700">Cumpleaños Este Mes</span>
+                </div>
+                <span className="text-sm font-semibold text-rose-600">{birthdayThisMonth.length}</span>
+              </button>
+              {showBirthdayPanel && birthdayThisMonth.length > 0 && (
+                <div className="mt-2 rounded-xl border border-rose-100 bg-rose-50 divide-y divide-rose-100">
+                  {birthdayThisMonth.map(m => {
+                    const dob = parseISO(m.date_of_birth);
+                    const day = dob.getDate();
+                    const isToday = dob.getDate() === now.getDate();
+                    return (
+                      <div key={m.id} className="flex items-center justify-between px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          {isToday && <span className="text-xs">🎂</span>}
+                          <span className="text-sm text-slate-700 font-medium">{m.full_name}</span>
+                        </div>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isToday ? 'bg-rose-500 text-white' : 'bg-rose-100 text-rose-700'}`}>
+                          día {day}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {showBirthdayPanel && birthdayThisMonth.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-2">Sin cumpleaños este mes</p>
+              )}
             </div>
           </Card>
         </div>

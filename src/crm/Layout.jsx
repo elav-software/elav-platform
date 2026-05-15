@@ -190,12 +190,15 @@ export default function Layout({ children, currentPageName }) {
   const loadPendingMembers = async () => {
     try {
       const churchId = await getMyChurchId();
+      const lastSeen = localStorage.getItem('crm_members_last_seen');
+      const since = lastSeen ? new Date(lastSeen) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const { count } = await supabase
         .from('personas')
         .select('*', { count: 'exact', head: true })
         .eq('church_id', churchId)
         .neq('rol', 'Líder')
-        .eq('estado_aprobacion', 'pendiente');
+        .eq('estado_aprobacion', 'pendiente')
+        .gte('created_at', since.toISOString());
       setPendingMembersCount(count || 0);
     } catch (err) {
       console.error("Error cargando miembros pendientes:", err);
@@ -239,7 +242,10 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   useEffect(() => {
-    const handler = () => setPendingMembersCount(0);
+    const handler = () => {
+      localStorage.setItem('crm_members_last_seen', new Date().toISOString());
+      setPendingMembersCount(0);
+    };
     window.addEventListener('members-seen', handler);
     return () => window.removeEventListener('members-seen', handler);
   }, []);
