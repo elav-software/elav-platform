@@ -1295,9 +1295,9 @@ export default function PortalDashboard() {
                   title="Notificaciones"
                 >
                   <Bell className="w-5 h-5 text-gray-700" />
-                  {(unreadMaterials + newPrayers + eventNotifications.length + materialNotifications.length) > 0 && (
+                  {(unreadMaterials + eventNotifications.length + materialNotifications.length) > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                      {unreadMaterials + newPrayers + eventNotifications.length + materialNotifications.length}
+                      {unreadMaterials + eventNotifications.length + materialNotifications.length}
                     </span>
                   )}
                 </button>
@@ -1305,7 +1305,7 @@ export default function PortalDashboard() {
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
                     <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                       <span className="font-semibold text-gray-900 text-sm">Notificaciones</span>
-                      {(unreadMaterials + newPrayers + eventNotifications.length + materialNotifications.length) > 0 && <span className="text-xs text-red-600 font-medium">{unreadMaterials + newPrayers + eventNotifications.length + materialNotifications.length} pendientes</span>}
+                      {(unreadMaterials + eventNotifications.length + materialNotifications.length) > 0 && <span className="text-xs text-red-600 font-medium">{unreadMaterials + eventNotifications.length + materialNotifications.length} pendientes</span>}
                     </div>
                     {/* Eventos nuevos — para todos los usuarios del portal */}
                     {eventNotifications.map(n => (
@@ -1361,15 +1361,15 @@ export default function PortalDashboard() {
                       </button>
                     )}
                     {/* Materiales no leídos — para líderes */}
-                    {unreadList.length === 0 && newPrayers === 0 && eventNotifications.length === 0 && materialNotifications.length === 0 ? (
+                    {unreadList.length === 0 && eventNotifications.length === 0 && materialNotifications.length === 0 ? (
                       <div className="px-4 py-6 text-center text-sm text-gray-500">Todo al día, no hay novedades.</div>
-                    ) : unreadList.length === 0 && isLider ? (
+                    ) : isLider && unreadList.length === 0 ? (
                       <div className="px-4 py-4 text-center text-sm text-gray-500">No hay materiales nuevos.</div>
-                    ) : (
+                    ) : isLider ? (
                       <ul>
                         {unreadList.map(m => (
                           <li key={m.id}>
-                            <button onClick={() => redirect("/connect/portal/materiales")}
+                            <button onClick={() => { setBellOpen(false); redirect("/connect/portal/materiales"); }}
                               className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors flex items-start gap-3 border-b border-gray-50 last:border-0">
                               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <BookOpen className="w-4 h-4 text-purple-600" />
@@ -1386,12 +1386,14 @@ export default function PortalDashboard() {
                           </li>
                         ))}
                       </ul>
+                    ) : null}
+                    {isLider && (
+                      <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                        <button onClick={() => { setBellOpen(false); redirect("/connect/portal/materiales"); }} className="text-xs text-purple-600 font-medium hover:text-purple-700 w-full text-center py-1">
+                          Ver todos los materiales →
+                        </button>
+                      </div>
                     )}
-                    <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
-                      <button onClick={() => redirect("/connect/portal/materiales")} className="text-xs text-purple-600 font-medium hover:text-purple-700 w-full text-center py-1">
-                        Ver todos los materiales →
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
