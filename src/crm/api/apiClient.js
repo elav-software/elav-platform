@@ -279,6 +279,9 @@ const functions = {
   async invoke(name, params = {}) {
     if (name === "geocodeAddress") {
       const address = params.address || "";
+      const district = params.district || "";
+
+      const wait = () => new Promise(r => setTimeout(r, 1100));
 
       const nominatim = async (q) => {
         const query = q.toLowerCase().includes("argentina") ? q : `${q}, Argentina`;
@@ -300,25 +303,42 @@ const functions = {
       };
 
       // Intento 1: dirección completa
-      const result = await nominatim(address);
-      if (result) return result;
+      const result1 = await nominatim(address);
+      if (result1) return result1;
 
-      // Intento 2: simplificar — quitar códigos postales (B1234), "Provincia de ...", "Argentina"
-      //            y quedar con [calle+número, localidad]
+      // Construir partes limpias (sin códigos postales, provincia, Argentina, duplicados)
       const parts = address.split(',').map(p => p.trim()).filter(p =>
         p &&
-        !/^[A-Z]\d{4}/.test(p) &&            // elimina códigos postales tipo B1765
+        !/^[A-Z]\d{4}/.test(p) &&
         !/^provincia/i.test(p) &&
         !/^argentina$/i.test(p)
       );
-      // Deduplicar partes: quitar repetidas (case-insensitive)
       const seen = new Set();
       const unique = parts.filter(p => { const k = p.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+
+      // Intento 2: calle + localidad simplificados
       if (unique.length >= 2) {
         const simplified = `${unique[0]}, ${unique[unique.length - 1]}, Argentina`;
-        await new Promise(r => setTimeout(r, 1100)); // Nominatim rate limit
-        return await nominatim(simplified);
+        await wait();
+        const result2 = await nominatim(simplified);
+        if (result2) return result2;
       }
+
+      // Intento 3: solo el district pasado explícitamente (ej: "González Catán")
+      // Útil cuando la calle no está en OpenStreetMap pero la localidad sí
+      if (district && district.trim()) {
+        await wait();
+        const result3 = await nominatim(district);
+        if (result3) return result3;
+      }
+
+      // Intento 4: extraer la localidad de la dirección (último segmento significativo)
+      if (unique.length >= 2) {
+        const locality = unique[unique.length - 1];
+        await wait();
+        return await nominatim(locality);
+      }
+
       return null;
     }
 
