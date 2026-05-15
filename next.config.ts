@@ -8,6 +8,8 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.tile.openstreetmap.org",
   // Sentry necesita enviar errores a su servidor
   "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://nominatim.openstreetmap.org https://*.sentry.io https://*.ingest.sentry.io",
+  // Sentry Session Replay usa un Web Worker con blob: URL
+  "worker-src 'self' blob:",
   "font-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
