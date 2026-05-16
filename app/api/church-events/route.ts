@@ -6,6 +6,18 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Previene SSRF: solo permite HTTPS y bloquea IPs privadas/metadata
+function isAllowedEventsUrl(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    if (protocol !== "https:") return false;
+    const blocked = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.)/;
+    return !blocked.test(hostname);
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const churchId = searchParams.get("church_id");
@@ -18,7 +30,9 @@ export async function GET(req: NextRequest) {
     .eq("id", churchId)
     .single();
 
-  if (!church?.events_api_url) return NextResponse.json([]);
+  if (!church?.events_api_url || !isAllowedEventsUrl(church.events_api_url)) {
+    return NextResponse.json([]);
+  }
 
   try {
     const res = await fetch(church.events_api_url, {
