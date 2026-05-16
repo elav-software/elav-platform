@@ -1,81 +1,65 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Middleware de routing multi-tenant — sin configuración por iglesia.
+ * proxy.ts — Next.js 16 (antes middleware.ts)
  *
- * Cada iglesia tiene UN dominio propio (ej: miiglesia.com).
- * El routing a los módulos se hace por subdominio:
- *
- *   miiglesia.com              → /connect/home   (web pública)
- *   www.miiglesia.com          → /connect/home   (web pública)
- *   crm.miiglesia.com          → /crm/*          (CRM)
- *   censo.miiglesia.com        → /lider          (formulario censo)
- *
- * Para agregar una iglesia nueva: solo registrarla en la tabla `churches`
- * de Supabase + apuntar su DNS a este servidor. Sin cambios de código.
- *
- * La identificación de la iglesia (church_id) se resuelve en el cliente
- * consultando la columna `custom_domain` de la tabla `churches`.
- *
- * ── Localhost (desarrollo) ─────────────────────────────────────────────────
- *   Acceder directamente por ruta: /connect/home, /crm/dashboard, etc.
- *   El church puede pasarse como ?church=cfc (o via NEXT_PUBLIC_DEFAULT_CHURCH_SLUG)
+ * Hace dos cosas en un solo pase:
+ *   1. Auth check: rutas /crm/* (excepto /crm/login) y /connect/portal/*
+ *      (excepto login/callback/set-password) requieren sesión Supabase válida.
+ *      Sin sesión → redirect al login correspondiente.
+ *   2. Multi-tenant routing: en producción, el subdominio determina el módulo.
+ *      crm.miiglesia.com   → /crm/*
+ *      censo.miiglesia.com → /lider/*
+ *      miiglesia.com       → landing estática
  */
 
-export function proxy(request: NextRequest) {
+// Rutas del connect portal accesibles sin sesión
+const CONNECT_PUBLIC = [
+  "/connect/portal/login",
+  "/connect/portal/callback",
+  "/connect/portal/set-password",
+];
+
+/**
+ * Construye la respuesta de routing puro (redirect/rewrite/next) sin tocar auth.
+ * Separada para poder aplicarle las cookies de sesión refrescadas encima.
+ */
+function buildRoutingResponse(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
   const hostname = request.headers.get("host") ?? "";
-
-  // Skip Next.js internals and static assets
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname.includes(".")
-  ) {
-    return NextResponse.next();
-  }
-
   const isLocalhost =
     hostname.startsWith("localhost") || hostname.startsWith("127.0.0.1");
 
-  // ── LOCALHOST: pasar directamente, acceder por ruta ─────────────────────
-  if (isLocalhost) {
-    return NextResponse.next();
-  }
+  if (isLocalhost) return NextResponse.next();
 
-  // Obtener el primer subdominio (antes del primer punto)
   const sub = hostname.split(".")[0].toLowerCase();
 
-  // ── crm.miiglesia.com → módulo CRM ───────────────────────────────────────
+  // crm.miiglesia.com → módulo CRM
   if (sub === "crm") {
-    if (pathname.startsWith("/crm")) {
-      return NextResponse.next();
-    }
+    if (pathname.startsWith("/crm")) return NextResponse.next();
     const url = request.nextUrl.clone();
     url.pathname = pathname === "/" ? "/crm/login" : "/crm" + pathname;
     url.search = search;
     return NextResponse.redirect(url);
   }
 
-  // ── censo.miiglesia.com → formulario de censo ────────────────────────────
+  // censo.miiglesia.com → formulario de censo
   if (sub === "censo") {
-    if (pathname.startsWith("/lider") || pathname.startsWith("/miembros")) {
+    if (pathname.startsWith("/lider") || pathname.startsWith("/miembros"))
       return NextResponse.next();
-    }
     const url = request.nextUrl.clone();
     url.pathname = "/lider";
     return NextResponse.redirect(url);
   }
 
-  // ── miiglesia.com / www.miiglesia.com → landing estática ───────────────
-  // Rewrite: sirve el HTML sin cambiar la URL en el browser
+  // miiglesia.com / www.miiglesia.com → landing estática
   if (pathname === "/" || pathname === "") {
     const url = request.nextUrl.clone();
     url.pathname = "/landing/index.html";
     return NextResponse.rewrite(url);
   }
 
-  // URLs limpias de la landing (sin .html en la barra del browser)
   const landingPages: Record<string, string> = {
     "/soy-nuevo": "/landing/soy-nuevo.html",
     "/eventos":   "/landing/eventos.html",
@@ -102,6 +86,93 @@ export function proxy(request: NextRequest) {
   }
 
   return NextResponse.next();
+}
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const hostname = request.headers.get("host") ?? "";
+
+  // Saltar assets y rutas internas de Next.js
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
+  }
+
+  const isLocalhost =
+    hostname.startsWith("localhost") || hostname.startsWith("127.0.0.1");
+  const sub = isLocalhost ? "" : hostname.split(".")[0].toLowerCase();
+
+  // ── Determinar si la request es a una ruta protegida ────────────────────
+  //
+  // En producción con subdominio "crm", el path /dashboard se convertirá
+  // en /crm/dashboard después del routing. Calculamos el path efectivo para
+  // saber si necesita auth antes de hacer el routing.
+  const effectivePath =
+    sub === "crm" && !pathname.startsWith("/crm")
+      ? "/crm" + (pathname === "/" ? "/login" : pathname)
+      : pathname;
+
+  const needsCrmAuth =
+    effectivePath.startsWith("/crm") &&
+    !effectivePath.startsWith("/crm/login");
+
+  const needsConnectAuth =
+    pathname.startsWith("/connect/portal") &&
+    !CONNECT_PUBLIC.some((p) => pathname.startsWith(p));
+
+  // ── Auth check (solo rutas protegidas) ───────────────────────────────────
+  if (needsCrmAuth || needsConnectAuth) {
+    // Colectar cookies que Supabase quiera refrescar para aplicarlas
+    // a la respuesta de routing (que puede ser un redirect o rewrite)
+    const cookiesToRefresh: Array<{
+      name: string;
+      value: string;
+      options: Parameters<ReturnType<typeof NextResponse.next>["cookies"]["set"]>[2];
+    }> = [];
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(items) {
+            // Propagar al request (para que el server client lo vea)
+            items.forEach(({ name, value }) => request.cookies.set(name, value));
+            // Guardar para aplicar a la respuesta final
+            cookiesToRefresh.push(...items);
+          },
+        },
+      }
+    );
+
+    // getUser() verifica con Supabase y refresca el JWT si está por vencer.
+    // No usar getSession(): lee el cookie sin verificar firma server-side.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = needsCrmAuth ? "/crm/login" : "/connect/portal/login";
+      return NextResponse.redirect(url);
+    }
+
+    // Sesión válida: hacer routing y copiar cookies refrescadas a la respuesta
+    const response = buildRoutingResponse(request);
+    cookiesToRefresh.forEach(({ name, value, options }) =>
+      response.cookies.set(name, value, options)
+    );
+    return response;
+  }
+
+  // ── Sin auth requerida: solo routing ─────────────────────────────────────
+  return buildRoutingResponse(request);
 }
 
 export const config = {
