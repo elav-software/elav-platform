@@ -8,6 +8,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
+// Allowlist anti open-redirect
+const ALLOWED_REDIRECT_BASES = [
+  "https://crm.cfccasanova.com",
+  ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
+];
+
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -89,6 +95,9 @@ export async function POST(
         if (!email) {
           return NextResponse.json({ error: "email is required" }, { status: 400 });
         }
+        if (redirectBase && !ALLOWED_REDIRECT_BASES.some(b => redirectBase.startsWith(b))) {
+          return NextResponse.json({ error: "redirectBase no permitido" }, { status: 400 });
+        }
 
         const { error } = await adminClient.auth.admin.inviteUserByEmail(email, {
           data: { full_name: fullName },
@@ -106,6 +115,9 @@ export async function POST(
       if (name === "invite-all-leaders") {
         // Invite all approved leaders with email in this church
         const { redirectBase } = body as { redirectBase: string };
+        if (!redirectBase || !ALLOWED_REDIRECT_BASES.some(b => redirectBase.startsWith(b))) {
+          return NextResponse.json({ error: "redirectBase no permitido" }, { status: 400 });
+        }
 
         const { data: leaders, error: fetchError } = await adminClient
           .from("personas")

@@ -14,6 +14,12 @@ const supabasePublic = createClient(
 // Áreas que dan acceso al portal — sincronizar con AREA_PORTAL_SECTIONS en PortalDashboard.jsx
 const PORTAL_AREAS = ["Consolidación"];
 
+// Allowlist anti open-redirect
+const ALLOWED_REDIRECT_BASES = [
+  "https://crm.cfccasanova.com",
+  ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
+];
+
 export async function POST(req: NextRequest) {
   try {
     // Verificar que hay un token de sesión del portal
@@ -44,6 +50,9 @@ export async function POST(req: NextRequest) {
     const { personaId, email, fullName, redirectBase } = await req.json();
     if (!personaId || !email || !redirectBase) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
+    }
+    if (!ALLOWED_REDIRECT_BASES.some(b => redirectBase.startsWith(b))) {
+      return NextResponse.json({ error: "redirectBase no permitido" }, { status: 400 });
     }
 
     // Verificar que el miembro pertenece a la célula del líder

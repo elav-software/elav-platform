@@ -8,6 +8,12 @@ const supabaseAdmin = createClient(
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+// Allowlist anti open-redirect
+const ALLOWED_REDIRECT_BASES = [
+  "https://crm.cfccasanova.com",
+  ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
+];
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get("Authorization");
@@ -43,6 +49,9 @@ export async function POST(req: NextRequest) {
     const { redirectBase } = await req.json();
     if (!redirectBase) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
+    }
+    if (!ALLOWED_REDIRECT_BASES.some(b => redirectBase.startsWith(b))) {
+      return NextResponse.json({ error: "redirectBase no permitido" }, { status: 400 });
     }
 
     const { data: leaders, error: fetchError } = await supabaseAdmin
