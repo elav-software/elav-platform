@@ -19,30 +19,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Token inválido" }, { status: 401 });
     }
 
-    // Verificar que es admin o superadmin
-    // Caso 1: superadmin via user_metadata (no tiene fila en church_users)
-    const isSuperadminByMeta =
-      user.user_metadata?.role === "superadmin" ||
-      user.app_metadata?.role === "superadmin";
+    // Verificar que es admin o superadmin via church_users (fuente autoritativa)
+    // o via app_metadata (solo modificable por service_role, no por el usuario)
+    const isSuperadminByMeta = user.app_metadata?.role === "superadmin";
 
     if (!isSuperadminByMeta) {
-      // Caso 2: admin/superadmin via church_users
-      const { data: churchUser, error: cuError } = await supabaseAdmin
+      const { data: churchUser } = await supabaseAdmin
         .from("church_users")
         .select("church_id, role, is_active")
         .eq("user_id", user.id)
+        .eq("is_active", true)
         .maybeSingle();
 
-      console.log("[upload-material] church_users row:", churchUser, "error:", cuError);
-
-      if (
-        !churchUser ||
-        !["admin", "superadmin"].includes(churchUser.role)
-      ) {
-        return NextResponse.json(
-          { error: "Sin permisos de admin", debug: { role: churchUser?.role ?? null } },
-          { status: 403 }
-        );
+      if (!churchUser || !["admin", "superadmin"].includes(churchUser.role)) {
+        return NextResponse.json({ error: "Sin permisos de admin" }, { status: 403 });
       }
     }
 

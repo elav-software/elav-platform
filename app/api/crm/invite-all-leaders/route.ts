@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Token inválido" }, { status: 401 });
     }
 
-    // Superadmin: buscar church_id desde la sesión guardada, o permitir con cualquier iglesia
-    const isSuperadmin = user.user_metadata?.role === "superadmin";
+    // Verificar admin via church_users (fuente autoritativa)
+    // o via app_metadata (solo modificable por service_role, no por el usuario)
+    const isSuperadminByMeta = user.app_metadata?.role === "superadmin";
 
     const { data: churchUser } = await supabaseAdmin
       .from("church_users")
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       .eq("is_active", true)
       .maybeSingle();
 
-    if (!isSuperadmin && (!churchUser || !["admin", "superadmin"].includes(churchUser.role))) {
+    if (!isSuperadminByMeta && (!churchUser || !["admin", "superadmin"].includes(churchUser.role))) {
       return NextResponse.json({ error: "Sin permisos de administrador" }, { status: 403 });
     }
 
