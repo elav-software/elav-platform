@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 // ── Rate limiting (Upstash) ──────────────────────────────────────────────────
-// Para activar: npm install @upstash/ratelimit @upstash/redis
-// y agregar UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN al .env
-// import { Ratelimit } from "@upstash/ratelimit";
-// import { Redis } from "@upstash/redis";
-// const ratelimit = new Ratelimit({
-//   redis: Redis.fromEnv(),
-//   limiter: Ratelimit.slidingWindow(5, "1 h"),
-//   analytics: true,
-// });
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, "1 h"), // máx 5 envíos por IP por hora
+  analytics: true,
+  prefix: "soy-nuevo",
+});
 // ────────────────────────────────────────────────────────────────────────────
 
 // Dominios permitidos por slug de iglesia (multi-tenant)
@@ -61,15 +61,15 @@ export async function POST(req: NextRequest) {
 
     const corsHeaders = CORS_HEADERS(expectedOrigin ?? origin ?? "*");
 
-    // ── Rate limiting por IP (activar cuando Upstash esté configurado) ────
-    // const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-    // const { success } = await ratelimit.limit(ip);
-    // if (!success) {
-    //   return NextResponse.json(
-    //     { error: "Demasiadas solicitudes. Intentá de nuevo en una hora." },
-    //     { status: 429, headers: corsHeaders }
-    //   );
-    // }
+    // ── Rate limiting por IP ───────────────────────────────────────────────
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = await ratelimit.limit(ip);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Intentá de nuevo en una hora." },
+        { status: 429, headers: corsHeaders }
+      );
+    }
 
     if (!nombre || !telefono) {
       return NextResponse.json({ error: "Nombre y teléfono son obligatorios" }, { status: 400, headers: corsHeaders });
