@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     // Estrategia 3: por full_name — último fallback si email también está vacío en leaders
     const { data: personaRow } = await supabaseAdmin
       .from("personas")
-      .select("id, nombre, apellido")
+      .select("id, church_id, nombre, apellido")
       .ilike("email", user.email!)
       .maybeSingle();
 
@@ -52,12 +52,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Fallback 3: buscar por full_name usando nombre+apellido de personas
-    if (!crmLeader && personaRow) {
+    // IMPORTANTE: filtrar por church_id para evitar cruzar datos entre iglesias
+    if (!crmLeader && personaRow?.church_id) {
       const fullName = `${personaRow.nombre} ${personaRow.apellido}`.trim();
       const { data } = await supabaseAdmin
         .from("leaders")
         .select("id, church_id")
         .ilike("full_name", fullName)
+        .eq("church_id", personaRow.church_id)
         .maybeSingle();
       crmLeader = data;
     }
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
       attendance: attendance ? parseInt(attendance) : 0,
       visits: visits ? parseInt(visits) : 0,
       new_converts: newConverts ? parseInt(newConverts) : 0,
-      offering: offering ? parseFloat(offering) : 0,
+      offering: (() => { const v = parseFloat(offering); return isFinite(v) && v >= 0 ? v : 0; })(),
       notes: notes || null,
     });
 
