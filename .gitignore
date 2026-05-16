@@ -47,6 +47,7 @@ scripts/
 # notas locales
 TODO.txt
 TODO_CRITICAL.txt
+TODO_ACTUAL.txt
 SYNC_DEV_MIGRATION.sql
 VERIFY_DEV_SYNC.sql
 # schema.dbml NO está aquí — debe compartirse con el desarrollador
