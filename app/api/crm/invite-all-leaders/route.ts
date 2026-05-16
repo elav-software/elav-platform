@@ -107,13 +107,7 @@ export async function POST(req: NextRequest) {
       await delay(300);
     }
 
-    return NextResponse.json({
-      success: true,
-      invited,
-      skipped,
-      failed,
-      failedEmails: failed > 0 ? failedEmails : undefined,
-    });
+    return NextResponse.json({ success: true, invited, skipped, failed });
   } catch (err: unknown) {
     console.error("Error invitando líderes:", err);
     const message = err instanceof Error ? err.message : "Error interno";

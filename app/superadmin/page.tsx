@@ -23,6 +23,7 @@ export default function SuperAdminPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ChurchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [passwordRevealed, setPasswordRevealed] = useState(false);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -142,11 +143,21 @@ export default function SuperAdminPage() {
               </p>
               <p className="text-xs font-mono text-amber-900">
                 Email: {result.admin.email}<br />
-                Clave: {result.admin.temp_password}
+                Clave:{" "}
+                {passwordRevealed ? (
+                  <span>{result.admin.temp_password}</span>
+                ) : (
+                  <button
+                    onClick={() => setPasswordRevealed(true)}
+                    className="underline text-amber-700 hover:text-amber-900"
+                  >
+                    clic para revelar
+                  </button>
+                )}
               </p>
             </div>
             <button
-              onClick={() => setResult(null)}
+              onClick={() => { setResult(null); setPasswordRevealed(false); }}
               className="text-xs text-emerald-700 underline"
             >
               Crear otra iglesia

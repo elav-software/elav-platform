@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
     if (!email || !redirectBase) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+    }
     if (!ALLOWED_REDIRECT_BASES.some(b => redirectBase.startsWith(b))) {
       return NextResponse.json({ error: "redirectBase no permitido" }, { status: 400 });
     }
