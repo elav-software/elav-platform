@@ -193,7 +193,6 @@ export const api = {
     Devotional:          createEntity('connect_devotionals'),
     Event:               createEntity('connect_events'),
     Announcement:        createEntity('connect_announcements'),
-    PrayerRequest:       createEntity('connect_prayer_requests'),
     CounselingRequest:   createEntity('connect_counseling_requests'),
     EventRegistration:   createEntity('connect_event_registrations'),
     SermonNote:          createEntity('connect_sermon_notes'),
