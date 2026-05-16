@@ -19,31 +19,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Token inválido" }, { status: 401 });
     }
 
-    // Verificar que es admin o superadmin via church_users (fuente autoritativa)
-    // o via app_metadata (solo modificable por service_role, no por el usuario)
+    // Verificar auth + obtener church_id verificado server-side
+    // app_metadata.role solo es modificable por service_role (no por el usuario)
     const isSuperadminByMeta = user.app_metadata?.role === "superadmin";
 
-    if (!isSuperadminByMeta) {
-      const { data: churchUser } = await supabaseAdmin
-        .from("church_users")
-        .select("church_id, role, is_active")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .maybeSingle();
+    const { data: churchUser } = await supabaseAdmin
+      .from("church_users")
+      .select("church_id, role, is_active")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
 
-      if (!churchUser || !["admin", "superadmin"].includes(churchUser.role)) {
-        return NextResponse.json({ error: "Sin permisos de admin" }, { status: 403 });
-      }
+    if (!isSuperadminByMeta && (!churchUser || !["admin", "superadmin"].includes(churchUser.role))) {
+      return NextResponse.json({ error: "Sin permisos de admin" }, { status: 403 });
+    }
+
+    if (!churchUser?.church_id) {
+      return NextResponse.json({ error: "No se pudo determinar la iglesia" }, { status: 403 });
     }
 
     // Parsear FormData
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    const filePath = formData.get("filePath") as string | null;
+    const rawFileName = formData.get("filePath") as string | null;
 
-    if (!file || !filePath) {
+    if (!file || !rawFileName) {
       return NextResponse.json({ error: "Falta archivo o path" }, { status: 400 });
     }
+
+    // Sanitizar: extraer solo el nombre base (sin path traversal) y caracteres seguros
+    const safeFileName = rawFileName.split("/").pop()?.replace(/[^a-zA-Z0-9._\-]/g, "_") ?? "";
+    if (!safeFileName || safeFileName.startsWith(".")) {
+      return NextResponse.json({ error: "Nombre de archivo inválido" }, { status: 400 });
+    }
+    // Path siempre prefijado con el church_id del usuario autenticado (nunca del cliente)
+    const safePath = `${churchUser.church_id}/${safeFileName}`;
 
     // Convertir File a Buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -52,7 +62,7 @@ export async function POST(req: NextRequest) {
     // Subir con service role (bypasea RLS)
     const { error: uploadError } = await supabaseAdmin.storage
       .from("materiales")
-      .upload(filePath, buffer, {
+      .upload(safePath, buffer, {
         contentType: file.type || "application/octet-stream",
         upsert: false,
       });
@@ -65,7 +75,7 @@ export async function POST(req: NextRequest) {
     // Generar URL firmada (1 año)
     const { data: signedData, error: signedError } = await supabaseAdmin.storage
       .from("materiales")
-      .createSignedUrl(filePath, 60 * 60 * 24 * 365);
+      .createSignedUrl(safePath, 60 * 60 * 24 * 365);
 
     if (signedError || !signedData?.signedUrl) {
       return NextResponse.json({ error: "No se pudo generar URL" }, { status: 500 });

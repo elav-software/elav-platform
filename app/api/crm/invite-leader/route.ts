@@ -6,6 +6,13 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Allowlist anti open-redirect: mismo patrón que ALLOWED_ORIGINS en soy-nuevo
+const ALLOWED_REDIRECT_BASES = [
+  "https://crm.cfccasanova.com",
+  // Agregar dominio CRM de cada iglesia nueva que se incorpore
+  ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
+];
+
 // Cliente público para operaciones que requieren anon key (como resetPasswordForEmail)
 const supabasePublic = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,6 +47,9 @@ export async function POST(req: NextRequest) {
     const { email, fullName, redirectBase } = await req.json();
     if (!email || !redirectBase) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
+    }
+    if (!ALLOWED_REDIRECT_BASES.some(b => redirectBase.startsWith(b))) {
+      return NextResponse.json({ error: "redirectBase no permitido" }, { status: 400 });
     }
 
     // Intentar invitar directamente. Si ya existe, caer en reset de contraseña.

@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createHash, timingSafeEqual } from "crypto";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, "1 h"),
+  analytics: true,
+  prefix: "superadmin",
+});
 
 /**
  * POST /api/superadmin/create-church
@@ -17,9 +27,22 @@ import { createClient } from "@supabase/supabase-js";
  *   plan         string  — "basic" | "pro"  (default: "basic")
  */
 export async function POST(req: NextRequest) {
-  // ── 1. Verificar clave maestra ────────────────────────────────────────────
-  const secret = req.headers.get("x-superadmin-secret");
-  if (!secret || secret !== process.env.SUPERADMIN_SECRET) {
+  // ── 1. Rate limiting por IP ───────────────────────────────────────────────
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { success } = await ratelimit.limit(ip);
+  if (!success) {
+    return NextResponse.json({ error: "Demasiados intentos. Intentá en una hora." }, { status: 429 });
+  }
+
+  // ── 2. Verificar clave maestra (comparación timing-safe) ──────────────────
+  const secret = req.headers.get("x-superadmin-secret") ?? "";
+  const expectedSecret = process.env.SUPERADMIN_SECRET ?? "";
+  const providedHash = createHash("sha256").update(secret).digest();
+  const expectedHash = createHash("sha256").update(expectedSecret).digest();
+  const validSecret =
+    providedHash.length === expectedHash.length &&
+    timingSafeEqual(providedHash, expectedHash);
+  if (!secret || !validSecret) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

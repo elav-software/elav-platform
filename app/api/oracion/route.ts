@@ -70,7 +70,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Origen no permitido" }, { status: 403 });
     }
 
-    const corsHeaders = CORS_HEADERS(expectedOrigin ?? origin ?? "*");
+    const corsHeaders = CORS_HEADERS(
+      expectedOrigin ?? (Object.values(ALLOWED_ORIGINS).includes(origin) ? origin : "null")
+    );
 
     // ── Rate limiting por IP ───────────────────────────────────────────────
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
